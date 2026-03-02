@@ -1,17 +1,133 @@
-.bg-dots {
-    background-color: #f8fafc; /* Bardzo jasny, nowoczesny szary */
+:root {
+    --kolor-glowny: #4f46e5;
+    --kolor-glowny-hover: #4338ca;
+    --ciemny: #1e293b;
+    --jasny: #f8fafc;
+    --szary-ramka: #e2e8f0;
+}
+
+/* Tło w kropki i ogólne ustawienia */
+body {
+    background-color: var(--jasny);
     background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
     background-size: 28px 28px;
 }
 
+/* Paski przewijania */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: #64748b; }
-
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Siatka kalendarza */
 .time-row { border-bottom: 1px dashed #cbd5e1; }
 .day-col { border-right: 1px dashed #cbd5e1; }
 .day-col:last-child { border-right: none; }
+
+/* --- NASZE NOWE CZYSTE KLASY --- */
+
+/* Główne białe okienka (kafelki) */
+.karta {
+    background-color: white;
+    border: 2px solid var(--ciemny);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 4px 4px 0px var(--ciemny);
+    transition: transform 0.2s;
+}
+.karta:hover {
+    transform: translateY(-4px);
+}
+
+/* Przyciski */
+.przycisk-glowny {
+    background-color: var(--kolor-glowny);
+    color: white;
+    font-weight: bold;
+    padding: 0.5rem 1.5rem;
+    border-radius: 9999px;
+    box-shadow: 2px 2px 0px var(--ciemny);
+    border: 2px solid var(--ciemny);
+    transition: all 0.2s;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.przycisk-glowny:hover {
+    background-color: var(--kolor-glowny-hover);
+}
+.przycisk-anuluj {
+    padding: 0.5rem 1rem;
+    color: #64748b;
+    font-weight: bold;
+    border-radius: 0.75rem;
+    transition: background-color 0.2s;
+}
+.przycisk-anuluj:hover {
+    background-color: #f1f5f9;
+}
+
+/* Pola tekstowe (formularze) */
+.pole-tekstowe {
+    width: 100%;
+    border: 2px solid var(--szary-ramka);
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    outline: none;
+    font-weight: 500;
+    color: var(--ciemny);
+    background-color: white;
+    transition: border-color 0.2s;
+    margin-bottom: 0.75rem;
+}
+.pole-tekstowe:focus {
+    border-color: var(--kolor-glowny);
+}
+
+/* Wyskakujące okienka (Modale) */
+.modal-tlo {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(15, 23, 42, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 50;
+    padding: 1rem;
+    backdrop-filter: blur(4px);
+}
+.modal-tlo.hidden {
+    display: none;
+}
+.modal-okno {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    width: 100%;
+    max-width: 28rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border: 2px solid var(--ciemny);
+}
+
+/* Zakładki w menu górnym */
+.nav-tab {
+    color: #64748b;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    transition: all 0.2s;
+    white-space: nowrap;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+.nav-tab:hover {
+    color: var(--ciemny);
+}
+.nav-tab.aktywna {
+    background-color: var(--kolor-glowny);
+    color: white;
+    box-shadow: 2px 2px 0px var(--ciemny);
+    border: 2px solid var(--ciemny);
+    font-weight: bold;
+}
