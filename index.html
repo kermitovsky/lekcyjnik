@@ -20,6 +20,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <link rel="icon" type="image/png" href="ikona.png?v=2">
+    <link rel="apple-touch-icon" href="ikona.png?v=2">
+
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5" id="meta-theme-color">
@@ -344,11 +347,11 @@
             <div class="flex gap-2 mb-1">
                 <div class="w-1/2">
                     <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Od</label>
-                    <input type="time" id="lesson-time-start" class="pole-tekstowe text-sm md:text-base" onchange="autoUzupelnijCzas()">
+                    <input type="text" id="lesson-time-start" class="pole-tekstowe text-sm md:text-base" placeholder="HH:MM">
                 </div>
                 <div class="w-1/2">
                     <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Do</label>
-                    <input type="time" id="lesson-time-end" class="pole-tekstowe text-sm md:text-base">
+                    <input type="text" id="lesson-time-end" class="pole-tekstowe text-sm md:text-base" placeholder="HH:MM">
                 </div>
             </div>
 
