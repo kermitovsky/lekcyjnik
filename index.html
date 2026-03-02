@@ -9,28 +9,52 @@
 </head>
 <body class="bg-dots text-gray-800 font-sans h-screen flex flex-col overflow-hidden">
 
-    <nav class="bg-white/90 backdrop-blur border-b border-gray-200 px-4 md:px-6 py-4 flex items-center justify-between md:justify-start gap-2 md:gap-6 z-30 relative">
-        <h1 class="font-bold text-xl text-indigo-600 hidden md:block mr-4">Lekcyjnik</h1>
-        <button onclick="switchTab('pulpit')" id="tab-pulpit" class="nav-tab text-gray-500 hover:text-gray-900 font-medium px-4 py-2 rounded-full transition">Pulpit</button>
-        <button onclick="switchTab('kalendarz')" id="tab-kalendarz" class="nav-tab bg-indigo-500 text-white shadow-md font-medium px-6 py-2 rounded-full transition">Kalendarz</button>
-        <button onclick="switchTab('uczniowie')" id="tab-uczniowie" class="nav-tab text-gray-500 hover:text-gray-900 font-medium px-4 py-2 rounded-full transition">Uczniowie</button>
+    <nav class="bg-white/90 backdrop-blur border-b border-gray-200 px-4 md:px-6 py-4 flex items-center justify-between md:justify-start gap-2 md:gap-6 z-30 relative shadow-sm">
+        <h1 class="font-bold text-2xl text-indigo-600 hidden md:block mr-4 tracking-tight">Lekcyjnik</h1>
+        <div class="flex gap-2 overflow-x-auto no-scrollbar w-full md:w-auto">
+            <button onclick="switchTab('pulpit')" id="tab-pulpit" class="nav-tab text-gray-500 hover:text-gray-900 font-medium px-4 py-2 rounded-full transition whitespace-nowrap">Pulpit</button>
+            <button onclick="switchTab('kalendarz')" id="tab-kalendarz" class="nav-tab bg-indigo-500 text-white shadow-md font-medium px-6 py-2 rounded-full transition whitespace-nowrap">Kalendarz</button>
+            <button onclick="switchTab('uczniowie')" id="tab-uczniowie" class="nav-tab text-gray-500 hover:text-gray-900 font-medium px-4 py-2 rounded-full transition whitespace-nowrap">Uczniowie</button>
+            <button onclick="switchTab('zarobki')" id="tab-zarobki" class="nav-tab text-gray-500 hover:text-gray-900 font-medium px-4 py-2 rounded-full transition whitespace-nowrap">Zarobki</button>
+        </div>
     </nav>
 
     <main class="flex-1 overflow-auto p-4 md:p-6 relative" id="main-content">
         
-        <div id="view-pulpit" class="max-w-4xl mx-auto hidden space-y-6">
-            <h2 class="text-3xl font-extrabold text-gray-900 mb-6">Podsumowanie</h2>
+        <div id="view-pulpit" class="max-w-5xl mx-auto hidden space-y-6">
+            <div class="flex justify-between items-end">
+                <h2 class="text-3xl font-extrabold text-gray-900">Witaj z powrotem!</h2>
+                <p id="today-date-display" class="text-gray-500 font-medium"></p>
+            </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 class="text-gray-500 font-medium mb-2">Zarobki w tym miesiącu</h3>
-                    <p id="monthly-earnings" class="text-4xl font-bold text-green-500">0 zł</p>
-                    <p class="text-sm text-gray-400 mt-2">Tylko opłacone lekcje</p>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-2xl shadow-lg text-white relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-4 opacity-20 text-6xl">⏰</div>
+                        <h3 class="text-indigo-100 font-medium mb-4 text-sm uppercase tracking-wider">Następna lekcja</h3>
+                        <div id="next-lesson-widget">
+                            </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-gray-500 font-medium">Zarobki (ten miesiąc)</h3>
+                            <button onclick="switchTab('zarobki')" class="text-indigo-500 text-sm font-bold hover:underline">Szczegóły &rarr;</button>
+                        </div>
+                        <p id="dashboard-monthly-earnings" class="text-4xl font-extrabold text-gray-900">0 zł</p>
+                        <div class="mt-4 flex gap-2">
+                            <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded" id="dashboard-paid-count">0 opłaconych</span>
+                            <span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded" id="dashboard-unpaid-count">0 nieopłaconych</span>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 class="text-gray-500 font-medium mb-4">Lekcje na dzisiaj</h3>
-                    <div id="today-lessons-list" class="space-y-3">
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-gray-800">Plan na ten tydzień</h3>
+                        <button onclick="switchTab('kalendarz')" class="text-indigo-500 font-bold hover:underline text-sm">Przejdź do kalendarza</button>
+                    </div>
+                    <div id="this-week-list" class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                         </div>
                 </div>
             </div>
@@ -40,14 +64,16 @@
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <div>
                     <h2 id="month-year-display" class="text-2xl md:text-3xl font-extrabold text-gray-900"></h2>
-                    <p id="week-range-display" class="text-gray-500 font-medium uppercase text-sm mt-1"></p>
                 </div>
                 
                 <div class="flex items-center gap-2 md:gap-4 w-full md:w-auto justify-between md:justify-end">
-                    <div class="flex bg-white rounded-full border border-gray-200 shadow-sm overflow-hidden">
-                        <button onclick="changeWeek(-1)" class="px-3 md:px-4 py-2 hover:bg-gray-50 font-bold">&lt;</button>
-                        <button onclick="goToToday()" class="px-3 md:px-4 py-2 border-x border-gray-200 hover:bg-gray-50 text-xs md:text-sm font-bold">DZISIAJ</button>
-                        <button onclick="changeWeek(1)" class="px-3 md:px-4 py-2 hover:bg-gray-50 font-bold">&gt;</button>
+                    <button onclick="goToToday()" class="bg-white border border-gray-200 text-gray-700 font-bold py-2 px-4 rounded-full hover:bg-gray-50 transition shadow-sm text-sm">
+                        Dzisiaj
+                    </button>
+                    <div class="flex bg-white rounded-full border border-gray-200 shadow-sm overflow-hidden items-center">
+                        <button onclick="changeWeek(-1)" class="px-4 py-2 hover:bg-gray-50 font-bold text-gray-500 border-r border-gray-100">&lt;</button>
+                        <span id="calendar-week-btn-text" class="px-4 py-2 text-sm font-bold text-gray-800 min-w-[110px] text-center"></span>
+                        <button onclick="changeWeek(1)" class="px-4 py-2 hover:bg-gray-50 font-bold text-gray-500 border-l border-gray-100">&gt;</button>
                     </div>
                     <button onclick="openLessonModal()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 md:px-6 rounded-full shadow-lg whitespace-nowrap">
                         + Lekcja
@@ -59,10 +85,9 @@
                 <div class="overflow-x-auto flex-1 flex flex-col">
                     <div class="min-w-[800px] flex-1 flex flex-col">
                         <div id="calendar-header" class="grid grid-cols-8 border-b border-gray-200 bg-white sticky top-0 z-20"></div>
-                        
                         <div class="relative flex-1 overflow-y-auto" id="calendar-body-scroll">
                             <div id="current-time-line" class="absolute left-0 right-0 h-px bg-pink-500 z-10 pointer-events-none hidden">
-                                <div class="absolute left-8 -top-1.5 w-3 h-3 bg-pink-500 rounded-full"></div>
+                                <div class="absolute left-8 -top-1.5 w-3 h-3 bg-pink-500 rounded-full shadow-[0_0_8px_rgba(236,72,153,0.8)]"></div>
                             </div>
                             <div id="calendar-grid" class="grid grid-cols-8 relative min-h-[900px]"></div>
                         </div>
@@ -79,59 +104,90 @@
             <div id="students-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </div>
 
+        <div id="view-zarobki" class="max-w-5xl mx-auto hidden space-y-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-extrabold text-gray-900">Raport Finansowy</h2>
+                <input type="month" id="earnings-month-picker" onchange="renderZarobki()" class="border border-gray-200 p-2 rounded-lg font-bold text-gray-700 outline-none focus:border-indigo-500 shadow-sm">
+            </div>
+
+            <div class="bg-green-500 text-white p-6 rounded-2xl shadow-lg flex justify-between items-center">
+                <div>
+                    <h3 class="text-green-100 font-medium text-sm uppercase tracking-wider mb-1">Całkowity zarobek w miesiącu</h3>
+                    <p id="total-earnings-display" class="text-5xl font-extrabold">0 zł</p>
+                </div>
+                <div class="text-right">
+                    <p id="unpaid-earnings-display" class="text-green-100 font-medium">Brakujące wpłaty: 0 zł</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Zarobki wg Ucznia</h3>
+                    <div id="earnings-by-student" class="space-y-3"></div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Zarobki wg Przedmiotu</h3>
+                    <div id="earnings-by-subject" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <div id="modal-student" class="fixed inset-0 bg-black/50 hidden flex justify-center items-center z-50 p-4">
         <div class="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl">
             <h3 class="text-xl font-bold mb-4">Uczeń</h3>
             <input type="text" id="student-name" placeholder="Imię i nazwisko" class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500">
-            <input type="text" id="student-subjects" placeholder="Przedmioty (np. Matematyka)" class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500">
+            <input type="text" id="student-subjects" placeholder="Domyślne przedmioty (np. Matematyka)" class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500">
             <div class="mb-4">
                 <label class="text-sm text-gray-500 mb-1 block">Kolor w kalendarzu:</label>
                 <input type="color" id="student-color" value="#6366f1" class="w-full h-10 rounded cursor-pointer border-0">
             </div>
             <div class="flex justify-end gap-2">
-                <button onclick="closeModals()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">Anuluj</button>
-                <button onclick="saveStudent()" class="px-4 py-2 bg-indigo-500 text-white font-bold rounded-lg">Zapisz</button>
+                <button onclick="closeModals()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg font-medium">Anuluj</button>
+                <button onclick="saveStudent()" class="px-4 py-2 bg-indigo-500 text-white font-bold rounded-lg shadow-md">Zapisz</button>
             </div>
         </div>
     </div>
 
     <div id="modal-lesson" class="fixed inset-0 bg-black/50 hidden flex justify-center items-center z-50 p-4">
         <div class="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl">
-            <h3 id="lesson-modal-title" class="text-xl font-bold mb-4">Zaplanuj lekcję</h3>
+            <h3 id="lesson-modal-title" class="text-xl font-bold mb-4 text-gray-800">Zaplanuj lekcję</h3>
             
             <input type="hidden" id="lesson-id">
             
-            <select id="lesson-student" class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500"></select>
+            <select id="lesson-student" onchange="autoFillSubject()" class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500 font-medium text-gray-700"></select>
             
-            <input type="date" id="lesson-date" class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500">
+            <input type="text" id="lesson-subject" placeholder="Przedmiot (np. Angielski)" class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500">
+            
+            <input type="date" id="lesson-date" class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500 text-gray-700">
             
             <div class="flex gap-2 mb-3">
-                <input type="time" id="lesson-time-start" class="w-1/2 border p-3 rounded-lg outline-none focus:border-indigo-500" value="15:00">
-                <input type="time" id="lesson-time-end" class="w-1/2 border p-3 rounded-lg outline-none focus:border-indigo-500" value="16:00">
+                <input type="time" id="lesson-time-start" class="w-1/2 border p-3 rounded-lg outline-none focus:border-indigo-500 text-gray-700" value="15:00">
+                <input type="time" id="lesson-time-end" class="w-1/2 border p-3 rounded-lg outline-none focus:border-indigo-500 text-gray-700" value="16:00">
             </div>
 
-            <input type="number" id="lesson-price" placeholder="Cena (zł)" class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500">
+            <input type="number" id="lesson-price" placeholder="Cena za lekcję (zł)" class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500">
             
-            <textarea id="lesson-notes" placeholder="Notatki, temat, zadanie domowe..." class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500 h-24 resize-none"></textarea>
+            <textarea id="lesson-notes" placeholder="Notatki, temat, zadanie domowe..." class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500 h-20 resize-none"></textarea>
 
-            <div class="flex items-center justify-between mb-4 bg-gray-50 p-3 rounded-lg border">
+            <div class="flex items-center justify-between mb-5 bg-gray-50 p-3 rounded-lg border border-gray-200">
                 <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="lesson-paid" class="w-5 h-5 accent-green-500">
+                    <input type="checkbox" id="lesson-paid" class="w-5 h-5 accent-green-500 rounded">
                     <span class="font-bold text-gray-700">Opłacone</span>
                 </label>
                 <label id="recurring-box" class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="lesson-recurring" class="w-4 h-4 accent-indigo-500">
-                    <span class="text-sm text-gray-600">Co tydzień</span>
+                    <input type="checkbox" id="lesson-recurring" class="w-4 h-4 accent-indigo-500 rounded">
+                    <span class="text-sm font-medium text-gray-600">Stała lekcja (co tydzień)</span>
                 </label>
             </div>
 
             <div class="flex justify-between items-center">
-                <button id="btn-delete-lesson" onclick="deleteLesson()" class="text-red-500 font-bold hover:underline hidden">Usuń</button>
+                <button id="btn-delete-lesson" onclick="deleteLesson()" class="text-red-500 font-bold hover:underline hidden px-2">Usuń</button>
                 <div class="flex gap-2 ml-auto">
-                    <button onclick="closeModals()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">Anuluj</button>
-                    <button onclick="saveLesson()" class="px-4 py-2 bg-indigo-500 text-white font-bold rounded-lg">Zapisz</button>
+                    <button onclick="closeModals()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg font-medium">Anuluj</button>
+                    <button onclick="saveLesson()" class="px-4 py-2 bg-indigo-500 text-white font-bold rounded-lg shadow-md">Zapisz</button>
                 </div>
             </div>
         </div>
