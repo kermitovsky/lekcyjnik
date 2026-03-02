@@ -33,30 +33,62 @@ let chartInstances = {};
 Chart.defaults.font.family = "'Inter', 'sans-serif'";
 Chart.defaults.color = '#64748b';
 
+// --- CUSTOMOWE OKIENKA (ZAMIAST PRZEGLĄDARKOWYCH) ---
+function customAlert(title, message) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('modal-alert');
+        document.getElementById('alert-title').innerText = title;
+        document.getElementById('alert-message').innerText = message;
+        const btnOk = document.getElementById('btn-alert-ok');
+        
+        modal.classList.remove('hidden');
+        btnOk.onclick = () => { modal.classList.add('hidden'); resolve(); };
+    });
+}
+
+function showConfirm(title, message, isDanger = false) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('modal-confirm');
+        document.getElementById('confirm-title').innerText = title;
+        document.getElementById('confirm-message').innerText = message;
+        const btnOk = document.getElementById('btn-confirm-ok');
+        const btnCancel = document.getElementById('btn-confirm-cancel');
+        
+        btnOk.style.backgroundColor = isDanger ? '#ef4444' : 'var(--akcent)';
+
+        modal.classList.remove('hidden');
+        const cleanup = () => { modal.classList.add('hidden'); btnOk.onclick = null; btnCancel.onclick = null; };
+
+        btnOk.onclick = () => { cleanup(); resolve(true); };
+        btnCancel.onclick = () => { cleanup(); resolve(false); };
+    });
+}
+
+function showSeriesChoice(title, message, isDanger = false) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('modal-series');
+        document.getElementById('series-title').innerText = title;
+        document.getElementById('series-message').innerText = message;
+        const btnSingle = document.getElementById('btn-series-single');
+        const btnFuture = document.getElementById('btn-series-future');
+        const btnCancel = document.getElementById('btn-series-cancel');
+
+        btnFuture.style.backgroundColor = isDanger ? '#ef4444' : 'var(--akcent)';
+
+        modal.classList.remove('hidden');
+        const cleanup = () => { modal.classList.add('hidden'); btnSingle.onclick = null; btnFuture.onclick = null; btnCancel.onclick = null; };
+
+        btnSingle.onclick = () => { cleanup(); resolve('single'); };
+        btnFuture.onclick = () => { cleanup(); resolve('future'); };
+        btnCancel.onclick = () => { cleanup(); resolve(null); };
+    });
+}
+
 // ZAINICJOWANIE KALENDARZY 24H
 document.addEventListener("DOMContentLoaded", () => {
-    datePicker = flatpickr("#lesson-date", {
-        locale: "pl",
-        dateFormat: "Y-m-d", 
-        altInput: true,
-        altFormat: "d/m/Y",  
-        allowInput: true
-    });
-
-    timeStartPicker = flatpickr("#lesson-time-start", {
-        enableTime: true,
-        noCalendar: true,
-        dateFormat: "H:i",
-        time_24hr: true,
-        onChange: autoUzupelnijCzas
-    });
-
-    timeEndPicker = flatpickr("#lesson-time-end", {
-        enableTime: true,
-        noCalendar: true,
-        dateFormat: "H:i",
-        time_24hr: true
-    });
+    datePicker = flatpickr("#lesson-date", { locale: "pl", dateFormat: "Y-m-d", altInput: true, altFormat: "d/m/Y", allowInput: true });
+    timeStartPicker = flatpickr("#lesson-time-start", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true, onChange: autoUzupelnijCzas });
+    timeEndPicker = flatpickr("#lesson-time-end", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true });
 });
 
 // --- APLIKOWANIE USTAWIEŃ WIZUALNYCH ---
@@ -68,20 +100,15 @@ function applyVisualSettings() {
         document.documentElement.classList.remove('dark');
         document.getElementById('meta-theme-color').setAttribute('content', settings.accent);
     }
-    
     document.documentElement.style.setProperty('--akcent', settings.accent);
-    
     document.querySelectorAll('.kolor-kolo').forEach(k => k.classList.remove('aktywny'));
     let activeCircle = Array.from(document.querySelectorAll('.kolor-kolo')).find(el => el.getAttribute('onclick').includes(settings.accent));
     if(activeCircle) activeCircle.classList.add('aktywny');
-
     document.getElementById('ust-start').value = settings.startHour;
     document.getElementById('ust-end').value = settings.endHour;
     document.getElementById('ust-czas').value = settings.duration;
 
-    if(!document.getElementById('view-zarobki').classList.contains('hidden')) {
-        renderZarobki();
-    }
+    if(!document.getElementById('view-zarobki').classList.contains('hidden')) renderZarobki();
 }
 
 function ustawMotyw(theme) { settings.theme = theme; applyVisualSettings(); saveToCloud(); }
@@ -90,8 +117,7 @@ function zapiszOpcje() {
     settings.startHour = parseInt(document.getElementById('ust-start').value) || 7;
     settings.endHour = parseInt(document.getElementById('ust-end').value) || 22;
     settings.duration = parseInt(document.getElementById('ust-czas').value) || 60;
-    saveToCloud();
-    renderCalendar();
+    saveToCloud(); renderCalendar();
 }
 
 function autoUzupelnijCzas() {
@@ -124,9 +150,13 @@ firebase.auth().onAuthStateChanged((user) => {
     }
 });
 
-function zalogujPrzezGoogle() {
+async function zalogujPrzezGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider).catch(e => alert("Błąd logowania Google: " + e.message));
+    try {
+        await firebase.auth().signInWithPopup(provider);
+    } catch (e) {
+        await customAlert("Błąd logowania", e.message);
+    }
 }
 function wyloguj() { firebase.auth().signOut(); }
 
@@ -135,9 +165,7 @@ function pobierzDaneZChmury() {
     db.collection("planer_korepetytora").doc(currentUser.uid).get().then((doc) => {
         if (doc.exists) {
             let data = doc.data();
-            subjects = data.subjects || [];
-            students = data.students || [];
-            lessons = data.lessons || [];
+            subjects = data.subjects || []; students = data.students || []; lessons = data.lessons || [];
             if(data.settings) settings = data.settings;
         } else {
             subjects = []; students = []; lessons = [];
@@ -153,10 +181,7 @@ function pobierzDaneZChmury() {
 function saveToCloud() {
     if(!currentUser) return; 
     db.collection("planer_korepetytora").doc(currentUser.uid).set({
-        subjects: subjects,
-        students: students,
-        lessons: lessons,
-        settings: settings
+        subjects: subjects, students: students, lessons: lessons, settings: settings
     });
 }
 
@@ -166,8 +191,7 @@ function pobierzKopieZapasowa() {
     const blob = new Blob([dataStr], {type: "application/json"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `Planer_Kopia_${new Date().toISOString().split('T')[0]}.json`;
+    a.href = url; a.download = `Planer_Kopia_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
 }
 
@@ -246,18 +270,18 @@ function editSubject(id) {
     document.getElementById('btn-delete-subject').classList.remove('hidden');
     document.getElementById('modal-subject').classList.remove('hidden');
 }
-function saveSubject() {
+async function saveSubject() {
     const id = document.getElementById('subject-id').value;
     const name = document.getElementById('subject-name').value;
     const color = document.getElementById('subject-color').value;
-    if(!name) return alert('Wpisz nazwę przedmiotu!');
+    if(!name) return await customAlert('Błąd', 'Wpisz nazwę przedmiotu!');
     if(id) { let sub = subjects.find(s => s.id == id); sub.name = name; sub.color = color; } 
     else { subjects.push({ id: Date.now().toString(), name, color }); }
     saveToCloud(); closeModals(); renderSubjects();
 }
-function deleteSubject() {
+async function deleteSubject() {
     const id = document.getElementById('subject-id').value;
-    if(confirm('Usunąć ten przedmiot?')) {
+    if(await showConfirm('Usuwanie', 'Czy na pewno usunąć ten przedmiot?', true)) {
         subjects = subjects.filter(s => s.id != id);
         saveToCloud(); closeModals(); renderSubjects();
     }
@@ -328,10 +352,10 @@ function editStudent(id) {
     document.getElementById('modal-student').setAttribute('data-editing-id', id);
     document.getElementById('modal-student').classList.remove('hidden');
 }
-function saveStudent() {
+async function saveStudent() {
     const name = document.getElementById('student-name').value;
     const editingId = document.getElementById('modal-student').getAttribute('data-editing-id');
-    if(!name) return alert('Wpisz imię!');
+    if(!name) return await customAlert('Błąd', 'Wpisz imię ucznia!');
     let selectedSubjects = [];
     document.querySelectorAll('.student-subject-cb:checked').forEach(cb => selectedSubjects.push(cb.value));
     if(editingId) {
@@ -342,8 +366,8 @@ function saveStudent() {
     }
     saveToCloud(); closeModals(); renderStudents();
 }
-function deleteStudent(id) {
-    if(confirm('Na pewno usunąć ucznia i jego wszystkie lekcje?')) {
+async function deleteStudent(id) {
+    if(await showConfirm('Usuwanie Ucznia', 'Na pewno usunąć ucznia i wszystkie jego zaplanowane lekcje?', true)) {
         students = students.filter(s => s.id != id);
         lessons = lessons.filter(l => l.studentId != id);
         saveToCloud(); renderStudents();
@@ -674,7 +698,7 @@ function editLesson(id) {
     document.getElementById('modal-lesson').classList.remove('hidden');
 }
 
-function saveLesson() {
+async function saveLesson() {
     const id = document.getElementById('lesson-id').value;
     const studentId = document.getElementById('lesson-student').value;
     const subjectId = document.getElementById('lesson-subject').value;
@@ -686,16 +710,14 @@ function saveLesson() {
     const cancelled = document.getElementById('lesson-cancelled') ? document.getElementById('lesson-cancelled').checked : false;
     const isRecurring = document.getElementById('lesson-recurring') ? document.getElementById('lesson-recurring').checked : false;
 
-    if(!studentId || !date || !subjectId || !startTime || !endTime) return alert('Uzupełnij wszystkie dane (uczeń, przedmiot, data, godziny)!');
+    if(!studentId || !date || !subjectId || !startTime || !endTime) return await customAlert('Błąd', 'Uzupełnij wszystkie dane (uczeń, przedmiot, data, godziny)!');
 
     if (id) {
         let originalLesson = lessons.find(l => l.id == id);
         let oldDate = originalLesson.date;
         
-        // ZNAJDOWANIE PRZYSZŁYCH LEKCJI W CYKLU
         let futureLessons = lessons.filter(l => {
             if (l.id == id || l.date < oldDate) return false;
-            // Sprawdzamy po sprytnym ID grupy lub (awaryjnie dla starszych) po tych samych danych
             if (originalLesson.groupId && l.groupId === originalLesson.groupId) return true;
             if (!originalLesson.groupId && l.studentId == originalLesson.studentId && l.subjectId == originalLesson.subjectId && l.startTime == originalLesson.startTime) {
                 return new Date(l.date).getDay() === new Date(oldDate).getDay();
@@ -703,7 +725,29 @@ function saveLesson() {
             return false;
         });
 
-        // Aktualizacja GŁÓWNEJ lekcji
+        if (futureLessons.length > 0) {
+            let choice = await showSeriesChoice('Aktualizacja cyklu', 'Znalazłem zaplanowane przyszłe lekcje. Co chcesz zaktualizować?');
+            if (choice === 'future') {
+                let dateDiff = Math.round((new Date(date) - new Date(oldDate)) / (1000 * 60 * 60 * 24));
+                futureLessons.forEach(fl => {
+                    fl.studentId = studentId;
+                    fl.subjectId = subjectId;
+                    fl.startTime = startTime;
+                    fl.endTime = endTime;
+                    fl.price = price;
+                    if (dateDiff !== 0) {
+                        let fd = new Date(fl.date);
+                        fd.setDate(fd.getDate() + dateDiff);
+                        fl.date = fd.toISOString().split('T')[0];
+                    }
+                });
+            } else if (choice === 'single') {
+                // nic nie robi dla reszty
+            } else {
+                return; // anulowano
+            }
+        }
+
         originalLesson.studentId = studentId;
         originalLesson.subjectId = subjectId;
         originalLesson.date = date;
@@ -713,40 +757,17 @@ function saveLesson() {
         originalLesson.paid = paid;
         originalLesson.cancelled = cancelled;
 
-        // Jeśli są inne, pytamy użytkownika
-        if (futureLessons.length > 0) {
-            let updateFuture = confirm("Znalazłem zaplanowane przyszłe lekcje z tego cyklu.\n\n[OK] -> Zaktualizuj tę lekcję ORAZ WSZYSTKIE PRZYSZŁE\n[Anuluj] -> Zaktualizuj TYLKO tę jedną lekcję");
-            
-            if (updateFuture) {
-                // Obliczamy o ile dni ktoś ewentualnie przesunął lekcję w kalendarzu
-                let dateDiff = Math.round((new Date(date) - new Date(oldDate)) / (1000 * 60 * 60 * 24));
-                
-                futureLessons.forEach(fl => {
-                    fl.studentId = studentId;
-                    fl.subjectId = subjectId;
-                    fl.startTime = startTime;
-                    fl.endTime = endTime;
-                    fl.price = price;
-                    if (dateDiff !== 0) { // Przesuwamy też daty w przyszłości jeśli przesunięto główną
-                        let fd = new Date(fl.date);
-                        fd.setDate(fd.getDate() + dateDiff);
-                        fl.date = fd.toISOString().split('T')[0];
-                    }
-                });
-            }
-        }
-
     } else {
         const repetitions = isRecurring ? 156 : 1; 
         let baseDate = new Date(date);
-        let newGroupId = "grp_" + Date.now().toString() + Math.floor(Math.random() * 1000); // Unikalny identyfikator cyklu
+        let newGroupId = "grp_" + Date.now().toString() + Math.floor(Math.random() * 1000); 
 
         for(let i=0; i<repetitions; i++) {
             let lessonDate = new Date(baseDate);
             lessonDate.setDate(baseDate.getDate() + (i * 7));
             lessons.push({
                 id: Date.now().toString() + Math.floor(Math.random() * 1000) + i,
-                groupId: isRecurring ? newGroupId : null, // Przypisanie do grupy
+                groupId: isRecurring ? newGroupId : null,
                 studentId, subjectId, date: lessonDate.toISOString().split('T')[0],
                 startTime, endTime, price, cancelled: false,
                 paid: (paid && i === 0) ? true : false
@@ -757,11 +778,10 @@ function saveLesson() {
     if(!document.getElementById('view-pulpit').classList.contains('hidden')) renderDashboard();
 }
 
-function deleteLesson() {
+async function deleteLesson() {
     const id = document.getElementById('lesson-id').value;
     let originalLesson = lessons.find(l => l.id == id);
     
-    // Logika usuwania całego cyklu
     let futureLessons = lessons.filter(l => {
         if (l.id == id || l.date < originalLesson.date) return false;
         if (originalLesson.groupId && l.groupId === originalLesson.groupId) return true;
@@ -772,18 +792,18 @@ function deleteLesson() {
     });
 
     if (futureLessons.length > 0) {
-        let choice = prompt("Wybierz zakres USUWANIA (wpisz 1 lub 2):\n\n1 - Usuń TYLKO TĘ jedną lekcję\n2 - Usuń tę i WSZYSTKIE PRZYSZŁE z tego cyklu", "1");
-        if (choice === "1") {
+        let choice = await showSeriesChoice('Usuwanie cyklu', 'Wybierz zakres usuwania. Zamiast usuwać, możesz zaznaczyć lekcję jako Odwołaną.', true);
+        if (choice === 'single') {
             lessons = lessons.filter(l => l.id != id);
-        } else if (choice === "2") {
+        } else if (choice === 'future') {
             let idsToDelete = futureLessons.map(f => f.id);
             idsToDelete.push(id);
             lessons = lessons.filter(l => !idsToDelete.includes(l.id));
         } else {
-            return; // Użytkownik zamknął okienko prompt, przerywamy usuwanie
+            return; 
         }
     } else {
-        if(!confirm('Na pewno całkowicie USUNĄĆ tę lekcję?')) return;
+        if(!await showConfirm('Usuwanie lekcji', 'Na pewno całkowicie USUNĄĆ tę lekcję? (Możesz też po prostu zaznaczyć ją jako odwołaną)', true)) return;
         lessons = lessons.filter(l => l.id != id);
     }
     
