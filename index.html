@@ -382,6 +382,37 @@
         </div>
     </div>
 
+    <div id="modal-alert" class="modal-tlo hidden z-[70]">
+        <div class="modal-okno text-center max-w-sm">
+            <h3 class="text-2xl font-extrabold mb-3" id="alert-title">Uwaga</h3>
+            <p class="mb-6 font-medium" style="color: var(--tekst-szary)" id="alert-message"></p>
+            <button id="btn-alert-ok" class="przycisk-glowny w-full">Zrozumiałem</button>
+        </div>
+    </div>
+
+    <div id="modal-confirm" class="modal-tlo hidden z-[70]">
+        <div class="modal-okno text-center max-w-sm">
+            <h3 class="text-2xl font-extrabold mb-3" id="confirm-title">Potwierdzenie</h3>
+            <p class="mb-6 font-medium" style="color: var(--tekst-szary)" id="confirm-message"></p>
+            <div class="flex justify-center gap-3">
+                <button id="btn-confirm-cancel" class="przycisk-anuluj w-1/2 border-2" style="border-color: var(--szary-ramka)">Anuluj</button>
+                <button id="btn-confirm-ok" class="przycisk-glowny w-1/2">Tak</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-series" class="modal-tlo hidden z-[70]">
+        <div class="modal-okno text-center max-w-sm">
+            <h3 class="text-xl md:text-2xl font-extrabold mb-3" id="series-title">Cykl Lekcji</h3>
+            <p class="mb-6 font-medium text-sm md:text-base" style="color: var(--tekst-szary)" id="series-message"></p>
+            <div class="flex flex-col gap-3">
+                <button id="btn-series-single" class="w-full font-bold py-3 rounded-xl border-2 transition shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5" style="border-color: var(--ciemny); background-color: var(--karta-bg); color: var(--tekst-glowny)">Tylko tę jedną lekcję</button>
+                <button id="btn-series-future" class="w-full font-bold py-3 rounded-xl border-2 transition shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 text-white" style="border-color: var(--ciemny); background-color: var(--akcent);">Tę i wszystkie przyszłe</button>
+                <button id="btn-series-cancel" class="przycisk-anuluj mt-2">Anuluj</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
