@@ -108,7 +108,7 @@ function openSubjectModal() {
 }
 
 function editSubject(id) {
-    const sub = subjects.find(s => s.id === id);
+    const sub = subjects.find(s => s.id == id); // Podwójny znak równości naprawia błędy starszych ID
     if(!sub) return;
     document.getElementById('subject-id').value = sub.id;
     document.getElementById('subject-name').value = sub.name;
@@ -124,7 +124,7 @@ function saveSubject() {
     if(!name) return alert('Wpisz nazwę przedmiotu!');
 
     if(id) {
-        let sub = subjects.find(s => s.id === id);
+        let sub = subjects.find(s => s.id == id);
         sub.name = name;
         sub.color = color;
     } else {
@@ -138,7 +138,7 @@ function saveSubject() {
 function deleteSubject() {
     const id = document.getElementById('subject-id').value;
     if(confirm('Usunąć ten przedmiot?')) {
-        subjects = subjects.filter(s => s.id !== id);
+        subjects = subjects.filter(s => s.id != id);
         saveToCloud();
         closeModals();
         renderSubjects();
@@ -159,7 +159,7 @@ function renderStudents() {
         let studentSubjectsHtml = '';
         if(student.subjectIds && student.subjectIds.length > 0) {
             student.subjectIds.forEach(subId => {
-                let sub = subjects.find(s => s.id === subId);
+                let sub = subjects.find(s => s.id == subId);
                 if(sub) {
                     studentSubjectsHtml += `<span class="text-xs font-bold px-2 py-1 rounded-md text-white border border-slate-800" style="background-color: ${sub.color}">${sub.name.toUpperCase()}</span> `;
                 }
@@ -175,8 +175,8 @@ function renderStudents() {
                     <div class="flex flex-wrap gap-1">${studentSubjectsHtml}</div>
                 </div>
                 <div class="flex flex-col gap-2">
-                    <button onclick="editStudent('${student.id}')" class="text-sm font-bold text-indigo-600 hover:underline">Edytuj</button>
-                    <button onclick="deleteStudent('${student.id}')" class="text-sm font-bold text-rose-500 hover:underline">Usuń</button>
+                    <button onclick="editStudent('${student.id}')" class="text-sm font-bold text-indigo-600 hover:underline text-right">Edytuj</button>
+                    <button onclick="deleteStudent('${student.id}')" class="text-sm font-bold text-rose-500 hover:underline text-right">Usuń</button>
                 </div>
             </div>`;
     });
@@ -185,7 +185,6 @@ function renderStudents() {
 function openStudentModal() {
     document.getElementById('student-name').value = '';
     
-    // Generowanie listy checkboxów z przedmiotami
     const container = document.getElementById('student-subjects-container');
     container.innerHTML = '';
     if(subjects.length === 0) {
@@ -203,13 +202,12 @@ function openStudentModal() {
         });
     }
     
-    // Zapisujemy, że to nowy uczeń (brak ukrytego ID w HTML, więc zrobimy to zmienną globalną dla prostoty lub podepniemy pod onclick)
     document.getElementById('modal-student').setAttribute('data-editing-id', '');
     document.getElementById('modal-student').classList.remove('hidden');
 }
 
 function editStudent(id) {
-    const student = students.find(s => s.id === id);
+    const student = students.find(s => s.id == id);
     if(!student) return;
     
     document.getElementById('student-name').value = student.name;
@@ -243,7 +241,7 @@ function saveStudent() {
     });
 
     if(editingId) {
-        let student = students.find(s => s.id === editingId);
+        let student = students.find(s => s.id == editingId);
         student.name = name;
         student.subjectIds = selectedSubjects;
     } else {
@@ -257,14 +255,14 @@ function saveStudent() {
 
 function deleteStudent(id) {
     if(confirm('Na pewno usunąć ucznia i jego wszystkie lekcje?')) {
-        students = students.filter(s => s.id !== id);
-        lessons = lessons.filter(l => l.studentId !== id);
+        students = students.filter(s => s.id != id);
+        lessons = lessons.filter(l => l.studentId != id);
         saveToCloud();
         renderStudents();
     }
 }
 
-// --- PULPIT (NOWY WYGLĄD) ---
+// --- PULPIT ---
 function renderDashboard() {
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -272,24 +270,20 @@ function renderDashboard() {
     const todayString = now.toISOString().split('T')[0];
     const nowTime = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
 
-    // Miesiace po polsku do tytułu
     const monthsGenitive = ["styczniu", "lutym", "marcu", "kwietniu", "maju", "czerwcu", "lipcu", "sierpniu", "wrześniu", "październiku", "listopadzie", "grudniu"];
     document.getElementById('pulpit-month-title').innerText = `Zarobki w ${monthsGenitive[currentMonth]}`;
 
-    // Obliczenia do kafelków
     let earnings = 0, lessonsThisMonth = 0, unpaidTotal = 0, unpaidCount = 0;
     
     lessons.forEach(l => {
         let lDate = new Date(l.date);
         let price = Number(l.price || 0);
         
-        // Zliczanie w obecnym miesiącu
         if(lDate.getMonth() === currentMonth && lDate.getFullYear() === currentYear) {
             lessonsThisMonth++;
             if(l.paid) earnings += price;
         }
         
-        // Zliczanie zaległości (wszystkie przeszłe nieopłacone)
         if(!l.paid && (l.date < todayString || (l.date === todayString && l.startTime < nowTime))) {
             unpaidTotal += price;
             unpaidCount++;
@@ -298,13 +292,11 @@ function renderDashboard() {
 
     document.getElementById('dashboard-monthly-earnings').innerText = `${earnings} zł`;
     document.getElementById('dashboard-monthly-lessons').innerText = `${lessonsThisMonth} lekcji w tym miesiącu`;
-    
     document.getElementById('dashboard-unpaid-sum').innerText = `${unpaidTotal} zł`;
     document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} zaległych lekcji łącznie`;
-    
     document.getElementById('dashboard-active-students').innerText = students.length;
 
-    // Nadchodzące lekcje (lista na lewo)
+    // Nadchodzące lekcje
     let upcomingLessons = lessons.filter(l => l.date > todayString || (l.date === todayString && l.startTime >= nowTime));
     upcomingLessons.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
     
@@ -314,12 +306,10 @@ function renderDashboard() {
     if(upcomingLessons.length === 0) {
         upcomingContainer.innerHTML = '<p class="text-slate-500 font-medium">Brak zaplanowanych lekcji.</p>';
     } else {
-        // Pokażmy maksymalnie 5 kolejnych
         upcomingLessons.slice(0, 5).forEach(l => {
-            let student = students.find(s => s.id === l.studentId) || {name: 'Nieznany'};
-            let subject = subjects.find(s => s.id === l.subjectId);
+            let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
+            let subject = subjects.find(s => s.id == l.subjectId);
             
-            // Formatowanie daty dla czytelności
             let lDate = new Date(l.date);
             let dayNames = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
             let dateDisplay = `${dayNames[lDate.getDay()]}, ${lDate.getDate()} ${monthsGenitive[lDate.getMonth()]}`;
@@ -345,9 +335,9 @@ function renderDashboard() {
         });
     }
 
-    // Zaległości płatnicze (lista na prawo)
+    // Zaległości
     let unpaidLessons = lessons.filter(l => !l.paid && (l.date < todayString || (l.date === todayString && l.startTime < nowTime)));
-    unpaidLessons.sort((a,b) => (b.date + b.startTime).localeCompare(a.date + a.startTime)); // od najnowszych zaległych
+    unpaidLessons.sort((a,b) => (b.date + b.startTime).localeCompare(a.date + a.startTime)); 
     
     const unpaidContainer = document.getElementById('pulpit-unpaid-lessons');
     unpaidContainer.innerHTML = '';
@@ -360,7 +350,7 @@ function renderDashboard() {
             </div>`;
     } else {
         unpaidLessons.slice(0, 5).forEach(l => {
-            let student = students.find(s => s.id === l.studentId) || {name: 'Nieznany'};
+            let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
             unpaidContainer.innerHTML += `
                 <div class="flex justify-between items-center p-3 border-2 border-rose-100 bg-rose-50 rounded-xl cursor-pointer hover:border-rose-300 transition" onclick="editLesson('${l.id}')">
                     <div>
@@ -371,9 +361,72 @@ function renderDashboard() {
                 </div>`;
         });
     }
+
+    // WIDOK TYGODNIOWY NA PULPICIE
+    const weekContainer = document.getElementById('pulpit-week-view');
+    weekContainer.innerHTML = '';
+
+    const mondayString = getMonday(now).toISOString().split('T')[0];
+    let sundayDate = new Date(getMonday(now));
+    sundayDate.setDate(sundayDate.getDate() + 6);
+    const sundayString = sundayDate.toISOString().split('T')[0];
+
+    let thisWeekLessons = lessons.filter(l => l.date >= mondayString && l.date <= sundayString);
+    thisWeekLessons.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
+
+    if(thisWeekLessons.length === 0) {
+        weekContainer.innerHTML = '<p class="text-slate-500 font-medium p-4">Pusty grafik na ten tydzień.</p>';
+    } else {
+        const daysNamesPL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
+        let lastDay = '';
+        
+        thisWeekLessons.forEach(l => {
+            let lDate = new Date(l.date);
+            let dayName = daysNamesPL[lDate.getDay()];
+            let dayDisplay = l.date === todayString ? '<span class="text-indigo-600">Dzisiaj</span>' : dayName;
+
+            if(l.date !== lastDay) {
+                weekContainer.innerHTML += `<div class="text-sm font-extrabold text-slate-800 uppercase tracking-wider mt-6 mb-2 border-b-2 border-slate-100 pb-1">${dayDisplay} <span class="text-slate-400 font-medium text-xs normal-case">(${l.date})</span></div>`;
+                lastDay = l.date;
+            }
+
+            let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
+            let subject = subjects.find(s => s.id == l.subjectId) || {name: 'Brak', color: '#cbd5e1'};
+            let paidIcon = l.paid 
+                ? '<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded border border-emerald-200 text-xs font-bold shadow-sm">Opłacone</span>' 
+                : '<span class="bg-rose-100 text-rose-700 px-2 py-1 rounded border border-rose-200 text-xs font-bold shadow-sm">Brak</span>';
+
+            weekContainer.innerHTML += `
+                <div class="flex items-center justify-between p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-indigo-400 hover:-translate-y-0.5 transition cursor-pointer shadow-[2px_2px_0_#e2e8f0]" onclick="editLesson('${l.id}')">
+                    <div class="flex items-center gap-4">
+                        <div class="w-1.5 h-12 rounded-full" style="background-color: ${subject.color}"></div>
+                        <div>
+                            <p class="font-extrabold text-slate-900">${l.startTime} - ${l.endTime}</p>
+                            <p class="text-sm font-medium text-slate-500">${student.name} <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 border border-slate-200 text-slate-600" style="background-color: ${hexToRgba(subject.color, 0.1)}">${subject.name.toUpperCase()}</span></p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-2">
+                        <span class="font-extrabold text-slate-900">${l.price || 0} zł</span>
+                        ${paidIcon}
+                    </div>
+                </div>`;
+        });
+    }
 }
 
 // --- KALENDARZ ---
+function changeWeek(offset) {
+    // Bezpieczniejsze przełączanie dni, żeby ominąć błędy mutacji Daty
+    let newDate = new Date(currentDate.getTime() + offset * 7 * 24 * 60 * 60 * 1000);
+    currentDate = newDate;
+    renderCalendar();
+}
+
+function goToToday() {
+    currentDate = new Date();
+    renderCalendar();
+}
+
 function renderCalendar() {
     let monday = getMonday(currentDate);
     let sunday = new Date(monday);
@@ -428,8 +481,8 @@ function renderCalendar() {
             let topPosition = ((parseInt(start[0]) - startHour) * 64) + (parseInt(start[1]) / 60 * 64);
             let height = (((parseInt(end[0]) - parseInt(start[0])) * 64) + ((parseInt(end[1]) - parseInt(start[1])) / 60 * 64));
 
-            let student = students.find(s => s.id === lesson.studentId) || {name: 'Usunięty uczeń'};
-            let subject = subjects.find(s => s.id === lesson.subjectId) || {name: 'Brak', color: '#cbd5e1'};
+            let student = students.find(s => s.id == lesson.studentId) || {name: 'Usunięty uczeń'};
+            let subject = subjects.find(s => s.id == lesson.subjectId) || {name: 'Brak', color: '#cbd5e1'};
             
             let bgColor = hexToRgba(subject.color, 0.15);
             let icon = lesson.paid ? '✅' : '<span class="text-rose-500">❗</span>';
@@ -479,19 +532,17 @@ setInterval(updateCurrentTimeLine, 60000);
 // --- LEKCJE (MODAL) ---
 function updateLessonSubjectDropdown() {
     const stId = document.getElementById('lesson-student').value;
-    const student = students.find(s => s.id === stId);
+    const student = students.find(s => s.id == stId);
     const subjectSelect = document.getElementById('lesson-subject');
     
     subjectSelect.innerHTML = '';
     if(!student || !student.subjectIds || student.subjectIds.length === 0) {
-        // Jeśli uczeń nie ma przypisanych przedmiotów, pokaż wszystkie z bazy
         subjects.forEach(sub => {
             subjectSelect.innerHTML += `<option value="${sub.id}">${sub.name}</option>`;
         });
     } else {
-        // Pokaż tylko te przypisane do ucznia
         student.subjectIds.forEach(subId => {
-            let sub = subjects.find(s => s.id === subId);
+            let sub = subjects.find(s => s.id == subId);
             if(sub) subjectSelect.innerHTML += `<option value="${sub.id}">${sub.name}</option>`;
         });
     }
@@ -515,14 +566,12 @@ function openLessonModal() {
         selectStudent.innerHTML += `<option value="${s.id}">${s.name}</option>`;
     });
 
-    // Puste przedmioty dopóki nie wybierze ucznia
     document.getElementById('lesson-subject').innerHTML = '<option value="">Wybierz ucznia najpierw...</option>';
-
     document.getElementById('modal-lesson').classList.remove('hidden');
 }
 
 function editLesson(id) {
-    const lesson = lessons.find(l => l.id === id);
+    const lesson = lessons.find(l => l.id == id);
     if(!lesson) return;
 
     document.getElementById('lesson-modal-title').innerText = 'Szczegóły lekcji';
@@ -539,11 +588,10 @@ function editLesson(id) {
     const selectStudent = document.getElementById('lesson-student');
     selectStudent.innerHTML = '';
     students.forEach(s => {
-        selectStudent.innerHTML += `<option value="${s.id}" ${s.id === lesson.studentId ? 'selected' : ''}>${s.name}</option>`;
+        selectStudent.innerHTML += `<option value="${s.id}" ${s.id == lesson.studentId ? 'selected' : ''}>${s.name}</option>`;
     });
 
-    updateLessonSubjectDropdown(); // Aktualizuje listę przedmiotów dla tego ucznia
-    // Ustawia zapisany przedmiot (jeśli istnieje)
+    updateLessonSubjectDropdown();
     if(lesson.subjectId) document.getElementById('lesson-subject').value = lesson.subjectId;
 
     document.getElementById('modal-lesson').classList.remove('hidden');
@@ -563,7 +611,7 @@ function saveLesson() {
     if(!studentId || !date || !subjectId) return alert('Wybierz ucznia, przedmiot i datę!');
 
     if (id) {
-        let lesson = lessons.find(l => l.id === id);
+        let lesson = lessons.find(l => l.id == id);
         lesson.studentId = studentId;
         lesson.subjectId = subjectId;
         lesson.date = date;
@@ -587,7 +635,7 @@ function saveLesson() {
                 startTime,
                 endTime,
                 price,
-                paid: (paid && i === 0) ? true : false // Tylko pierwsza (obecna) lekcja jest od razu oznaczana jako opłacona z automatu
+                paid: (paid && i === 0) ? true : false
             });
         }
     }
@@ -601,7 +649,7 @@ function saveLesson() {
 function deleteLesson() {
     const id = document.getElementById('lesson-id').value;
     if(confirm('Na pewno usunąć tę lekcję?')) {
-        lessons = lessons.filter(l => l.id !== id);
+        lessons = lessons.filter(l => l.id != id);
         saveToCloud();
         closeModals();
         renderCalendar();
@@ -626,10 +674,10 @@ function renderZarobki() {
             let price = Number(l.price || 0);
             total += price;
             
-            let studentName = (students.find(s => s.id === l.studentId) || {name: 'Nieznany'}).name;
+            let studentName = (students.find(s => s.id == l.studentId) || {name: 'Nieznany'}).name;
             byStudent[studentName] = (byStudent[studentName] || 0) + price;
             
-            let subject = subjects.find(s => s.id === l.subjectId);
+            let subject = subjects.find(s => s.id == l.subjectId);
             let subjectName = subject ? subject.name : 'Inne';
             let subjectColor = subject ? subject.color : '#8b5cf6';
 
