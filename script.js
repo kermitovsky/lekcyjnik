@@ -26,15 +26,19 @@ let settings = {
 };
 
 let currentDate = new Date();
-let datePicker; // Zmienna kalendarzyka
+let datePicker; 
+let chartInstances = {}; // Trzyma instancje wykresów z Chart.js
 
-// Uruchomienie kalendarzyka z biblioteki na start
+// Konfiguracja domyślna dla wykresów
+Chart.defaults.font.family = "'Inter', 'sans-serif'";
+Chart.defaults.color = '#64748b';
+
 document.addEventListener("DOMContentLoaded", () => {
     datePicker = flatpickr("#lesson-date", {
         locale: "pl",
-        dateFormat: "Y-m-d", // Zapis w formacie zrozumiałym dla bazy
+        dateFormat: "Y-m-d", 
         altInput: true,
-        altFormat: "d/m/Y",  // Widok dla użytkownika (DD/MM/YYYY)
+        altFormat: "d/m/Y",  
         allowInput: true
     });
 });
@@ -58,6 +62,11 @@ function applyVisualSettings() {
     document.getElementById('ust-start').value = settings.startHour;
     document.getElementById('ust-end').value = settings.endHour;
     document.getElementById('ust-czas').value = settings.duration;
+
+    // Odśwież wykresy, żeby zaktualizować kolory ramek
+    if(!document.getElementById('view-zarobki').classList.contains('hidden')) {
+        renderZarobki();
+    }
 }
 
 function ustawMotyw(theme) { settings.theme = theme; applyVisualSettings(); saveToCloud(); }
@@ -171,7 +180,9 @@ function switchTab(tabName) {
     if(tabName === 'uczniowie') renderStudents();
     if(tabName === 'przedmioty') renderSubjects();
     if(tabName === 'zarobki') {
-        document.getElementById('earnings-month-picker').value = `${new Date().getFullYear()}-${(new Date().getMonth()+1).toString().padStart(2, '0')}`;
+        const now = new Date();
+        document.getElementById('earnings-month-picker').value = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}`;
+        document.getElementById('earnings-week-picker').value = getWeekString(now); // Ustawia obecny tydzień
         renderZarobki();
     }
 }
@@ -180,6 +191,16 @@ function getMonday(d) {
     d = new Date(d);
     let day = d.getDay(), diff = d.getDate() - day + (day === 0 ? -6 : 1); 
     return new Date(d.setDate(diff));
+}
+
+// Funkcja pomocnicza zamieniająca Datę na String typu "2026-W10" używany w polu HTML <input type="week">
+function getWeekString(dateObj) {
+    let d = new Date(dateObj);
+    d.setHours(0,0,0,0);
+    d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+    let week1 = new Date(d.getFullYear(), 0, 4);
+    let weekNum = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+    return d.getFullYear() + '-W' + weekNum.toString().padStart(2, '0');
 }
 
 function hexToRgba(hex, alpha) {
@@ -331,9 +352,10 @@ function renderDashboard() {
     const currentYear = now.getFullYear();
     const todayString = now.toISOString().split('T')[0];
     const nowTime = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-    const monthsGenitive = ["styczniu", "lutym", "marcu", "kwietniu", "maju", "czerwcu", "lipcu", "sierpniu", "wrześniu", "październiku", "listopadzie", "grudniu"];
+    const monthNames = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+    const monthsGenitive = ["stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca", "lipca", "sierpnia", "września", "października", "listopada", "grudnia"];
     
-    document.getElementById('pulpit-month-title').innerText = `Zarobki w ${monthsGenitive[currentMonth]}`;
+    document.getElementById('pulpit-month-title').innerText = `Zarobki - ${monthNames[currentMonth]}`;
 
     let earnings = 0, lessonsThisMonth = 0, unpaidTotal = 0, unpaidCount = 0;
     
@@ -354,7 +376,7 @@ function renderDashboard() {
     });
 
     document.getElementById('dashboard-monthly-earnings').innerText = `${earnings} zł`;
-    document.getElementById('dashboard-monthly-lessons').innerText = `${lessonsThisMonth} odbytych lekcji`;
+    document.getElementById('dashboard-monthly-lessons').innerText = `${lessonsThisMonth} lekcji`;
     document.getElementById('dashboard-unpaid-sum').innerText = `${unpaidTotal} zł`;
     document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} zaległych lekcji`;
     document.getElementById('dashboard-active-students').innerText = students.length;
@@ -377,7 +399,7 @@ function renderDashboard() {
             let badge = subject ? `<span class="text-[10px] font-bold px-2 py-1 rounded border" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${subject.color}; border-color: ${subject.color}">${subject.name.toUpperCase()}</span>` : '';
 
             upcomingContainer.innerHTML += `
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition" style="background-color: var(--karta-bg); border-color: var(--szary-ramka)" onclick="editLesson('${l.id}')">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition shadow-sm hover:shadow-md" style="background-color: var(--karta-bg); border-color: var(--szary-ramka)" onclick="editLesson('${l.id}')">
                     <div class="flex items-center gap-4">
                         <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold border" style="background-color: var(--jasny); border-color: var(--szary-ramka); color: var(--tekst-szary)">🕒</div>
                         <div>
@@ -503,7 +525,7 @@ function renderCalendar() {
     }
     document.getElementById('calendar-header').innerHTML = headerHtml;
 
-    // Wysokość godzin zwiększona z h-16 na h-24 (czyli z 64px na 96px)
+    // Wysokość rzędu = 96px
     let gridHtml = `<div class="border-r-2 relative w-16 shrink-0 z-10" style="background-color: var(--karta-bg); border-color: var(--ciemny)">`;
     for(let h = settings.startHour; h <= settings.endHour; h++) {
         gridHtml += `<div class="h-24 time-row text-xs text-right pr-2 pt-1 font-bold" style="color: var(--tekst-szary)">${h}:00</div>`;
@@ -526,7 +548,6 @@ function renderCalendar() {
             
             if(parseInt(start[0]) < settings.startHour && parseInt(end[0]) <= settings.startHour) return;
 
-            // Zmieniony mnożnik na 96 pikseli (więcej miejsca na tekst)
             let topPosition = ((parseInt(start[0]) - settings.startHour) * 96) + (parseInt(start[1]) / 60 * 96);
             let height = (((parseInt(end[0]) - parseInt(start[0])) * 96) + ((parseInt(end[1]) - parseInt(start[1])) / 60 * 96));
             
@@ -570,7 +591,6 @@ function updateCurrentTimeLine() {
         let hours = now.getHours();
         let minutes = now.getMinutes();
         if(hours >= settings.startHour && hours <= settings.endHour) {
-            // Mnożnik zmieniony na 96 pikseli, żeby różowa linia idealnie zgrywała się z kafelkami
             let top = ((hours - settings.startHour) * 96) + (minutes / 60 * 96);
             line.style.top = `${top}px`;
         } else { line.classList.add('hidden'); }
@@ -598,7 +618,6 @@ function openLessonModal() {
     document.getElementById('lesson-modal-title').innerText = 'Zaplanuj lekcję';
     document.getElementById('lesson-id').value = '';
     
-    // Ustawienie dzisiejszej daty w kalendarzyku
     if(datePicker) datePicker.setDate(new Date().toISOString().split('T')[0]);
     
     document.getElementById('lesson-time-start').value = '15:00';
@@ -625,7 +644,6 @@ function editLesson(id) {
     document.getElementById('lesson-modal-title').innerText = 'Szczegóły lekcji';
     document.getElementById('lesson-id').value = lesson.id;
     
-    // Wczytanie daty do kalendarzyka
     if(datePicker) datePicker.setDate(lesson.date);
     
     document.getElementById('lesson-time-start').value = lesson.startTime;
@@ -652,10 +670,7 @@ function saveLesson() {
     const id = document.getElementById('lesson-id').value;
     const studentId = document.getElementById('lesson-student').value;
     const subjectId = document.getElementById('lesson-subject').value;
-    
-    // Pobieranie właściwej daty z kalendarzyka w ukrytym formacie YYYY-MM-DD
     const date = document.getElementById('lesson-date').value;
-    
     const startTime = document.getElementById('lesson-time-start').value;
     const endTime = document.getElementById('lesson-time-end').value;
     const price = document.getElementById('lesson-price').value;
@@ -697,36 +712,86 @@ function deleteLesson() {
     }
 }
 
-// --- ZAROBKI ---
-function renderZarobki() {
-    const monthPicker = document.getElementById('earnings-month-picker').value;
-    if(!monthPicker) return;
-    const [year, month] = monthPicker.split('-');
-    
-    let total = 0; let byStudent = {}; let bySubject = {};
+// --- ZAROBKI (Z WYKRESAMI) ---
+function processEarningsData(lessonsArray) {
+    let total = 0;
+    let byStudent = {};
+    let bySubject = {};
 
-    lessons.forEach(l => {
-        let lDate = new Date(l.date);
-        if(lDate.getFullYear() == year && (lDate.getMonth() + 1) == month && l.paid && !l.cancelled) {
+    lessonsArray.forEach(l => {
+        if(l.paid && !l.cancelled) {
             let price = Number(l.price || 0);
             total += price;
-            let studentName = (students.find(s => s.id == l.studentId) || {name: 'Nieznany'}).name;
+
+            let student = students.find(s => s.id == l.studentId);
+            let studentName = student ? student.name : 'Nieznany uczeń';
             byStudent[studentName] = (byStudent[studentName] || 0) + price;
+
             let subject = subjects.find(s => s.id == l.subjectId);
             let subjectName = subject ? subject.name : 'Inne';
-            let subjectColor = subject ? subject.color : '#8b5cf6';
+            let subjectColor = subject ? subject.color : settings.accent;
+
             if(!bySubject[subjectName]) bySubject[subjectName] = {val: 0, color: subjectColor};
             bySubject[subjectName].val += price;
         }
     });
 
-    const studentContainer = document.getElementById('earnings-by-student');
-    studentContainer.innerHTML = '';
-    let studentArray = Object.keys(byStudent).map(k => ({name: k, val: byStudent[k]})).sort((a,b) => b.val - a.val);
-    if(studentArray.length === 0) studentContainer.innerHTML = '<p style="color: var(--tekst-szary)">Brak opłaconych lekcji.</p>';
-    studentArray.forEach(item => {
-        let width = Math.max(10, (item.val / total) * 100);
-        studentContainer.innerHTML += `
+    let studentArr = Object.keys(byStudent).map(k => ({name: k, val: byStudent[k]})).sort((a,b) => b.val - a.val);
+    let subjectArr = Object.keys(bySubject).map(k => ({name: k, val: bySubject[k].val, color: bySubject[k].color})).sort((a,b) => b.val - a.val);
+
+    return { total, studentArr, subjectArr };
+}
+
+function renderChart(canvasId, type, dataArr) {
+    if(chartInstances[canvasId]) chartInstances[canvasId].destroy();
+    const ctx = document.getElementById(canvasId).getContext('2d');
+
+    if(dataArr.length === 0) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        return;
+    }
+
+    const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--ciemny').trim();
+
+    chartInstances[canvasId] = new Chart(ctx, {
+        type: type,
+        data: {
+            labels: dataArr.map(d => d.name),
+            datasets: [{
+                data: dataArr.map(d => d.val),
+                backgroundColor: dataArr.map(d => d.color || settings.accent),
+                borderColor: borderColor,
+                borderWidth: 2,
+                borderRadius: type === 'bar' ? 6 : 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: type === 'doughnut', position: 'bottom' }
+            },
+            scales: type === 'bar' ? {
+                y: { 
+                    beginAtZero: true, 
+                    grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--szary-ramka').trim() }
+                },
+                x: { grid: { display: false } }
+            } : undefined
+        }
+    });
+}
+
+function renderStudentList(containerId, studentArr, total) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    if(studentArr.length === 0) {
+        container.innerHTML = '<p style="color: var(--tekst-szary)">Brak opłaconych lekcji.</p>';
+        return;
+    }
+    studentArr.forEach(item => {
+        let width = total > 0 ? Math.max(5, (item.val / total) * 100) : 0;
+        container.innerHTML += `
             <div class="mb-3">
                 <div class="flex justify-between text-sm font-bold mb-1">
                     <span>${item.name}</span><span style="color: var(--akcent)">${item.val} zł</span>
@@ -736,23 +801,33 @@ function renderZarobki() {
                 </div>
             </div>`;
     });
+}
 
-    const subjectContainer = document.getElementById('earnings-by-subject');
-    subjectContainer.innerHTML = '';
-    let subjectArray = Object.keys(bySubject).map(k => ({name: k, val: bySubject[k].val, color: bySubject[k].color})).sort((a,b) => b.val - a.val);
-    if(subjectArray.length === 0) subjectContainer.innerHTML = '<p style="color: var(--tekst-szary)">Brak opłaconych lekcji.</p>';
-    subjectArray.forEach(item => {
-        let width = Math.max(10, (item.val / total) * 100);
-        subjectContainer.innerHTML += `
-            <div class="mb-3">
-                <div class="flex justify-between text-sm font-bold mb-1">
-                    <span>${item.name}</span><span style="color: var(--akcent)">${item.val} zł</span>
-                </div>
-                <div class="w-full rounded-full h-3 border-2" style="background-color: var(--jasny); border-color: var(--szary-ramka)">
-                    <div class="h-full rounded-full border border-white" style="width: ${width}%; background-color: ${item.color}"></div>
-                </div>
-            </div>`;
-    });
+function renderZarobki() {
+    const monthPicker = document.getElementById('earnings-month-picker').value; 
+    const weekPicker = document.getElementById('earnings-week-picker').value;
+
+    // 1. CAŁY CZAS
+    const allData = processEarningsData(lessons);
+    document.getElementById('total-all-earnings').innerText = `${allData.total} zł`;
+    renderChart('chart-all-subject', 'doughnut', allData.subjectArr);
+    renderStudentList('list-all-student', allData.studentArr, allData.total);
+
+    // 2. MIESIĄC
+    if(monthPicker) {
+        const monthLessons = lessons.filter(l => l.date.substring(0,7) === monthPicker);
+        const monthData = processEarningsData(monthLessons);
+        document.getElementById('total-month-earnings').innerText = `${monthData.total} zł`;
+        renderChart('chart-month-subject', 'bar', monthData.subjectArr);
+    }
+
+    // 3. TYDZIEŃ
+    if(weekPicker) {
+        const weekLessons = lessons.filter(l => getWeekString(l.date) === weekPicker);
+        const weekData = processEarningsData(weekLessons);
+        document.getElementById('total-week-earnings').innerText = `${weekData.total} zł`;
+        renderChart('chart-week-subject', 'bar', weekData.subjectArr);
+    }
 }
 
 function closeModals() {
