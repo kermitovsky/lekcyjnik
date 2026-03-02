@@ -1,0 +1,17 @@
+/* Tło w kropeczki */
+.bg-dots {
+    background-color: #fdfdfd;
+    background-image: radial-gradient(#d1d5db 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+
+/* Nowoczesne paski przewijania */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Przerywane linie kalendarza */
+.time-row { border-bottom: 1px dashed #e2e8f0; }
+.day-col { border-right: 1px dashed #e2e8f0; }
+.day-col:last-child { border-right: none; }
