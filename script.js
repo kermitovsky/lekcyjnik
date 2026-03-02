@@ -385,7 +385,7 @@ function renderDashboard() {
             upcomingContainer.innerHTML += `
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-sm hover:shadow-md gap-2 sm:gap-0" style="background-color: var(--karta-bg); border-color: var(--szary-ramka)" onclick="editLesson('${l.id}')">
                     <div class="flex items-center gap-3 md:gap-4">
-                        <div class="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-bold border text-sm md:text-base" style="background-color: var(--jasny); border-color: var(--szary-ramka); color: var(--tekst-szary)">🕒</div>
+                        <div class="w-8 h-8 md:w-10 h-10 rounded-full flex items-center justify-center font-bold border text-sm md:text-base" style="background-color: var(--jasny); border-color: var(--szary-ramka); color: var(--tekst-szary)">🕒</div>
                         <div>
                             <div class="font-extrabold text-sm md:text-base">${student.name}</div>
                             <div class="text-xs md:text-sm font-medium" style="color: var(--tekst-szary)">${dateDisplay}, ${l.startTime}</div>
@@ -402,7 +402,8 @@ function renderDashboard() {
     const unpaidContainer = document.getElementById('pulpit-unpaid-lessons');
     unpaidContainer.innerHTML = '';
     if(unpaidLessons.length === 0) {
-        unpaidContainer.innerHTML = `<div class="border-2 p-4 md:p-6 rounded-xl text-center" style="background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3)"><div class="text-2xl md:text-3xl mb-1 md:mb-2">🎉</div><p class="text-emerald-500 font-bold text-sm md:text-base">Wszyscy opłaceni!</p></div>`;
+        // ZMIENIONY TEKST NA ZGODNY Z LOGIKĄ
+        unpaidContainer.innerHTML = `<div class="border-2 p-4 md:p-6 rounded-xl text-center" style="background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3)"><div class="text-2xl md:text-3xl mb-1 md:mb-2">🎉</div><p class="text-emerald-500 font-bold text-sm md:text-base">Uczniowie nie mają zaległości.</p></div>`;
     } else {
         unpaidLessons.slice(0, 5).forEach(l => {
             let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
@@ -688,7 +689,7 @@ function saveLesson() {
 
 function deleteLesson() {
     const id = document.getElementById('lesson-id').value;
-    if(confirm('Na pewno całkowicie USUNĄĆ tę lekcję?')) {
+    if(confirm('Na pewno całkowicie USUNĄĆ tę lekcję? (Zamiast tego możesz po prostu zaznaczyć ją jako odwołaną)')) {
         lessons = lessons.filter(l => l.id != id);
         saveToCloud(); closeModals(); renderCalendar();
         if(!document.getElementById('view-pulpit').classList.contains('hidden')) renderDashboard();
