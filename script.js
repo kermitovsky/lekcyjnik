@@ -11,7 +11,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-let currentUser = null; // Zmienna trzymająca zalogowanego użytkownika
+let currentUser = null; 
 
 let subjects = [];
 let students = [];
@@ -24,30 +24,45 @@ const endHour = 22;
 // --- LOGOWANIE I WYLOWANIE ---
 firebase.auth().onAuthStateChanged((user) => {
     if (user) {
-        // Użytkownik jest zalogowany!
         currentUser = user;
-        
-        // Ukrywamy ekran logowania, pokazujemy menu i główną zawartość
         document.getElementById('view-login').classList.add('hidden');
         document.getElementById('app-nav').classList.remove('hidden');
         document.getElementById('main-content').classList.remove('hidden');
-        
-        pobierzDaneZChmury(); // Pobieramy jego prywatne dane
+        pobierzDaneZChmury(); 
     } else {
-        // Użytkownik nie jest zalogowany
         currentUser = null;
-        
-        // Pokazujemy ekran logowania, ukrywamy resztę
         document.getElementById('view-login').classList.remove('hidden');
         document.getElementById('app-nav').classList.add('hidden');
         document.getElementById('main-content').classList.add('hidden');
     }
 });
 
+// Nowe: Logowanie i Rejestracja przez Email
+function zalogujPrzezEmail() {
+    const email = document.getElementById('login-email').value;
+    const haslo = document.getElementById('login-haslo').value;
+    if(!email || !haslo) return alert("Wpisz email i hasło!");
+
+    firebase.auth().signInWithEmailAndPassword(email, haslo)
+        .catch(error => alert("Błąd logowania. Sprawdź poprawność danych (lub załóż nowe konto). Błąd: " + error.message));
+}
+
+function zarejestrujPrzezEmail() {
+    const email = document.getElementById('login-email').value;
+    const haslo = document.getElementById('login-haslo').value;
+    if(!email || !haslo) return alert("Wpisz email i hasło!");
+    if(haslo.length < 6) return alert("Twoje hasło musi mieć co najmniej 6 znaków!");
+
+    firebase.auth().createUserWithEmailAndPassword(email, haslo)
+        .then(() => alert("Super! Konto zostało założone i jesteś zalogowany."))
+        .catch(error => alert("Błąd rejestracji: " + error.message));
+}
+
+// Stare: Logowanie przez Google
 function zalogujPrzezGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
     firebase.auth().signInWithPopup(provider).catch(error => {
-        alert("Błąd logowania: " + error.message);
+        alert("Błąd logowania Google: " + error.message);
     });
 }
 
@@ -55,16 +70,14 @@ function wyloguj() {
     firebase.auth().signOut();
 }
 
-// --- POBIERANIE I ZAPIS DANYCH DLA KONKRETNEGO KONTA ---
+// --- POBIERANIE I ZAPIS DANYCH ---
 function pobierzDaneZChmury() {
-    // Odwołujemy się do szufladki z numerem ID zalogowanego użytkownika (currentUser.uid)
     db.collection("planer_korepetytora").doc(currentUser.uid).get().then((doc) => {
         if (doc.exists) {
             subjects = doc.data().subjects || [];
             students = doc.data().students || [];
             lessons = doc.data().lessons || [];
         } else {
-            // Jeśli to nowe konto, zresetuj tablice
             subjects = [];
             students = [];
             lessons = [];
@@ -77,8 +90,7 @@ function pobierzDaneZChmury() {
 }
 
 function saveToCloud() {
-    if(!currentUser) return; // Jeśli nie jest zalogowany, nie zapisuj
-    
+    if(!currentUser) return; 
     db.collection("planer_korepetytora").doc(currentUser.uid).set({
         subjects: subjects,
         students: students,
