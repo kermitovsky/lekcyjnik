@@ -1,4 +1,4 @@
-// --- KONFIGURACJA FIREBASE (Bez zmian, dane zostają te same) ---
+// --- KONFIGURACJA FIREBASE ---
 const firebaseConfig = {
     apiKey: "AIzaSyBAEop-rCgSrVWKlcf02OTM_vPSxtNFl38",
     authDomain: "lekcyjnik-90745.firebaseapp.com",
@@ -11,6 +11,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+let currentUser = null; // Zmienna trzymająca zalogowanego użytkownika
+
 let subjects = [];
 let students = [];
 let lessons = [];
@@ -19,41 +21,81 @@ let currentDate = new Date();
 const startHour = 7;
 const endHour = 22;
 
-// --- POBIERANIE DANYCH ---
-db.collection("moj_lekcyjnik").doc("baza_danych").get().then((doc) => {
-    if (doc.exists) {
-        subjects = doc.data().subjects || [];
-        students = doc.data().students || [];
-        lessons = doc.data().lessons || [];
+// --- LOGOWANIE I WYLOWANIE ---
+firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+        // Użytkownik jest zalogowany!
+        currentUser = user;
+        
+        // Ukrywamy ekran logowania, pokazujemy menu i główną zawartość
+        document.getElementById('view-login').classList.add('hidden');
+        document.getElementById('app-nav').classList.remove('hidden');
+        document.getElementById('main-content').classList.remove('hidden');
+        
+        pobierzDaneZChmury(); // Pobieramy jego prywatne dane
+    } else {
+        // Użytkownik nie jest zalogowany
+        currentUser = null;
+        
+        // Pokazujemy ekran logowania, ukrywamy resztę
+        document.getElementById('view-login').classList.remove('hidden');
+        document.getElementById('app-nav').classList.add('hidden');
+        document.getElementById('main-content').classList.add('hidden');
     }
-    switchTab('pulpit');
-}).catch((error) => {
-    console.error("Błąd połączenia z bazą:", error);
-    switchTab('pulpit'); 
 });
 
-// --- ZAPIS ---
+function zalogujPrzezGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider).catch(error => {
+        alert("Błąd logowania: " + error.message);
+    });
+}
+
+function wyloguj() {
+    firebase.auth().signOut();
+}
+
+// --- POBIERANIE I ZAPIS DANYCH DLA KONKRETNEGO KONTA ---
+function pobierzDaneZChmury() {
+    // Odwołujemy się do szufladki z numerem ID zalogowanego użytkownika (currentUser.uid)
+    db.collection("planer_korepetytora").doc(currentUser.uid).get().then((doc) => {
+        if (doc.exists) {
+            subjects = doc.data().subjects || [];
+            students = doc.data().students || [];
+            lessons = doc.data().lessons || [];
+        } else {
+            // Jeśli to nowe konto, zresetuj tablice
+            subjects = [];
+            students = [];
+            lessons = [];
+        }
+        switchTab('pulpit');
+    }).catch((error) => {
+        console.error("Błąd połączenia z bazą:", error);
+        switchTab('pulpit'); 
+    });
+}
+
 function saveToCloud() {
-    db.collection("moj_lekcyjnik").doc("baza_danych").set({
+    if(!currentUser) return; // Jeśli nie jest zalogowany, nie zapisuj
+    
+    db.collection("planer_korepetytora").doc(currentUser.uid).set({
         subjects: subjects,
         students: students,
         lessons: lessons
     });
 }
 
-// --- NAWIGACJA (Dostosowana do nowego pliku CSS) ---
+// --- NAWIGACJA ---
 function switchTab(tabName) {
-    // Ukryj wszystkie widoki
     ['pulpit', 'kalendarz', 'uczniowie', 'przedmioty', 'zarobki'].forEach(id => {
         document.getElementById(`view-${id}`).classList.add('hidden');
     });
     
-    // Zdejmij podświetlenie ze wszystkich przycisków
     document.querySelectorAll('.nav-tab').forEach(btn => {
         btn.classList.remove('aktywna');
     });
 
-    // Włącz odpowiedni widok i podświetl przycisk
     document.getElementById(`view-${tabName}`).classList.remove('hidden');
     document.getElementById(`tab-${tabName}`).classList.add('aktywna');
 
