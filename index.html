@@ -5,33 +5,136 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mój Lekcyjnik</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-100 p-4 font-sans text-gray-800 min-h-screen">
-    <div class="max-w-4xl mx-auto space-y-6">
-        
-        <h1 class="text-4xl font-bold text-blue-600 text-center mt-4">Twój Lekcyjnik</h1>
+<body class="bg-dots text-gray-800 font-sans h-screen flex flex-col overflow-hidden">
 
-        <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-            <h2 class="font-bold text-xl mb-4 text-gray-700">Dodaj nową lekcję</h2>
-            <form id="lesson-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <input type="text" id="student" placeholder="Imię ucznia" class="border p-3 rounded-lg bg-gray-50 outline-none focus:border-blue-500" required>
-                <input type="text" id="subject" placeholder="Przedmiot" class="border p-3 rounded-lg bg-gray-50 outline-none focus:border-blue-500" required>
-                <select id="day" class="border p-3 rounded-lg bg-gray-50 outline-none focus:border-blue-500">
-                    <option value="Poniedziałek">Poniedziałek</option>
-                    <option value="Wtorek">Wtorek</option>
-                    <option value="Środa">Środa</option>
-                    <option value="Czwartek">Czwartek</option>
-                    <option value="Piątek">Piątek</option>
-                </select>
-                <input type="time" id="time" class="border p-3 rounded-lg bg-gray-50 outline-none focus:border-blue-500" required>
-                <input type="number" id="price" placeholder="Cena (zł)" class="border p-3 rounded-lg bg-gray-50 outline-none focus:border-blue-500" required>
-                <button type="submit" class="bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-blue-700 transition">Dodaj do kalendarza</button>
-            </form>
+    <nav class="bg-white/90 backdrop-blur border-b border-gray-200 px-4 md:px-6 py-4 flex items-center justify-between md:justify-start gap-2 md:gap-6 z-30 relative">
+        <h1 class="font-bold text-xl text-indigo-600 hidden md:block mr-4">Lekcyjnik</h1>
+        <button onclick="switchTab('pulpit')" id="tab-pulpit" class="nav-tab text-gray-500 hover:text-gray-900 font-medium px-4 py-2 rounded-full transition">Pulpit</button>
+        <button onclick="switchTab('kalendarz')" id="tab-kalendarz" class="nav-tab bg-indigo-500 text-white shadow-md font-medium px-6 py-2 rounded-full transition">Kalendarz</button>
+        <button onclick="switchTab('uczniowie')" id="tab-uczniowie" class="nav-tab text-gray-500 hover:text-gray-900 font-medium px-4 py-2 rounded-full transition">Uczniowie</button>
+    </nav>
+
+    <main class="flex-1 overflow-auto p-4 md:p-6 relative" id="main-content">
+        
+        <div id="view-pulpit" class="max-w-4xl mx-auto hidden space-y-6">
+            <h2 class="text-3xl font-extrabold text-gray-900 mb-6">Podsumowanie</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-gray-500 font-medium mb-2">Zarobki w tym miesiącu</h3>
+                    <p id="monthly-earnings" class="text-4xl font-bold text-green-500">0 zł</p>
+                    <p class="text-sm text-gray-400 mt-2">Tylko opłacone lekcje</p>
+                </div>
+                
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-gray-500 font-medium mb-4">Lekcje na dzisiaj</h3>
+                    <div id="today-lessons-list" class="space-y-3">
+                        </div>
+                </div>
+            </div>
         </div>
 
-        <div id="lessons-container" class="space-y-6">
+        <div id="view-kalendarz" class="max-w-6xl mx-auto h-full flex flex-col">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h2 id="month-year-display" class="text-2xl md:text-3xl font-extrabold text-gray-900"></h2>
+                    <p id="week-range-display" class="text-gray-500 font-medium uppercase text-sm mt-1"></p>
+                </div>
+                
+                <div class="flex items-center gap-2 md:gap-4 w-full md:w-auto justify-between md:justify-end">
+                    <div class="flex bg-white rounded-full border border-gray-200 shadow-sm overflow-hidden">
+                        <button onclick="changeWeek(-1)" class="px-3 md:px-4 py-2 hover:bg-gray-50 font-bold">&lt;</button>
+                        <button onclick="goToToday()" class="px-3 md:px-4 py-2 border-x border-gray-200 hover:bg-gray-50 text-xs md:text-sm font-bold">DZISIAJ</button>
+                        <button onclick="changeWeek(1)" class="px-3 md:px-4 py-2 hover:bg-gray-50 font-bold">&gt;</button>
+                    </div>
+                    <button onclick="openLessonModal()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 md:px-6 rounded-full shadow-lg whitespace-nowrap">
+                        + Lekcja
+                    </button>
+                </div>
             </div>
 
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 flex-1 flex flex-col overflow-hidden">
+                <div class="overflow-x-auto flex-1 flex flex-col">
+                    <div class="min-w-[800px] flex-1 flex flex-col">
+                        <div id="calendar-header" class="grid grid-cols-8 border-b border-gray-200 bg-white sticky top-0 z-20"></div>
+                        
+                        <div class="relative flex-1 overflow-y-auto" id="calendar-body-scroll">
+                            <div id="current-time-line" class="absolute left-0 right-0 h-px bg-pink-500 z-10 pointer-events-none hidden">
+                                <div class="absolute left-8 -top-1.5 w-3 h-3 bg-pink-500 rounded-full"></div>
+                            </div>
+                            <div id="calendar-grid" class="grid grid-cols-8 relative min-h-[900px]"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-uczniowie" class="max-w-4xl mx-auto hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-extrabold text-gray-900">Baza Uczniów</h2>
+                <button onclick="openStudentModal()" class="bg-indigo-500 text-white font-bold py-2 px-6 rounded-full shadow-lg">+ Dodaj ucznia</button>
+            </div>
+            <div id="students-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </div>
+
+    </main>
+
+    <div id="modal-student" class="fixed inset-0 bg-black/50 hidden flex justify-center items-center z-50 p-4">
+        <div class="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl">
+            <h3 class="text-xl font-bold mb-4">Uczeń</h3>
+            <input type="text" id="student-name" placeholder="Imię i nazwisko" class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500">
+            <input type="text" id="student-subjects" placeholder="Przedmioty (np. Matematyka)" class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500">
+            <div class="mb-4">
+                <label class="text-sm text-gray-500 mb-1 block">Kolor w kalendarzu:</label>
+                <input type="color" id="student-color" value="#6366f1" class="w-full h-10 rounded cursor-pointer border-0">
+            </div>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModals()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">Anuluj</button>
+                <button onclick="saveStudent()" class="px-4 py-2 bg-indigo-500 text-white font-bold rounded-lg">Zapisz</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-lesson" class="fixed inset-0 bg-black/50 hidden flex justify-center items-center z-50 p-4">
+        <div class="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl">
+            <h3 id="lesson-modal-title" class="text-xl font-bold mb-4">Zaplanuj lekcję</h3>
+            
+            <input type="hidden" id="lesson-id">
+            
+            <select id="lesson-student" class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500"></select>
+            
+            <input type="date" id="lesson-date" class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500">
+            
+            <div class="flex gap-2 mb-3">
+                <input type="time" id="lesson-time-start" class="w-1/2 border p-3 rounded-lg outline-none focus:border-indigo-500" value="15:00">
+                <input type="time" id="lesson-time-end" class="w-1/2 border p-3 rounded-lg outline-none focus:border-indigo-500" value="16:00">
+            </div>
+
+            <input type="number" id="lesson-price" placeholder="Cena (zł)" class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500">
+            
+            <textarea id="lesson-notes" placeholder="Notatki, temat, zadanie domowe..." class="w-full border p-3 rounded-lg mb-3 outline-none focus:border-indigo-500 h-24 resize-none"></textarea>
+
+            <div class="flex items-center justify-between mb-4 bg-gray-50 p-3 rounded-lg border">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="lesson-paid" class="w-5 h-5 accent-green-500">
+                    <span class="font-bold text-gray-700">Opłacone</span>
+                </label>
+                <label id="recurring-box" class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="lesson-recurring" class="w-4 h-4 accent-indigo-500">
+                    <span class="text-sm text-gray-600">Co tydzień</span>
+                </label>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <button id="btn-delete-lesson" onclick="deleteLesson()" class="text-red-500 font-bold hover:underline hidden">Usuń</button>
+                <div class="flex gap-2 ml-auto">
+                    <button onclick="closeModals()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">Anuluj</button>
+                    <button onclick="saveLesson()" class="px-4 py-2 bg-indigo-500 text-white font-bold rounded-lg">Zapisz</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
