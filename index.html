@@ -18,6 +18,8 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/pl.js"></script>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5" id="meta-theme-color">
@@ -81,7 +83,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="karta flex flex-col justify-between">
                     <div class="flex justify-between items-start mb-4">
-                        <span id="pulpit-month-title" class="font-medium text-lg">Zarobki w miesiącu</span>
+                        <span id="pulpit-month-title" class="font-medium text-lg">Zarobki</span>
                         <span class="text-xl">📅</span>
                     </div>
                     <div>
@@ -108,8 +110,7 @@
                     </div>
                     <div>
                         <div id="dashboard-active-students" class="text-4xl font-extrabold mb-1">0</div>
-                        <div class="text-sm font-medium" style="color: var(--tekst-szary)">stan na teraz</div>
-                    </div>
+                        <div class="text-sm font-medium" style="color: var(--karta-bg)">-</div> </div>
                 </div>
             </div>
 
@@ -138,7 +139,7 @@
                 <h2 id="month-year-display" class="text-2xl md:text-3xl font-extrabold"></h2>
                 
                 <div class="flex items-center gap-2 md:gap-4 w-full md:w-auto justify-between">
-                    <button onclick="goToToday()" class="border-2 font-bold py-2 px-4 rounded-full text-sm" style="background-color: var(--karta-bg); border-color: var(--szary-ramka)">Dzisiaj</button>
+                    <button onclick="goToToday()" class="border-2 font-bold py-2 px-4 rounded-full text-sm hover:opacity-70" style="background-color: var(--karta-bg); border-color: var(--szary-ramka)">Dzisiaj</button>
                     <div class="flex rounded-full border-2 overflow-hidden items-center shadow-sm" style="background-color: var(--karta-bg); border-color: var(--szary-ramka)">
                         <button onclick="changeWeek(-1)" class="px-4 py-2 font-bold border-r-2 hover:opacity-70" style="border-color: var(--szary-ramka)">&lt;</button>
                         <span id="calendar-week-btn-text" class="px-4 py-2 text-sm font-bold min-w-[120px] text-center"></span>
@@ -179,24 +180,63 @@
             <div id="students-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </div>
 
-        <div id="view-zarobki" class="max-w-5xl mx-auto hidden space-y-6">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-3xl font-extrabold">Raport Finansowy</h2>
-                <input type="month" id="earnings-month-picker" onchange="renderZarobki()" class="border-2 p-2 rounded-xl font-bold outline-none shadow-[2px_2px_0_var(--ciemny)]" style="background-color: var(--karta-bg); border-color: var(--ciemny); color: var(--tekst-glowny)">
+        <div id="view-zarobki" class="max-w-6xl mx-auto hidden space-y-12 pb-12">
+            <div>
+                <h2 class="text-4xl font-extrabold mb-2">Raport Finansowy</h2>
+                <p style="color: var(--tekst-szary)">Przeanalizuj swoje przychody z podziałem na okresy, przedmioty i uczniów.</p>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="karta">
-                    <h3 class="text-xl font-bold mb-4 border-b-2 pb-2" style="border-color: var(--szary-ramka)">Zarobki wg Ucznia</h3>
-                    <div id="earnings-by-student" class="space-y-3"></div>
+
+            <section class="space-y-6">
+                <h3 class="text-2xl font-extrabold border-b-2 pb-2" style="border-color: var(--szary-ramka)">1. Łączne zarobki (od początku)</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="karta text-center flex flex-col justify-center items-center lg:col-span-1">
+                        <p class="text-sm font-bold uppercase mb-2" style="color: var(--tekst-szary)">Całkowity przychód</p>
+                        <p class="text-5xl font-extrabold" style="color: var(--akcent)" id="total-all-earnings">0 zł</p>
+                    </div>
+                    <div class="karta lg:col-span-1 min-h-[250px] relative">
+                        <canvas id="chart-all-subject"></canvas>
+                    </div>
+                    <div class="karta lg:col-span-1">
+                        <h4 class="font-bold mb-4 border-b-2 pb-2" style="border-color: var(--szary-ramka)">Top Uczniowie</h4>
+                        <div id="list-all-student" class="space-y-3 max-h-48 overflow-y-auto pr-2"></div>
+                    </div>
                 </div>
-                <div class="karta">
-                    <h3 class="text-xl font-bold mb-4 border-b-2 pb-2" style="border-color: var(--szary-ramka)">Zarobki wg Przedmiotu</h3>
-                    <div id="earnings-by-subject" class="space-y-3"></div>
+            </section>
+
+            <section class="space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between sm:items-end border-b-2 pb-2 gap-4" style="border-color: var(--szary-ramka)">
+                    <h3 class="text-2xl font-extrabold">2. Zarobki w miesiącu</h3>
+                    <input type="month" id="earnings-month-picker" onchange="renderZarobki()" class="border-2 p-2 rounded-xl font-bold outline-none cursor-pointer" style="background-color: var(--karta-bg); border-color: var(--ciemny); color: var(--tekst-glowny)">
                 </div>
-            </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="karta text-center flex flex-col justify-center items-center lg:col-span-1">
+                        <p class="text-sm font-bold uppercase mb-2" style="color: var(--tekst-szary)">Przychód w tym miesiącu</p>
+                        <p class="text-5xl font-extrabold" style="color: var(--akcent)" id="total-month-earnings">0 zł</p>
+                    </div>
+                    <div class="karta lg:col-span-2 min-h-[250px] relative">
+                        <canvas id="chart-month-subject"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section class="space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between sm:items-end border-b-2 pb-2 gap-4" style="border-color: var(--szary-ramka)">
+                    <h3 class="text-2xl font-extrabold">3. Zarobki w wybranym tygodniu</h3>
+                    <input type="week" id="earnings-week-picker" onchange="renderZarobki()" class="border-2 p-2 rounded-xl font-bold outline-none cursor-pointer" style="background-color: var(--karta-bg); border-color: var(--ciemny); color: var(--tekst-glowny)">
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="karta text-center flex flex-col justify-center items-center lg:col-span-1">
+                        <p class="text-sm font-bold uppercase mb-2" style="color: var(--tekst-szary)">Przychód w tym tygodniu</p>
+                        <p class="text-5xl font-extrabold" style="color: var(--akcent)" id="total-week-earnings">0 zł</p>
+                    </div>
+                    <div class="karta lg:col-span-2 min-h-[250px] relative">
+                        <canvas id="chart-week-subject"></canvas>
+                    </div>
+                </div>
+            </section>
         </div>
 
-        <div id="view-ustawienia" class="max-w-3xl mx-auto hidden space-y-6">
+        <div id="view-ustawienia" class="max-w-3xl mx-auto hidden space-y-6 pb-12">
             <h2 class="text-3xl font-extrabold mb-6 border-b-2 pb-4" style="border-color: var(--szary-ramka)">Ustawienia Aplikacji</h2>
             
             <div class="karta space-y-8">
