@@ -1,12 +1,12 @@
-const CACHE_NAME = 'lekcyjnik-v1';
+const CACHE_NAME = 'planer-v1';
 const urlsToCache = [
   './',
   './index.html',
   './style.css',
-  './script.js'
+  './script.js',
+  './manifest.json'
 ];
 
-// Instalowanie aplikacji w tle
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
@@ -15,7 +15,6 @@ self.addEventListener('install', event => {
   );
 });
 
-// Zapewnienie szybkiego działania
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(response => {
