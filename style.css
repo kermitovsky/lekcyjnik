@@ -1,6 +1,6 @@
 :root {
     /* Domyślne zmienne (Jasny motyw) */
-    --akcent: #4f46e5; /* Domyślny kolor - zmieniany przez JS */
+    --akcent: #4f46e5;
     --ciemny: #1e293b;
     --jasny: #f8fafc;
     --szary-ramka: #e2e8f0;
@@ -10,10 +10,9 @@
     --kropki-kolor: #cbd5e1;
 }
 
-/* Zmienne dla TRYBU CIEMNEGO */
 html.dark {
-    --ciemny: #f8fafc; /* Odwracamy: ramki stają się jasne */
-    --jasny: #0f172a; /* Tło staje się bardzo ciemne */
+    --ciemny: #f8fafc; 
+    --jasny: #0f172a; 
     --szary-ramka: #334155;
     --karta-bg: #1e293b;
     --tekst-glowny: #f8fafc;
@@ -39,7 +38,6 @@ body {
 .day-col { border-right: 1px dashed var(--szary-ramka); }
 .day-col:last-child { border-right: none; }
 
-/* Główne białe/ciemne okienka */
 .karta {
     background-color: var(--karta-bg);
     border: 2px solid var(--ciemny);
@@ -50,7 +48,6 @@ body {
 }
 .karta:hover { transform: translateY(-4px); }
 
-/* Przyciski */
 .przycisk-glowny {
     background-color: var(--akcent);
     color: #ffffff;
@@ -74,7 +71,6 @@ body {
 }
 .przycisk-anuluj:hover { background-color: var(--szary-ramka); }
 
-/* Pola tekstowe */
 .pole-tekstowe {
     width: 100%;
     border: 2px solid var(--szary-ramka);
@@ -89,7 +85,6 @@ body {
 }
 .pole-tekstowe:focus { border-color: var(--akcent); }
 
-/* Modale */
 .modal-tlo {
     position: fixed;
     inset: 0;
@@ -109,12 +104,13 @@ body {
     border-radius: 1rem;
     width: 100%;
     max-width: 28rem;
+    max-height: 90vh; /* Optymalizacja na małe telefony */
+    overflow-y: auto; /* Optymalizacja na małe telefony */
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     border: 2px solid var(--ciemny);
     color: var(--tekst-glowny);
 }
 
-/* Zakładki w menu */
 .nav-tab {
     color: var(--tekst-szary);
     font-weight: 500;
@@ -134,7 +130,6 @@ body {
     font-weight: bold;
 }
 
-/* Kółka z kolorami w ustawieniach */
 .kolor-kolo {
     width: 2.5rem;
     height: 2.5rem;
