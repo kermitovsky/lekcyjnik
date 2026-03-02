@@ -1,9 +1,45 @@
-let students = JSON.parse(localStorage.getItem('lekcyjnik_students')) || [];
-let lessons = JSON.parse(localStorage.getItem('lekcyjnik_lessons')) || [];
+// --- KONFIGURACJA FIREBASE ---
+const firebaseConfig = {
+  apiKey: "AIzaSyBAEop-rCgSrVWKlcf02OTM_vPSxtNFl38",
+  authDomain: "lekcyjnik-90745.firebaseapp.com",
+  projectId: "lekcyjnik-90745",
+  storageBucket: "lekcyjnik-90745.firebasestorage.app",
+  messagingSenderId: "2022297919",
+  appId: "1:2022297919:web:d00a5f529aa640ead0838a"
+};
+
+// Uruchamiamy Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// Puste listy na start - zaraz wypełnią się danymi z chmury
+let students = [];
+let lessons = [];
 
 let currentDate = new Date();
 const startHour = 7;
 const endHour = 22;
+
+// --- POBIERANIE DANYCH Z CHMURY NA STARCIE ---
+db.collection("moj_lekcyjnik").doc("baza_danych").get().then((doc) => {
+    if (doc.exists) {
+        students = doc.data().students || [];
+        lessons = doc.data().lessons || [];
+    }
+    // Odpalamy pulpit DOPIERO jak pobierzemy dane
+    switchTab('pulpit');
+}).catch((error) => {
+    console.error("Błąd połączenia z bazą:", error);
+    switchTab('pulpit'); // Odpalamy mimo to, żeby strona nie była pusta
+});
+
+// --- FUNKCJA ZAPISUJĄCA W CHMURZE ---
+function saveToCloud() {
+    db.collection("moj_lekcyjnik").doc("baza_danych").set({
+        students: students,
+        lessons: lessons
+    });
+}
 
 // --- NAWIGACJA ---
 function switchTab(tabName) {
@@ -29,7 +65,6 @@ function switchTab(tabName) {
     }
 }
 
-// --- POMOCNICZE DATY ---
 function getMonday(d) {
     d = new Date(d);
     let day = d.getDay(), diff = d.getDate() - day + (day === 0 ? -6 : 1); 
@@ -61,7 +96,6 @@ function renderCalendar() {
     document.getElementById('month-year-display').innerText = `${monthNames[sunday.getMonth()]} ${sunday.getFullYear()}`;
     
     let formatDay = (date) => date.getDate().toString().padStart(2, '0');
-    // Ustawienie tekstu w przycisku między strzałkami (np. 02 - 08 MAR)
     document.getElementById('calendar-week-btn-text').innerText = `${formatDay(monday)} - ${formatDay(sunday)} ${monthNames[sunday.getMonth()].substring(0,3).toUpperCase()}`;
 
     const daysNames = ['PON.', 'WT.', 'ŚR.', 'CZW.', 'PT.', 'SOB.', 'NIEDZ.'];
@@ -152,7 +186,7 @@ function updateCurrentTimeLine() {
 }
 setInterval(updateCurrentTimeLine, 60000);
 
-// --- PULPIT (DASHBOARD) ---
+// --- PULPIT ---
 function renderDashboard() {
     const now = new Date();
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -163,7 +197,6 @@ function renderDashboard() {
     const todayString = now.toISOString().split('T')[0];
     const nowTime = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
 
-    // Podsumowanie zarobków
     let earnings = 0, paidCount = 0, unpaidCount = 0;
     lessons.forEach(l => {
         let lDate = new Date(l.date);
@@ -176,7 +209,6 @@ function renderDashboard() {
     document.getElementById('dashboard-paid-count').innerText = `${paidCount} opłaconych`;
     document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} nieopłaconych`;
 
-    // Następna lekcja
     let upcomingLessons = lessons.filter(l => l.date > todayString || (l.date === todayString && l.startTime >= nowTime));
     upcomingLessons.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
     
@@ -197,7 +229,6 @@ function renderDashboard() {
         nextWidget.innerHTML = `<div class="text-xl font-bold text-indigo-100">Brak zaplanowanych lekcji! Wreszcie wolne! 🎉</div>`;
     }
 
-    // Plan na ten tydzień
     const mondayString = getMonday(now).toISOString().split('T')[0];
     let sundayDate = new Date(getMonday(now));
     sundayDate.setDate(sundayDate.getDate() + 6);
@@ -246,7 +277,7 @@ function renderDashboard() {
     }
 }
 
-// --- ZAROBKI (FINANSE) ---
+// --- ZAROBKI ---
 function renderZarobki() {
     const monthPicker = document.getElementById('earnings-month-picker').value;
     if(!monthPicker) return;
@@ -263,12 +294,8 @@ function renderZarobki() {
             let price = Number(l.price || 0);
             if(l.paid) {
                 total += price;
-                
-                // Zliczanie dla ucznia
                 let studentName = (students.find(s => s.id == l.studentId) || {name: 'Nieznany'}).name;
                 byStudent[studentName] = (byStudent[studentName] || 0) + price;
-                
-                // Zliczanie dla przedmiotu
                 let subject = l.subject || 'Inne / Brak podanego';
                 bySubject[subject] = (bySubject[subject] || 0) + price;
             } else {
@@ -280,7 +307,6 @@ function renderZarobki() {
     document.getElementById('total-earnings-display').innerText = `${total} zł`;
     document.getElementById('unpaid-earnings-display').innerText = `Brakujące wpłaty: ${unpaid} zł`;
 
-    // Renderowanie list
     const studentContainer = document.getElementById('earnings-by-student');
     studentContainer.innerHTML = '';
     let studentArray = Object.keys(byStudent).map(k => ({name: k, val: byStudent[k]})).sort((a,b) => b.val - a.val);
@@ -317,7 +343,6 @@ function renderZarobki() {
             </div>`;
     });
 }
-
 
 // --- UCZNIOWIE ---
 function renderStudents() {
@@ -357,18 +382,17 @@ function saveStudent() {
     if(!name) return alert('Wpisz imię!');
 
     students.push({ id: Date.now(), name, subjects, color });
-    localStorage.setItem('lekcyjnik_students', JSON.stringify(students));
+    saveToCloud(); // Zapis do Firebase!
     closeModals();
     renderStudents();
     renderCalendar();
 }
 
 function deleteStudent(id) {
-    if(confirm('Na pewno usunąć ucznia i jego wszystkie lekcje (również te opłacone z przeszłości)?')) {
+    if(confirm('Na pewno usunąć ucznia i jego wszystkie lekcje?')) {
         students = students.filter(s => s.id !== id);
         lessons = lessons.filter(l => l.studentId != id);
-        localStorage.setItem('lekcyjnik_students', JSON.stringify(students));
-        localStorage.setItem('lekcyjnik_lessons', JSON.stringify(lessons));
+        saveToCloud(); // Zapis do Firebase!
         renderStudents();
     }
 }
@@ -378,7 +402,6 @@ function autoFillSubject() {
     const stId = document.getElementById('lesson-student').value;
     const student = students.find(s => s.id == stId);
     if(student && student.subjects) {
-        // Jeśli uczeń ma wpisane przedmioty, wstawiamy pierwszy z brzegu do pola
         document.getElementById('lesson-subject').value = student.subjects.split(',')[0].trim();
     }
 }
@@ -447,7 +470,6 @@ function saveLesson() {
     if(!studentId || !date) return alert('Wybierz ucznia i datę!');
 
     if (id) {
-        // Edycja pojedynczej lekcji
         let lesson = lessons.find(l => l.id == id);
         lesson.studentId = studentId;
         lesson.subject = subject;
@@ -458,7 +480,6 @@ function saveLesson() {
         lesson.notes = notes;
         lesson.paid = paid;
     } else {
-        // Zapis nowej lekcji - żeby lekcja była "stała" i stabilna dla pamięci, generujemy ją na ponad 3 lata do przodu (156 tygodni)
         const repetitions = isRecurring ? 156 : 1; 
         let baseDate = new Date(date);
 
@@ -467,18 +488,17 @@ function saveLesson() {
             lessonDate.setDate(baseDate.getDate() + (i * 7));
             
             lessons.push({
-                id: Date.now() + i + Math.floor(Math.random() * 1000), // Bardzo unikalne ID
+                id: Date.now() + i + Math.floor(Math.random() * 1000),
                 studentId,
                 subject,
                 date: lessonDate.toISOString().split('T')[0],
                 startTime,
                 endTime,
                 price,
-                notes: i === 0 ? notes : '', // Notatki zapisujemy tylko do pierwszej lekcji
-                paid: false // Przyszłe stałe lekcje domyślnie są nieopłacone
+                notes: i === 0 ? notes : '', 
+                paid: false 
             });
         }
-        // Jeśli pierwsza (dzisiejsza) z powtarzających się ma być oznaczona jako opłacona:
         if(paid && isRecurring) {
            lessons[lessons.length - repetitions].paid = true;
         } else if (paid && !isRecurring) {
@@ -486,7 +506,7 @@ function saveLesson() {
         }
     }
 
-    localStorage.setItem('lekcyjnik_lessons', JSON.stringify(lessons));
+    saveToCloud(); // Zapis do Firebase!
     closeModals();
     renderCalendar();
     renderDashboard();
@@ -495,9 +515,9 @@ function saveLesson() {
 
 function deleteLesson() {
     const id = document.getElementById('lesson-id').value;
-    if(confirm('Na pewno usunąć tę lekcję? (Zniknie tylko to konkretne spotkanie)')) {
+    if(confirm('Na pewno usunąć tę lekcję?')) {
         lessons = lessons.filter(l => l.id != id);
-        localStorage.setItem('lekcyjnik_lessons', JSON.stringify(lessons));
+        saveToCloud(); // Zapis do Firebase!
         closeModals();
         renderCalendar();
         renderDashboard();
@@ -509,6 +529,3 @@ function closeModals() {
     document.getElementById('modal-student').classList.add('hidden');
     document.getElementById('modal-lesson').classList.add('hidden');
 }
-
-// Start aplikacji - Domyślnie otwieramy Pulpit
-switchTab('pulpit');
