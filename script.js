@@ -12,12 +12,11 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 let currentUser = null; 
-
 let subjects = [];
 let students = [];
 let lessons = [];
 
-// USTAWIENIA UŻYTKOWNIKA (Domyślne)
+// USTAWIENIA UŻYTKOWNIKA
 let settings = {
     theme: 'light',
     accent: '#4f46e5',
@@ -27,10 +26,21 @@ let settings = {
 };
 
 let currentDate = new Date();
+let datePicker; // Zmienna kalendarzyka
+
+// Uruchomienie kalendarzyka z biblioteki na start
+document.addEventListener("DOMContentLoaded", () => {
+    datePicker = flatpickr("#lesson-date", {
+        locale: "pl",
+        dateFormat: "Y-m-d", // Zapis w formacie zrozumiałym dla bazy
+        altInput: true,
+        altFormat: "d/m/Y",  // Widok dla użytkownika (DD/MM/YYYY)
+        allowInput: true
+    });
+});
 
 // --- APLIKOWANIE USTAWIEŃ WIZUALNYCH ---
 function applyVisualSettings() {
-    // Motyw (Jasny/Ciemny)
     if(settings.theme === 'dark') {
         document.documentElement.classList.add('dark');
         document.getElementById('meta-theme-color').setAttribute('content', '#0f172a');
@@ -39,31 +49,19 @@ function applyVisualSettings() {
         document.getElementById('meta-theme-color').setAttribute('content', settings.accent);
     }
     
-    // Kolor Akcentu
     document.documentElement.style.setProperty('--akcent', settings.accent);
     
-    // Zaznacz odpowiednie kółko w opcjach
     document.querySelectorAll('.kolor-kolo').forEach(k => k.classList.remove('aktywny'));
     let activeCircle = Array.from(document.querySelectorAll('.kolor-kolo')).find(el => el.getAttribute('onclick').includes(settings.accent));
     if(activeCircle) activeCircle.classList.add('aktywny');
 
-    // Wypełnij pola w zakładce Ustawienia
     document.getElementById('ust-start').value = settings.startHour;
     document.getElementById('ust-end').value = settings.endHour;
     document.getElementById('ust-czas').value = settings.duration;
 }
 
-// Zapis i zmiana z poziomu Ustawień
-function ustawMotyw(theme) {
-    settings.theme = theme;
-    applyVisualSettings();
-    saveToCloud();
-}
-function ustawAkcent(color) {
-    settings.accent = color;
-    applyVisualSettings();
-    saveToCloud();
-}
+function ustawMotyw(theme) { settings.theme = theme; applyVisualSettings(); saveToCloud(); }
+function ustawAkcent(color) { settings.accent = color; applyVisualSettings(); saveToCloud(); }
 function zapiszOpcje() {
     settings.startHour = parseInt(document.getElementById('ust-start').value) || 7;
     settings.endHour = parseInt(document.getElementById('ust-end').value) || 22;
@@ -72,7 +70,6 @@ function zapiszOpcje() {
     renderCalendar();
 }
 
-// Automatyczny czas w okienku lekcji
 function autoUzupelnijCzas() {
     let start = document.getElementById('lesson-time-start').value;
     if(!start) return;
@@ -126,7 +123,7 @@ function pobierzDaneZChmury() {
             subjects = data.subjects || [];
             students = data.students || [];
             lessons = data.lessons || [];
-            if(data.settings) settings = data.settings; // Nadpisz domyślne ustawienia
+            if(data.settings) settings = data.settings;
         } else {
             subjects = []; students = []; lessons = [];
         }
@@ -148,7 +145,6 @@ function saveToCloud() {
     });
 }
 
-// EKSPORT BAZY DANYCH
 function pobierzKopieZapasowa() {
     const backupData = { subjects, students, lessons, settings };
     const dataStr = JSON.stringify(backupData, null, 2);
@@ -345,7 +341,6 @@ function renderDashboard() {
         let lDate = new Date(l.date);
         let price = Number(l.price || 0);
         
-        // Zliczamy tylko nieodwołane
         if(!l.cancelled) {
             if(lDate.getMonth() === currentMonth && lDate.getFullYear() === currentYear) {
                 lessonsThisMonth++;
@@ -364,7 +359,6 @@ function renderDashboard() {
     document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} zaległych lekcji`;
     document.getElementById('dashboard-active-students').innerText = students.length;
 
-    // Nadchodzące lekcje (tylko nieodwołane)
     let upcomingLessons = lessons.filter(l => !l.cancelled && (l.date > todayString || (l.date === todayString && l.startTime >= nowTime)));
     upcomingLessons.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
     
@@ -396,7 +390,6 @@ function renderDashboard() {
         });
     }
 
-    // Zaległości (tylko nieodwołane)
     let unpaidLessons = lessons.filter(l => !l.cancelled && !l.paid && (l.date < todayString || (l.date === todayString && l.startTime < nowTime)));
     unpaidLessons.sort((a,b) => (b.date + b.startTime).localeCompare(a.date + a.startTime)); 
     
@@ -418,7 +411,6 @@ function renderDashboard() {
         });
     }
 
-    // Widok Tygodniowy
     const weekContainer = document.getElementById('pulpit-week-view');
     weekContainer.innerHTML = '';
     const mondayString = getMonday(now).toISOString().split('T')[0];
@@ -455,7 +447,6 @@ function renderDashboard() {
                 statusIcon = '<span class="px-2 py-1 rounded border text-xs font-bold shadow-sm text-rose-500 bg-rose-50 border-rose-200">Brak</span>';
             }
 
-            // Jeśli odwołana to wyszarz całą linijkę
             let cardOpacity = l.cancelled ? 'opacity: 0.5; filter: grayscale(100%)' : '';
             let lineThrough = l.cancelled ? 'text-decoration: line-through' : '';
 
@@ -512,10 +503,10 @@ function renderCalendar() {
     }
     document.getElementById('calendar-header').innerHTML = headerHtml;
 
-    // Generowanie siatki w oparciu o USTAWIENIA (startHour - endHour)
+    // Wysokość godzin zwiększona z h-16 na h-24 (czyli z 64px na 96px)
     let gridHtml = `<div class="border-r-2 relative w-16 shrink-0 z-10" style="background-color: var(--karta-bg); border-color: var(--ciemny)">`;
     for(let h = settings.startHour; h <= settings.endHour; h++) {
-        gridHtml += `<div class="h-16 time-row text-xs text-right pr-2 pt-1 font-bold" style="color: var(--tekst-szary)">${h}:00</div>`;
+        gridHtml += `<div class="h-24 time-row text-xs text-right pr-2 pt-1 font-bold" style="color: var(--tekst-szary)">${h}:00</div>`;
     }
     gridHtml += `</div>`;
 
@@ -525,7 +516,7 @@ function renderCalendar() {
 
         gridHtml += `<div class="relative day-col flex-1 border-r-2 last:border-r-0" style="border-color: var(--szary-ramka)" data-date="${dateString}">`;
         for(let h = settings.startHour; h <= settings.endHour; h++) {
-            gridHtml += `<div class="h-16 time-row"></div>`;
+            gridHtml += `<div class="h-24 time-row"></div>`;
         }
         
         let dailyLessons = lessons.filter(l => l.date === dateString);
@@ -533,33 +524,32 @@ function renderCalendar() {
             let start = lesson.startTime.split(':');
             let end = lesson.endTime.split(':');
             
-            // Ignoruj lekcje wychodzące całkowicie poza widok kalendarza
             if(parseInt(start[0]) < settings.startHour && parseInt(end[0]) <= settings.startHour) return;
 
-            let topPosition = ((parseInt(start[0]) - settings.startHour) * 64) + (parseInt(start[1]) / 60 * 64);
-            let height = (((parseInt(end[0]) - parseInt(start[0])) * 64) + ((parseInt(end[1]) - parseInt(start[1])) / 60 * 64));
+            // Zmieniony mnożnik na 96 pikseli (więcej miejsca na tekst)
+            let topPosition = ((parseInt(start[0]) - settings.startHour) * 96) + (parseInt(start[1]) / 60 * 96);
+            let height = (((parseInt(end[0]) - parseInt(start[0])) * 96) + ((parseInt(end[1]) - parseInt(start[1])) / 60 * 96));
             
-            // Ogranicznik, żeby klocki nie wystawały ponad kalendarz jeśli zaczną się np o 6:00 a widok jest od 7:00
             if(topPosition < 0) { height += topPosition; topPosition = 0; }
 
             let student = students.find(s => s.id == lesson.studentId) || {name: 'Usunięty uczeń'};
             let subject = subjects.find(s => s.id == lesson.subjectId) || {name: 'Brak', color: '#cbd5e1'};
             
-            let bgColor = hexToRgba(subject.color, 0.2);
-            let icon = lesson.cancelled ? '❌' : (lesson.paid ? '✅' : '<span class="text-rose-500">❗</span>');
+            let bgColor = hexToRgba(subject.color, 0.15);
+            let icon = lesson.cancelled ? '❌' : (lesson.paid ? '✅' : '<span class="text-rose-500 font-extrabold text-sm">!</span>');
             
             let opacityAndStrike = lesson.cancelled ? 'opacity: 0.5; filter: grayscale(100%); text-decoration: line-through;' : '';
 
             gridHtml += `
-                <div class="absolute w-[94%] left-[3%] rounded-xl p-2 overflow-hidden shadow-sm hover:shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 transition cursor-pointer flex flex-col border-l-4 border-2" 
+                <div class="absolute w-[94%] left-[3%] rounded-xl p-1.5 overflow-hidden shadow-sm hover:shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 transition cursor-pointer flex flex-col border-l-4 border-2" 
                      style="top: ${topPosition}px; height: ${height}px; background-color: ${bgColor}; border-left-color: ${subject.color}; border-color: ${subject.color}; ${opacityAndStrike}"
                      onclick="editLesson('${lesson.id}')">
-                    <div class="font-bold flex justify-between text-xs mb-1" style="color: ${subject.color}">
-                        <span>${lesson.startTime}</span>
+                    <div class="font-bold flex justify-between text-xs mb-0.5" style="color: ${subject.color}">
+                        <span class="whitespace-nowrap">${lesson.startTime} - ${lesson.endTime}</span>
                         <span title="Status">${icon}</span>
                     </div>
-                    <div class="font-extrabold truncate leading-tight text-sm">${student.name}</div>
-                    <div class="font-bold truncate mt-auto text-[10px] uppercase tracking-wider" style="color: var(--tekst-szary)">${subject.name}</div>
+                    <div class="font-extrabold truncate leading-tight text-[13px] md:text-sm">${student.name}</div>
+                    <div class="font-bold truncate mt-auto text-[9px] uppercase tracking-wider" style="color: var(--tekst-szary)">${subject.name}</div>
                 </div>`;
         });
         gridHtml += `</div>`;
@@ -580,7 +570,8 @@ function updateCurrentTimeLine() {
         let hours = now.getHours();
         let minutes = now.getMinutes();
         if(hours >= settings.startHour && hours <= settings.endHour) {
-            let top = ((hours - settings.startHour) * 64) + (minutes / 60 * 64);
+            // Mnożnik zmieniony na 96 pikseli, żeby różowa linia idealnie zgrywała się z kafelkami
+            let top = ((hours - settings.startHour) * 96) + (minutes / 60 * 96);
             line.style.top = `${top}px`;
         } else { line.classList.add('hidden'); }
     } else { line.classList.add('hidden'); }
@@ -606,10 +597,11 @@ function updateLessonSubjectDropdown() {
 function openLessonModal() {
     document.getElementById('lesson-modal-title').innerText = 'Zaplanuj lekcję';
     document.getElementById('lesson-id').value = '';
-    document.getElementById('lesson-date').value = new Date().toISOString().split('T')[0];
-    document.getElementById('lesson-time-start').value = '15:00';
     
-    // Auto czas
+    // Ustawienie dzisiejszej daty w kalendarzyku
+    if(datePicker) datePicker.setDate(new Date().toISOString().split('T')[0]);
+    
+    document.getElementById('lesson-time-start').value = '15:00';
     autoUzupelnijCzas();
 
     document.getElementById('lesson-price').value = '';
@@ -617,7 +609,7 @@ function openLessonModal() {
     document.getElementById('lesson-cancelled').checked = false;
     
     document.getElementById('recurring-box').classList.remove('hidden');
-    document.getElementById('cancelled-box').classList.add('hidden'); // Skrywamy przy nowej lekcji
+    document.getElementById('cancelled-box').classList.add('hidden'); 
     document.getElementById('btn-delete-lesson').classList.add('hidden');
 
     const selectStudent = document.getElementById('lesson-student');
@@ -632,7 +624,10 @@ function editLesson(id) {
     if(!lesson) return;
     document.getElementById('lesson-modal-title').innerText = 'Szczegóły lekcji';
     document.getElementById('lesson-id').value = lesson.id;
-    document.getElementById('lesson-date').value = lesson.date;
+    
+    // Wczytanie daty do kalendarzyka
+    if(datePicker) datePicker.setDate(lesson.date);
+    
     document.getElementById('lesson-time-start').value = lesson.startTime;
     document.getElementById('lesson-time-end').value = lesson.endTime;
     document.getElementById('lesson-price').value = lesson.price || '';
@@ -640,7 +635,7 @@ function editLesson(id) {
     document.getElementById('lesson-cancelled').checked = lesson.cancelled || false;
 
     document.getElementById('recurring-box').classList.add('hidden');
-    document.getElementById('cancelled-box').classList.remove('hidden'); // Pokazujemy przy edycji
+    document.getElementById('cancelled-box').classList.remove('hidden'); 
     document.getElementById('btn-delete-lesson').classList.remove('hidden');
 
     const selectStudent = document.getElementById('lesson-student');
@@ -657,7 +652,10 @@ function saveLesson() {
     const id = document.getElementById('lesson-id').value;
     const studentId = document.getElementById('lesson-student').value;
     const subjectId = document.getElementById('lesson-subject').value;
+    
+    // Pobieranie właściwej daty z kalendarzyka w ukrytym formacie YYYY-MM-DD
     const date = document.getElementById('lesson-date').value;
+    
     const startTime = document.getElementById('lesson-time-start').value;
     const endTime = document.getElementById('lesson-time-end').value;
     const price = document.getElementById('lesson-price').value;
@@ -709,7 +707,6 @@ function renderZarobki() {
 
     lessons.forEach(l => {
         let lDate = new Date(l.date);
-        // Odrzucamy odwołane
         if(lDate.getFullYear() == year && (lDate.getMonth() + 1) == month && l.paid && !l.cancelled) {
             let price = Number(l.price || 0);
             total += price;
