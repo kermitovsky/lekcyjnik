@@ -1,4 +1,4 @@
-// --- KONFIGURACJA FIREBASE ---
+// --- KONFIGURACJA FIREBASE (Bez zmian, dane zostają te same) ---
 const firebaseConfig = {
     apiKey: "AIzaSyBAEop-rCgSrVWKlcf02OTM_vPSxtNFl38",
     authDomain: "lekcyjnik-90745.firebaseapp.com",
@@ -11,7 +11,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// Puste listy na start
 let subjects = [];
 let students = [];
 let lessons = [];
@@ -42,20 +41,21 @@ function saveToCloud() {
     });
 }
 
-// --- NAWIGACJA ---
+// --- NAWIGACJA (Dostosowana do nowego pliku CSS) ---
 function switchTab(tabName) {
-    document.getElementById('view-pulpit').classList.add('hidden');
-    document.getElementById('view-kalendarz').classList.add('hidden');
-    document.getElementById('view-uczniowie').classList.add('hidden');
-    document.getElementById('view-przedmioty').classList.add('hidden');
-    document.getElementById('view-zarobki').classList.add('hidden');
+    // Ukryj wszystkie widoki
+    ['pulpit', 'kalendarz', 'uczniowie', 'przedmioty', 'zarobki'].forEach(id => {
+        document.getElementById(`view-${id}`).classList.add('hidden');
+    });
     
+    // Zdejmij podświetlenie ze wszystkich przycisków
     document.querySelectorAll('.nav-tab').forEach(btn => {
-        btn.className = "nav-tab text-slate-500 hover:text-slate-900 font-medium px-4 py-2 rounded-full transition whitespace-nowrap";
+        btn.classList.remove('aktywna');
     });
 
+    // Włącz odpowiedni widok i podświetl przycisk
     document.getElementById(`view-${tabName}`).classList.remove('hidden');
-    document.getElementById(`tab-${tabName}`).className = "nav-tab bg-indigo-600 text-white shadow-[2px_2px_0_#1e293b] border-2 border-slate-800 font-bold px-6 py-2 rounded-full transition whitespace-nowrap";
+    document.getElementById(`tab-${tabName}`).classList.add('aktywna');
 
     if(tabName === 'pulpit') renderDashboard();
     if(tabName === 'kalendarz') renderCalendar();
@@ -90,7 +90,7 @@ function renderSubjects() {
     }
     subjects.forEach(sub => {
         list.innerHTML += `
-            <div class="bg-white p-5 rounded-xl shadow-[4px_4px_0_#1e293b] border-2 border-slate-800 flex justify-between items-center cursor-pointer hover:-translate-y-1 transition" onclick="editSubject('${sub.id}')">
+            <div class="karta flex justify-between items-center cursor-pointer" onclick="editSubject('${sub.id}')">
                 <div class="flex items-center gap-3">
                     <div class="w-6 h-6 rounded-md border border-slate-300" style="background-color: ${sub.color}"></div>
                     <h4 class="font-bold text-lg text-slate-900">${sub.name}</h4>
@@ -108,7 +108,7 @@ function openSubjectModal() {
 }
 
 function editSubject(id) {
-    const sub = subjects.find(s => s.id == id); // Podwójny znak równości naprawia błędy starszych ID
+    const sub = subjects.find(s => s.id == id);
     if(!sub) return;
     document.getElementById('subject-id').value = sub.id;
     document.getElementById('subject-name').value = sub.name;
@@ -169,7 +169,7 @@ function renderStudents() {
         }
 
         list.innerHTML += `
-            <div class="bg-white p-5 rounded-xl shadow-[4px_4px_0_#1e293b] border-2 border-slate-800 flex justify-between items-start">
+            <div class="karta flex justify-between items-start">
                 <div class="space-y-2">
                     <h4 class="font-extrabold text-xl text-slate-900">${student.name}</h4>
                     <div class="flex flex-wrap gap-1">${studentSubjectsHtml}</div>
@@ -184,7 +184,6 @@ function renderStudents() {
 
 function openStudentModal() {
     document.getElementById('student-name').value = '';
-    
     const container = document.getElementById('student-subjects-container');
     container.innerHTML = '';
     if(subjects.length === 0) {
@@ -201,7 +200,6 @@ function openStudentModal() {
                 </label>`;
         });
     }
-    
     document.getElementById('modal-student').setAttribute('data-editing-id', '');
     document.getElementById('modal-student').classList.remove('hidden');
 }
@@ -211,7 +209,6 @@ function editStudent(id) {
     if(!student) return;
     
     document.getElementById('student-name').value = student.name;
-    
     const container = document.getElementById('student-subjects-container');
     container.innerHTML = '';
     subjects.forEach(sub => {
@@ -291,9 +288,9 @@ function renderDashboard() {
     });
 
     document.getElementById('dashboard-monthly-earnings').innerText = `${earnings} zł`;
-    document.getElementById('dashboard-monthly-lessons').innerText = `${lessonsThisMonth} lekcji w tym miesiącu`;
+    document.getElementById('dashboard-monthly-lessons').innerText = `${lessonsThisMonth} lekcji`;
     document.getElementById('dashboard-unpaid-sum').innerText = `${unpaidTotal} zł`;
-    document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} zaległych lekcji łącznie`;
+    document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} zaległych lekcji`;
     document.getElementById('dashboard-active-students').innerText = students.length;
 
     // Nadchodzące lekcje
@@ -322,9 +319,7 @@ function renderDashboard() {
             upcomingContainer.innerHTML += `
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-2 border-slate-200 rounded-xl bg-white gap-3 cursor-pointer hover:border-indigo-400 transition" onclick="editLesson('${l.id}')">
                     <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold border border-slate-200 shadow-sm text-lg">
-                            🕒
-                        </div>
+                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold border border-slate-200 shadow-sm text-lg">🕒</div>
                         <div>
                             <div class="font-extrabold text-slate-900">${student.name}</div>
                             <div class="text-sm text-slate-500 font-medium">${dateDisplay}, ${l.startTime}</div>
@@ -346,7 +341,7 @@ function renderDashboard() {
         unpaidContainer.innerHTML = `
             <div class="bg-emerald-50 border-2 border-emerald-200 p-6 rounded-xl text-center">
                 <div class="text-3xl mb-2">🎉</div>
-                <p class="text-emerald-700 font-bold">Świetnie! Wszyscy uczniowie są na bieżąco z płatnościami.</p>
+                <p class="text-emerald-700 font-bold">Wszyscy uczniowie są na bieżąco!</p>
             </div>`;
     } else {
         unpaidLessons.slice(0, 5).forEach(l => {
@@ -362,7 +357,7 @@ function renderDashboard() {
         });
     }
 
-    // WIDOK TYGODNIOWY NA PULPICIE
+    // Widok Tygodniowy na pulpicie
     const weekContainer = document.getElementById('pulpit-week-view');
     weekContainer.innerHTML = '';
 
@@ -416,7 +411,6 @@ function renderDashboard() {
 
 // --- KALENDARZ ---
 function changeWeek(offset) {
-    // Bezpieczniejsze przełączanie dni, żeby ominąć błędy mutacji Daty
     let newDate = new Date(currentDate.getTime() + offset * 7 * 24 * 60 * 60 * 1000);
     currentDate = newDate;
     renderCalendar();
