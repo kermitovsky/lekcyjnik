@@ -1,6 +1,6 @@
 {
-  "name": "Mój Lekcyjnik",
-  "short_name": "Lekcyjnik",
+  "name": "Planer Korepetytora",
+  "short_name": "Planer",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f8fafc",
