@@ -16,7 +16,6 @@ let subjects = [];
 let students = [];
 let lessons = [];
 
-// USTAWIENIA UŻYTKOWNIKA
 let settings = {
     theme: 'light',
     accent: '#4f46e5',
@@ -88,7 +87,7 @@ function autoUzupelnijCzas() {
     document.getElementById('lesson-time-end').value = `${endH}:${endM}`;
 }
 
-// --- LOGOWANIE ---
+// --- LOGOWANIE (TYLKO GOOGLE) ---
 firebase.auth().onAuthStateChanged((user) => {
     if (user) {
         currentUser = user;
@@ -104,21 +103,9 @@ firebase.auth().onAuthStateChanged((user) => {
     }
 });
 
-function zalogujPrzezEmail() {
-    const email = document.getElementById('login-email').value;
-    const haslo = document.getElementById('login-haslo').value;
-    if(!email || !haslo) return alert("Wpisz email i hasło!");
-    firebase.auth().signInWithEmailAndPassword(email, haslo).catch(e => alert("Błąd: " + e.message));
-}
-function zarejestrujPrzezEmail() {
-    const email = document.getElementById('login-email').value;
-    const haslo = document.getElementById('login-haslo').value;
-    if(!email || !haslo) return alert("Wpisz email i hasło!");
-    firebase.auth().createUserWithEmailAndPassword(email, haslo).catch(e => alert("Błąd: " + e.message));
-}
 function zalogujPrzezGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider).catch(e => alert("Błąd: " + e.message));
+    firebase.auth().signInWithPopup(provider).catch(e => alert("Błąd logowania Google: " + e.message));
 }
 function wyloguj() { firebase.auth().signOut(); }
 
@@ -266,20 +253,20 @@ function renderStudents() {
         if(student.subjectIds && student.subjectIds.length > 0) {
             student.subjectIds.forEach(subId => {
                 let sub = subjects.find(s => s.id == subId);
-                if(sub) studentSubjectsHtml += `<span class="text-xs font-bold px-2 py-1 rounded-md text-white border" style="background-color: ${sub.color}; border-color: var(--ciemny)">${sub.name.toUpperCase()}</span> `;
+                if(sub) studentSubjectsHtml += `<span class="text-[10px] md:text-xs font-bold px-2 py-1 rounded-md text-white border" style="background-color: ${sub.color}; border-color: var(--ciemny)">${sub.name.toUpperCase()}</span> `;
             });
         } else {
             studentSubjectsHtml = `<span class="text-xs font-medium" style="color: var(--tekst-szary)">Brak przypisanych przedmiotów</span>`;
         }
         list.innerHTML += `
-            <div class="karta flex justify-between items-start">
+            <div class="karta flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0">
                 <div class="space-y-2">
-                    <h4 class="font-extrabold text-xl">${student.name}</h4>
+                    <h4 class="font-extrabold text-lg md:text-xl">${student.name}</h4>
                     <div class="flex flex-wrap gap-1">${studentSubjectsHtml}</div>
                 </div>
-                <div class="flex flex-col gap-2 text-right">
-                    <button onclick="editStudent('${student.id}')" class="text-sm font-bold hover:underline" style="color: var(--akcent)">Edytuj</button>
-                    <button onclick="deleteStudent('${student.id}')" class="text-sm font-bold text-rose-500 hover:underline">Usuń</button>
+                <div class="flex sm:flex-col gap-3 sm:gap-2 w-full sm:w-auto text-center sm:text-right">
+                    <button onclick="editStudent('${student.id}')" class="text-sm font-bold hover:underline flex-1 sm:flex-none" style="color: var(--akcent)">Edytuj</button>
+                    <button onclick="deleteStudent('${student.id}')" class="text-sm font-bold text-rose-500 hover:underline flex-1 sm:flex-none">Usuń</button>
                 </div>
             </div>`;
     });
@@ -365,7 +352,6 @@ function renderDashboard() {
                 lessonsThisMonth++;
                 if(l.paid) earnings += price;
             }
-            // Zmiana: lekcja wpada do zaległości dopiero, gdy minie godzina jej ZAKOŃCZENIA (l.endTime)
             if(!l.paid && (l.date < todayString || (l.date === todayString && l.endTime < nowTime))) {
                 unpaidTotal += price;
                 unpaidCount++;
@@ -386,7 +372,7 @@ function renderDashboard() {
     upcomingContainer.innerHTML = '';
     
     if(upcomingLessons.length === 0) {
-        upcomingContainer.innerHTML = '<p style="color: var(--tekst-szary)">Brak zaplanowanych lekcji.</p>';
+        upcomingContainer.innerHTML = '<p class="text-sm md:text-base" style="color: var(--tekst-szary)">Brak zaplanowanych lekcji.</p>';
     } else {
         upcomingLessons.slice(0, 5).forEach(l => {
             let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
@@ -394,15 +380,15 @@ function renderDashboard() {
             let lDate = new Date(l.date);
             let dayNames = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
             let dateDisplay = l.date === todayString ? 'Dzisiaj' : `${dayNames[lDate.getDay()]}, ${lDate.getDate()} ${monthsGenitive[lDate.getMonth()]}`;
-            let badge = subject ? `<span class="text-[10px] font-bold px-2 py-1 rounded border" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${subject.color}; border-color: ${subject.color}">${subject.name.toUpperCase()}</span>` : '';
+            let badge = subject ? `<span class="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded border" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${subject.color}; border-color: ${subject.color}">${subject.name.toUpperCase()}</span>` : '';
 
             upcomingContainer.innerHTML += `
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition shadow-sm hover:shadow-md" style="background-color: var(--karta-bg); border-color: var(--szary-ramka)" onclick="editLesson('${l.id}')">
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold border" style="background-color: var(--jasny); border-color: var(--szary-ramka); color: var(--tekst-szary)">🕒</div>
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-sm hover:shadow-md gap-2 sm:gap-0" style="background-color: var(--karta-bg); border-color: var(--szary-ramka)" onclick="editLesson('${l.id}')">
+                    <div class="flex items-center gap-3 md:gap-4">
+                        <div class="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-bold border text-sm md:text-base" style="background-color: var(--jasny); border-color: var(--szary-ramka); color: var(--tekst-szary)">🕒</div>
                         <div>
-                            <div class="font-extrabold">${student.name}</div>
-                            <div class="text-sm font-medium" style="color: var(--tekst-szary)">${dateDisplay}, ${l.startTime}</div>
+                            <div class="font-extrabold text-sm md:text-base">${student.name}</div>
+                            <div class="text-xs md:text-sm font-medium" style="color: var(--tekst-szary)">${dateDisplay}, ${l.startTime}</div>
                         </div>
                     </div>
                     <div>${badge}</div>
@@ -410,24 +396,23 @@ function renderDashboard() {
         });
     }
 
-    // Zmiana zaległości na endTime
     let unpaidLessons = lessons.filter(l => !l.cancelled && !l.paid && (l.date < todayString || (l.date === todayString && l.endTime < nowTime)));
     unpaidLessons.sort((a,b) => (b.date + b.startTime).localeCompare(a.date + a.startTime)); 
     
     const unpaidContainer = document.getElementById('pulpit-unpaid-lessons');
     unpaidContainer.innerHTML = '';
     if(unpaidLessons.length === 0) {
-        unpaidContainer.innerHTML = `<div class="border-2 p-6 rounded-xl text-center" style="background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3)"><div class="text-3xl mb-2">🎉</div><p class="text-emerald-500 font-bold">Wszyscy opłaceni!</p></div>`;
+        unpaidContainer.innerHTML = `<div class="border-2 p-4 md:p-6 rounded-xl text-center" style="background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3)"><div class="text-2xl md:text-3xl mb-1 md:mb-2">🎉</div><p class="text-emerald-500 font-bold text-sm md:text-base">Wszyscy opłaceni!</p></div>`;
     } else {
         unpaidLessons.slice(0, 5).forEach(l => {
             let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
             unpaidContainer.innerHTML += `
                 <div class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition" style="background-color: rgba(244, 63, 94, 0.05); border-color: rgba(244, 63, 94, 0.2)" onclick="editLesson('${l.id}')">
                     <div>
-                        <div class="font-bold">${student.name}</div>
-                        <div class="text-xs font-medium text-rose-500">${l.date} | ${l.startTime}</div>
+                        <div class="font-bold text-sm md:text-base">${student.name}</div>
+                        <div class="text-[10px] md:text-xs font-medium text-rose-500">${l.date} | ${l.startTime}</div>
                     </div>
-                    <div class="font-extrabold text-rose-500">${l.price || 0} zł</div>
+                    <div class="font-extrabold text-rose-500 text-sm md:text-base">${l.price || 0} zł</div>
                 </div>`;
         });
     }
@@ -443,7 +428,7 @@ function renderDashboard() {
     thisWeekLessons.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
 
     if(thisWeekLessons.length === 0) {
-        weekContainer.innerHTML = '<p style="color: var(--tekst-szary)">Pusty grafik na ten tydzień.</p>';
+        weekContainer.innerHTML = '<p class="text-sm md:text-base" style="color: var(--tekst-szary)">Pusty grafik na ten tydzień.</p>';
     } else {
         const daysNamesPL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
         let lastDay = '';
@@ -452,7 +437,7 @@ function renderDashboard() {
             let lDate = new Date(l.date);
             let dayDisplay = l.date === todayString ? `<span style="color: var(--akcent)">Dzisiaj</span>` : daysNamesPL[lDate.getDay()];
             if(l.date !== lastDay) {
-                weekContainer.innerHTML += `<div class="text-sm font-extrabold uppercase tracking-wider mt-6 mb-2 border-b-2 pb-1" style="border-color: var(--szary-ramka)">${dayDisplay} <span class="font-medium text-xs normal-case" style="color: var(--tekst-szary)">(${l.date})</span></div>`;
+                weekContainer.innerHTML += `<div class="text-xs md:text-sm font-extrabold uppercase tracking-wider mt-4 md:mt-6 mb-2 border-b-2 pb-1" style="border-color: var(--szary-ramka)">${dayDisplay} <span class="font-medium text-[10px] md:text-xs normal-case" style="color: var(--tekst-szary)">(${l.date})</span></div>`;
                 lastDay = l.date;
             }
 
@@ -461,27 +446,27 @@ function renderDashboard() {
             
             let statusIcon = '';
             if(l.cancelled) {
-                statusIcon = '<span class="px-2 py-1 rounded border text-xs font-bold shadow-sm" style="background-color: var(--jasny); color: var(--tekst-szary); border-color: var(--szary-ramka)">Odwołana ❌</span>';
+                statusIcon = '<span class="px-1.5 md:px-2 py-1 rounded border text-[9px] md:text-xs font-bold shadow-sm" style="background-color: var(--jasny); color: var(--tekst-szary); border-color: var(--szary-ramka)">Odwołana ❌</span>';
             } else if (l.paid) {
-                statusIcon = '<span class="px-2 py-1 rounded border text-xs font-bold shadow-sm text-emerald-600 bg-emerald-50 border-emerald-200">Opłacone</span>';
+                statusIcon = '<span class="px-1.5 md:px-2 py-1 rounded border text-[9px] md:text-xs font-bold shadow-sm text-emerald-600 bg-emerald-50 border-emerald-200">Opłacone</span>';
             } else {
-                statusIcon = '<span class="px-2 py-1 rounded border text-xs font-bold shadow-sm text-rose-500 bg-rose-50 border-rose-200">Brak</span>';
+                statusIcon = '<span class="px-1.5 md:px-2 py-1 rounded border text-[9px] md:text-xs font-bold shadow-sm text-rose-500 bg-rose-50 border-rose-200">Brak</span>';
             }
 
             let cardOpacity = l.cancelled ? 'opacity: 0.5; filter: grayscale(100%)' : '';
             let lineThrough = l.cancelled ? 'text-decoration: line-through' : '';
 
             weekContainer.innerHTML += `
-                <div class="flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5" style="background-color: var(--karta-bg); border-color: var(--ciemny); ${cardOpacity}" onclick="editLesson('${l.id}')">
-                    <div class="flex items-center gap-4">
-                        <div class="w-1.5 h-12 rounded-full" style="background-color: ${subject.color}"></div>
-                        <div>
-                            <p class="font-extrabold" style="${lineThrough}">${l.startTime} - ${l.endTime}</p>
-                            <p class="text-sm font-medium" style="color: var(--tekst-szary)">${student.name} <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 border" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${subject.color}; border-color: ${subject.color}">${subject.name.toUpperCase()}</span></p>
+                <div class="flex items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 gap-2 md:gap-4" style="background-color: var(--karta-bg); border-color: var(--ciemny); ${cardOpacity}" onclick="editLesson('${l.id}')">
+                    <div class="flex items-center gap-3 md:gap-4 truncate">
+                        <div class="w-1.5 h-10 md:h-12 rounded-full shrink-0" style="background-color: ${subject.color}"></div>
+                        <div class="truncate">
+                            <p class="font-extrabold text-sm md:text-base" style="${lineThrough}">${l.startTime} - ${l.endTime}</p>
+                            <p class="text-xs md:text-sm font-medium truncate" style="color: var(--tekst-szary)">${student.name} <span class="text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 border hidden sm:inline-block" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${subject.color}; border-color: ${subject.color}">${subject.name.toUpperCase()}</span></p>
                         </div>
                     </div>
-                    <div class="flex flex-col items-end gap-2">
-                        <span class="font-extrabold" style="${lineThrough}">${l.price || 0} zł</span>
+                    <div class="flex flex-col items-end gap-1 md:gap-2 shrink-0">
+                        <span class="font-extrabold text-sm md:text-base" style="${lineThrough}">${l.price || 0} zł</span>
                         ${statusIcon}
                     </div>
                 </div>`;
@@ -505,8 +490,8 @@ function renderCalendar() {
     let formatDay = (date) => date.getDate().toString().padStart(2, '0');
     document.getElementById('calendar-week-btn-text').innerText = `${formatDay(monday)} - ${formatDay(sunday)} ${monthNames[sunday.getMonth()].substring(0,3).toUpperCase()}`;
 
-    const daysNames = ['PON.', 'WT.', 'ŚR.', 'CZW.', 'PT.', 'SOB.', 'NIEDZ.'];
-    let headerHtml = '<div class="border-r-2 p-2 w-16 shrink-0" style="background-color: var(--karta-bg); border-color: var(--ciemny)"></div>';
+    const daysNames = ['PON', 'WT', 'ŚR', 'CZW', 'PT', 'SOB', 'ND'];
+    let headerHtml = '<div class="border-r-2 p-1 md:p-2 w-12 md:w-16 shrink-0" style="background-color: var(--karta-bg); border-color: var(--ciemny)"></div>';
     
     for(let i=0; i<7; i++) {
         let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
@@ -515,19 +500,18 @@ function renderCalendar() {
         let textStyle = isToday ? `color: var(--akcent)` : `color: var(--tekst-szary)`;
         
         headerHtml += `
-            <div class="text-center py-3 border-r-2 day-col flex-1" style="background-color: var(--karta-bg); border-color: var(--ciemny)">
-                <div class="text-xs font-extrabold mb-2 tracking-wider" style="${textStyle}">${daysNames[i]}</div>
-                <div class="mx-auto w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full font-extrabold text-lg md:text-xl" style="${circleStyle}">
+            <div class="text-center py-2 md:py-3 border-r-2 day-col flex-1" style="background-color: var(--karta-bg); border-color: var(--ciemny)">
+                <div class="text-[10px] md:text-xs font-extrabold mb-1 md:mb-2 tracking-wider" style="${textStyle}">${daysNames[i]}</div>
+                <div class="mx-auto w-8 h-8 md:w-12 md:h-12 flex items-center justify-center rounded-full font-extrabold text-sm md:text-xl" style="${circleStyle}">
                     ${dayDate.getDate()}
                 </div>
             </div>`;
     }
     document.getElementById('calendar-header').innerHTML = headerHtml;
 
-    let gridHtml = `<div class="border-r-2 relative w-16 shrink-0 z-10" style="background-color: var(--karta-bg); border-color: var(--ciemny)">`;
+    let gridHtml = `<div class="border-r-2 relative w-12 md:w-16 shrink-0 z-10" style="background-color: var(--karta-bg); border-color: var(--ciemny)">`;
     for(let h = settings.startHour; h <= settings.endHour; h++) {
-        // Wysokość to h-24 (96px)
-        gridHtml += `<div class="h-24 time-row text-xs text-right pr-2 pt-1 font-bold" style="color: var(--tekst-szary)">${h}:00</div>`;
+        gridHtml += `<div class="h-24 time-row text-[10px] md:text-xs text-right pr-1 md:pr-2 pt-1 font-bold" style="color: var(--tekst-szary)">${h}:00</div>`;
     }
     gridHtml += `</div>`;
 
@@ -547,30 +531,29 @@ function renderCalendar() {
             
             if(parseInt(start[0]) < settings.startHour && parseInt(end[0]) <= settings.startHour) return;
 
-            // Zwiększony mnożnik na 96!
             let topPosition = ((parseInt(start[0]) - settings.startHour) * 96) + (parseInt(start[1]) / 60 * 96);
             let height = (((parseInt(end[0]) - parseInt(start[0])) * 96) + ((parseInt(end[1]) - parseInt(start[1])) / 60 * 96));
             
             if(topPosition < 0) { height += topPosition; topPosition = 0; }
 
-            let student = students.find(s => s.id == lesson.studentId) || {name: 'Usunięty uczeń'};
-            let subject = subjects.find(s => s.id == lesson.subjectId) || {name: 'Brak', color: '#cbd5e1'};
+            let student = students.find(s => s.id == lesson.studentId) || {name: 'Usunięty'};
+            let subject = subjects.find(s => s.id == lesson.subjectId) || {name: '', color: '#cbd5e1'};
             
             let bgColor = hexToRgba(subject.color, 0.15);
-            let icon = lesson.cancelled ? '❌' : (lesson.paid ? '✅' : '<span class="text-rose-500 font-extrabold text-sm">!</span>');
+            let icon = lesson.cancelled ? '❌' : (lesson.paid ? '✅' : '<span class="text-rose-500 font-extrabold text-xs md:text-sm">!</span>');
             
             let opacityAndStrike = lesson.cancelled ? 'opacity: 0.5; filter: grayscale(100%); text-decoration: line-through;' : '';
 
             gridHtml += `
-                <div class="absolute w-[94%] left-[3%] rounded-xl p-1.5 overflow-hidden shadow-sm hover:shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 transition cursor-pointer flex flex-col border-l-4 border-2" 
+                <div class="absolute w-[94%] left-[3%] rounded-lg md:rounded-xl p-1 md:p-1.5 overflow-hidden shadow-sm hover:shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 transition cursor-pointer flex flex-col border-l-2 md:border-l-4 border" 
                      style="top: ${topPosition}px; height: ${height}px; background-color: ${bgColor}; border-left-color: ${subject.color}; border-color: ${subject.color}; ${opacityAndStrike}"
                      onclick="editLesson('${lesson.id}')">
-                    <div class="font-bold flex justify-between text-xs mb-0.5" style="color: ${subject.color}">
-                        <span class="whitespace-nowrap">${lesson.startTime} - ${lesson.endTime}</span>
-                        <span title="Status">${icon}</span>
+                    <div class="font-bold flex justify-between text-[9px] md:text-xs mb-0.5" style="color: ${subject.color}">
+                        <span class="whitespace-nowrap tracking-tighter md:tracking-normal">${lesson.startTime}-${lesson.endTime}</span>
+                        <span title="Status" class="hidden md:inline">${icon}</span>
                     </div>
-                    <div class="font-extrabold truncate leading-tight text-[13px] md:text-sm">${student.name}</div>
-                    <div class="font-bold truncate mt-auto text-[9px] uppercase tracking-wider" style="color: var(--tekst-szary)">${subject.name}</div>
+                    <div class="font-extrabold truncate leading-tight text-[11px] md:text-sm">${student.name}</div>
+                    <div class="font-bold truncate mt-auto text-[8px] md:text-[9px] uppercase tracking-wider" style="color: var(--tekst-szary)">${subject.name}</div>
                 </div>`;
         });
         gridHtml += `</div>`;
@@ -705,7 +688,7 @@ function saveLesson() {
 
 function deleteLesson() {
     const id = document.getElementById('lesson-id').value;
-    if(confirm('Na pewno całkowicie USUNĄĆ tę lekcję? (Zamiast tego możesz po prostu zaznaczyć ją jako odwołaną)')) {
+    if(confirm('Na pewno całkowicie USUNĄĆ tę lekcję?')) {
         lessons = lessons.filter(l => l.id != id);
         saveToCloud(); closeModals(); renderCalendar();
         if(!document.getElementById('view-pulpit').classList.contains('hidden')) renderDashboard();
@@ -781,17 +764,17 @@ function renderStudentList(containerId, studentArr, total) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
     if(studentArr.length === 0) {
-        container.innerHTML = '<p style="color: var(--tekst-szary)">Brak opłaconych lekcji.</p>';
+        container.innerHTML = '<p class="text-sm" style="color: var(--tekst-szary)">Brak opłaconych lekcji.</p>';
         return;
     }
     studentArr.forEach(item => {
         let width = total > 0 ? Math.max(5, (item.val / total) * 100) : 0;
         container.innerHTML += `
             <div class="mb-3">
-                <div class="flex justify-between text-sm font-bold mb-1">
+                <div class="flex justify-between text-xs md:text-sm font-bold mb-1">
                     <span>${item.name}</span><span style="color: var(--akcent)">${item.val} zł</span>
                 </div>
-                <div class="w-full rounded-full h-3 border-2" style="background-color: var(--jasny); border-color: var(--szary-ramka)">
+                <div class="w-full rounded-full h-2 md:h-3 border-2" style="background-color: var(--jasny); border-color: var(--szary-ramka)">
                     <div class="h-full rounded-full" style="width: ${width}%; background-color: var(--akcent)"></div>
                 </div>
             </div>`;
