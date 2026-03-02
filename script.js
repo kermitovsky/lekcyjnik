@@ -27,9 +27,8 @@ let settings = {
 
 let currentDate = new Date();
 let datePicker; 
-let chartInstances = {}; // Trzyma instancje wykresów z Chart.js
+let chartInstances = {}; 
 
-// Konfiguracja domyślna dla wykresów
 Chart.defaults.font.family = "'Inter', 'sans-serif'";
 Chart.defaults.color = '#64748b';
 
@@ -63,7 +62,6 @@ function applyVisualSettings() {
     document.getElementById('ust-end').value = settings.endHour;
     document.getElementById('ust-czas').value = settings.duration;
 
-    // Odśwież wykresy, żeby zaktualizować kolory ramek
     if(!document.getElementById('view-zarobki').classList.contains('hidden')) {
         renderZarobki();
     }
@@ -182,7 +180,7 @@ function switchTab(tabName) {
     if(tabName === 'zarobki') {
         const now = new Date();
         document.getElementById('earnings-month-picker').value = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}`;
-        document.getElementById('earnings-week-picker').value = getWeekString(now); // Ustawia obecny tydzień
+        document.getElementById('earnings-week-picker').value = getWeekString(now); 
         renderZarobki();
     }
 }
@@ -193,7 +191,6 @@ function getMonday(d) {
     return new Date(d.setDate(diff));
 }
 
-// Funkcja pomocnicza zamieniająca Datę na String typu "2026-W10" używany w polu HTML <input type="week">
 function getWeekString(dateObj) {
     let d = new Date(dateObj);
     d.setHours(0,0,0,0);
@@ -368,7 +365,8 @@ function renderDashboard() {
                 lessonsThisMonth++;
                 if(l.paid) earnings += price;
             }
-            if(!l.paid && (l.date < todayString || (l.date === todayString && l.startTime < nowTime))) {
+            // Zmiana: lekcja wpada do zaległości dopiero, gdy minie godzina jej ZAKOŃCZENIA (l.endTime)
+            if(!l.paid && (l.date < todayString || (l.date === todayString && l.endTime < nowTime))) {
                 unpaidTotal += price;
                 unpaidCount++;
             }
@@ -381,7 +379,7 @@ function renderDashboard() {
     document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} zaległych lekcji`;
     document.getElementById('dashboard-active-students').innerText = students.length;
 
-    let upcomingLessons = lessons.filter(l => !l.cancelled && (l.date > todayString || (l.date === todayString && l.startTime >= nowTime)));
+    let upcomingLessons = lessons.filter(l => !l.cancelled && (l.date > todayString || (l.date === todayString && l.endTime >= nowTime)));
     upcomingLessons.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
     
     const upcomingContainer = document.getElementById('pulpit-upcoming-lessons');
@@ -412,7 +410,8 @@ function renderDashboard() {
         });
     }
 
-    let unpaidLessons = lessons.filter(l => !l.cancelled && !l.paid && (l.date < todayString || (l.date === todayString && l.startTime < nowTime)));
+    // Zmiana zaległości na endTime
+    let unpaidLessons = lessons.filter(l => !l.cancelled && !l.paid && (l.date < todayString || (l.date === todayString && l.endTime < nowTime)));
     unpaidLessons.sort((a,b) => (b.date + b.startTime).localeCompare(a.date + a.startTime)); 
     
     const unpaidContainer = document.getElementById('pulpit-unpaid-lessons');
@@ -525,9 +524,9 @@ function renderCalendar() {
     }
     document.getElementById('calendar-header').innerHTML = headerHtml;
 
-    // Wysokość rzędu = 96px
     let gridHtml = `<div class="border-r-2 relative w-16 shrink-0 z-10" style="background-color: var(--karta-bg); border-color: var(--ciemny)">`;
     for(let h = settings.startHour; h <= settings.endHour; h++) {
+        // Wysokość to h-24 (96px)
         gridHtml += `<div class="h-24 time-row text-xs text-right pr-2 pt-1 font-bold" style="color: var(--tekst-szary)">${h}:00</div>`;
     }
     gridHtml += `</div>`;
@@ -548,6 +547,7 @@ function renderCalendar() {
             
             if(parseInt(start[0]) < settings.startHour && parseInt(end[0]) <= settings.startHour) return;
 
+            // Zwiększony mnożnik na 96!
             let topPosition = ((parseInt(start[0]) - settings.startHour) * 96) + (parseInt(start[1]) / 60 * 96);
             let height = (((parseInt(end[0]) - parseInt(start[0])) * 96) + ((parseInt(end[1]) - parseInt(start[1])) / 60 * 96));
             
@@ -712,7 +712,7 @@ function deleteLesson() {
     }
 }
 
-// --- ZAROBKI (Z WYKRESAMI) ---
+// --- ZAROBKI ---
 function processEarningsData(lessonsArray) {
     let total = 0;
     let byStudent = {};
@@ -768,14 +768,9 @@ function renderChart(canvasId, type, dataArr) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: type === 'doughnut', position: 'bottom' }
-            },
+            plugins: { legend: { display: type === 'doughnut', position: 'bottom' } },
             scales: type === 'bar' ? {
-                y: { 
-                    beginAtZero: true, 
-                    grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--szary-ramka').trim() }
-                },
+                y: { beginAtZero: true, grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--szary-ramka').trim() } },
                 x: { grid: { display: false } }
             } : undefined
         }
@@ -807,13 +802,11 @@ function renderZarobki() {
     const monthPicker = document.getElementById('earnings-month-picker').value; 
     const weekPicker = document.getElementById('earnings-week-picker').value;
 
-    // 1. CAŁY CZAS
     const allData = processEarningsData(lessons);
     document.getElementById('total-all-earnings').innerText = `${allData.total} zł`;
     renderChart('chart-all-subject', 'doughnut', allData.subjectArr);
     renderStudentList('list-all-student', allData.studentArr, allData.total);
 
-    // 2. MIESIĄC
     if(monthPicker) {
         const monthLessons = lessons.filter(l => l.date.substring(0,7) === monthPicker);
         const monthData = processEarningsData(monthLessons);
@@ -821,7 +814,6 @@ function renderZarobki() {
         renderChart('chart-month-subject', 'bar', monthData.subjectArr);
     }
 
-    // 3. TYDZIEŃ
     if(weekPicker) {
         const weekLessons = lessons.filter(l => getWeekString(l.date) === weekPicker);
         const weekData = processEarningsData(weekLessons);
