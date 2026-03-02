@@ -1,15 +1,16 @@
-const CACHE_NAME = 'planer-v2';
+const CACHE_NAME = 'planer-v3';
 const urlsToCache = [
   './',
   './index.html',
   './style.css',
   './script.js',
-  './manifest.json'
+  './manifest.json',
+  './ikona.png'
 ];
 
 // Instalowanie i wymuszanie nowej wersji
 self.addEventListener('install', event => {
-  self.skipWaiting(); // Zmusza przeglądarkę do natychmiastowego użycia nowej wersji
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       return cache.addAll(urlsToCache);
@@ -32,12 +33,11 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Strategia: Najpierw Internet, potem Pamięć (Network First)
+// Strategia: Najpierw Internet, potem Pamięć
 self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Zapisujemy nową wersję do pamięci w locie
         const responseClone = response.clone();
         caches.open(CACHE_NAME).then(cache => {
           cache.put(event.request, responseClone);
@@ -45,7 +45,6 @@ self.addEventListener('fetch', event => {
         return response;
       })
       .catch(() => {
-        // Jeśli nie ma internetu, bierzemy z pamięci
         return caches.match(event.request);
       })
   );
