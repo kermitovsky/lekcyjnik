@@ -13,6 +13,11 @@
         }
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/pl.js"></script>
+
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5" id="meta-theme-color">
@@ -295,8 +300,8 @@
             
             <div class="grid grid-cols-2 gap-3 mb-1">
                 <div>
-                    <label class="text-xs font-bold uppercase" style="color: var(--tekst-szary)">Data</label>
-                    <input type="date" id="lesson-date" class="pole-tekstowe">
+                    <label class="text-xs font-bold uppercase" style="color: var(--tekst-szary)">Data (DD/MM/YYYY)</label>
+                    <input type="text" id="lesson-date" class="pole-tekstowe" placeholder="Wybierz datę">
                 </div>
                 <div>
                     <label class="text-xs font-bold uppercase" style="color: var(--tekst-szary)">Cena (zł)</label>
