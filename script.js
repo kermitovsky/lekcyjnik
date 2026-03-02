@@ -26,11 +26,14 @@ let settings = {
 
 let currentDate = new Date();
 let datePicker; 
+let timeStartPicker;
+let timeEndPicker;
 let chartInstances = {}; 
 
 Chart.defaults.font.family = "'Inter', 'sans-serif'";
 Chart.defaults.color = '#64748b';
 
+// ZAINICJOWANIE KALENDARZY 24H
 document.addEventListener("DOMContentLoaded", () => {
     datePicker = flatpickr("#lesson-date", {
         locale: "pl",
@@ -38,6 +41,21 @@ document.addEventListener("DOMContentLoaded", () => {
         altInput: true,
         altFormat: "d/m/Y",  
         allowInput: true
+    });
+
+    timeStartPicker = flatpickr("#lesson-time-start", {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: "H:i",
+        time_24hr: true,
+        onChange: autoUzupelnijCzas
+    });
+
+    timeEndPicker = flatpickr("#lesson-time-end", {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: "H:i",
+        time_24hr: true
     });
 });
 
@@ -84,7 +102,10 @@ function autoUzupelnijCzas() {
     date.setHours(h, m + settings.duration);
     let endH = date.getHours().toString().padStart(2, '0');
     let endM = date.getMinutes().toString().padStart(2, '0');
-    document.getElementById('lesson-time-end').value = `${endH}:${endM}`;
+    let endStr = `${endH}:${endM}`;
+    
+    document.getElementById('lesson-time-end').value = endStr;
+    if(timeEndPicker) timeEndPicker.setDate(endStr);
 }
 
 // --- LOGOWANIE (TYLKO GOOGLE) ---
@@ -402,7 +423,6 @@ function renderDashboard() {
     const unpaidContainer = document.getElementById('pulpit-unpaid-lessons');
     unpaidContainer.innerHTML = '';
     if(unpaidLessons.length === 0) {
-        // ZMIENIONY TEKST NA ZGODNY Z LOGIKĄ
         unpaidContainer.innerHTML = `<div class="border-2 p-4 md:p-6 rounded-xl text-center" style="background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3)"><div class="text-2xl md:text-3xl mb-1 md:mb-2">🎉</div><p class="text-emerald-500 font-bold text-sm md:text-base">Uczniowie nie mają zaległości.</p></div>`;
     } else {
         unpaidLessons.slice(0, 5).forEach(l => {
@@ -605,6 +625,7 @@ function openLessonModal() {
     if(datePicker) datePicker.setDate(new Date().toISOString().split('T')[0]);
     
     document.getElementById('lesson-time-start').value = '15:00';
+    if(timeStartPicker) timeStartPicker.setDate('15:00');
     autoUzupelnijCzas();
 
     document.getElementById('lesson-price').value = '';
@@ -632,6 +653,9 @@ function editLesson(id) {
     
     document.getElementById('lesson-time-start').value = lesson.startTime;
     document.getElementById('lesson-time-end').value = lesson.endTime;
+    if(timeStartPicker) timeStartPicker.setDate(lesson.startTime);
+    if(timeEndPicker) timeEndPicker.setDate(lesson.endTime);
+
     document.getElementById('lesson-price').value = lesson.price || '';
     document.getElementById('lesson-paid').checked = lesson.paid || false;
     document.getElementById('lesson-cancelled').checked = lesson.cancelled || false;
@@ -662,21 +686,67 @@ function saveLesson() {
     const cancelled = document.getElementById('lesson-cancelled') ? document.getElementById('lesson-cancelled').checked : false;
     const isRecurring = document.getElementById('lesson-recurring') ? document.getElementById('lesson-recurring').checked : false;
 
-    if(!studentId || !date || !subjectId) return alert('Wybierz ucznia, przedmiot i datę!');
+    if(!studentId || !date || !subjectId || !startTime || !endTime) return alert('Uzupełnij wszystkie dane (uczeń, przedmiot, data, godziny)!');
 
     if (id) {
-        let lesson = lessons.find(l => l.id == id);
-        lesson.studentId = studentId; lesson.subjectId = subjectId; lesson.date = date;
-        lesson.startTime = startTime; lesson.endTime = endTime; lesson.price = price;
-        lesson.paid = paid; lesson.cancelled = cancelled;
+        let originalLesson = lessons.find(l => l.id == id);
+        let oldDate = originalLesson.date;
+        
+        // ZNAJDOWANIE PRZYSZŁYCH LEKCJI W CYKLU
+        let futureLessons = lessons.filter(l => {
+            if (l.id == id || l.date < oldDate) return false;
+            // Sprawdzamy po sprytnym ID grupy lub (awaryjnie dla starszych) po tych samych danych
+            if (originalLesson.groupId && l.groupId === originalLesson.groupId) return true;
+            if (!originalLesson.groupId && l.studentId == originalLesson.studentId && l.subjectId == originalLesson.subjectId && l.startTime == originalLesson.startTime) {
+                return new Date(l.date).getDay() === new Date(oldDate).getDay();
+            }
+            return false;
+        });
+
+        // Aktualizacja GŁÓWNEJ lekcji
+        originalLesson.studentId = studentId;
+        originalLesson.subjectId = subjectId;
+        originalLesson.date = date;
+        originalLesson.startTime = startTime;
+        originalLesson.endTime = endTime;
+        originalLesson.price = price;
+        originalLesson.paid = paid;
+        originalLesson.cancelled = cancelled;
+
+        // Jeśli są inne, pytamy użytkownika
+        if (futureLessons.length > 0) {
+            let updateFuture = confirm("Znalazłem zaplanowane przyszłe lekcje z tego cyklu.\n\n[OK] -> Zaktualizuj tę lekcję ORAZ WSZYSTKIE PRZYSZŁE\n[Anuluj] -> Zaktualizuj TYLKO tę jedną lekcję");
+            
+            if (updateFuture) {
+                // Obliczamy o ile dni ktoś ewentualnie przesunął lekcję w kalendarzu
+                let dateDiff = Math.round((new Date(date) - new Date(oldDate)) / (1000 * 60 * 60 * 24));
+                
+                futureLessons.forEach(fl => {
+                    fl.studentId = studentId;
+                    fl.subjectId = subjectId;
+                    fl.startTime = startTime;
+                    fl.endTime = endTime;
+                    fl.price = price;
+                    if (dateDiff !== 0) { // Przesuwamy też daty w przyszłości jeśli przesunięto główną
+                        let fd = new Date(fl.date);
+                        fd.setDate(fd.getDate() + dateDiff);
+                        fl.date = fd.toISOString().split('T')[0];
+                    }
+                });
+            }
+        }
+
     } else {
         const repetitions = isRecurring ? 156 : 1; 
         let baseDate = new Date(date);
+        let newGroupId = "grp_" + Date.now().toString() + Math.floor(Math.random() * 1000); // Unikalny identyfikator cyklu
+
         for(let i=0; i<repetitions; i++) {
             let lessonDate = new Date(baseDate);
             lessonDate.setDate(baseDate.getDate() + (i * 7));
             lessons.push({
-                id: Date.now().toString() + Math.floor(Math.random() * 1000),
+                id: Date.now().toString() + Math.floor(Math.random() * 1000) + i,
+                groupId: isRecurring ? newGroupId : null, // Przypisanie do grupy
                 studentId, subjectId, date: lessonDate.toISOString().split('T')[0],
                 startTime, endTime, price, cancelled: false,
                 paid: (paid && i === 0) ? true : false
@@ -689,11 +759,36 @@ function saveLesson() {
 
 function deleteLesson() {
     const id = document.getElementById('lesson-id').value;
-    if(confirm('Na pewno całkowicie USUNĄĆ tę lekcję? (Zamiast tego możesz po prostu zaznaczyć ją jako odwołaną)')) {
+    let originalLesson = lessons.find(l => l.id == id);
+    
+    // Logika usuwania całego cyklu
+    let futureLessons = lessons.filter(l => {
+        if (l.id == id || l.date < originalLesson.date) return false;
+        if (originalLesson.groupId && l.groupId === originalLesson.groupId) return true;
+        if (!originalLesson.groupId && l.studentId == originalLesson.studentId && l.subjectId == originalLesson.subjectId && l.startTime == originalLesson.startTime) {
+            return new Date(l.date).getDay() === new Date(originalLesson.date).getDay();
+        }
+        return false;
+    });
+
+    if (futureLessons.length > 0) {
+        let choice = prompt("Wybierz zakres USUWANIA (wpisz 1 lub 2):\n\n1 - Usuń TYLKO TĘ jedną lekcję\n2 - Usuń tę i WSZYSTKIE PRZYSZŁE z tego cyklu", "1");
+        if (choice === "1") {
+            lessons = lessons.filter(l => l.id != id);
+        } else if (choice === "2") {
+            let idsToDelete = futureLessons.map(f => f.id);
+            idsToDelete.push(id);
+            lessons = lessons.filter(l => !idsToDelete.includes(l.id));
+        } else {
+            return; // Użytkownik zamknął okienko prompt, przerywamy usuwanie
+        }
+    } else {
+        if(!confirm('Na pewno całkowicie USUNĄĆ tę lekcję?')) return;
         lessons = lessons.filter(l => l.id != id);
-        saveToCloud(); closeModals(); renderCalendar();
-        if(!document.getElementById('view-pulpit').classList.contains('hidden')) renderDashboard();
     }
+    
+    saveToCloud(); closeModals(); renderCalendar();
+    if(!document.getElementById('view-pulpit').classList.contains('hidden')) renderDashboard();
 }
 
 // --- ZAROBKI ---
