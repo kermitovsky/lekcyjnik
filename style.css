@@ -1,17 +1,17 @@
 .bg-dots {
-    background-color: #f8fafc;
-    background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
-    background-size: 24px 24px;
+    background-color: #f8fafc; /* Bardzo jasny, nowoczesny szary */
+    background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
+    background-size: 28px 28px;
 }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-.time-row { border-bottom: 1px dashed #e2e8f0; }
-.day-col { border-right: 1px dashed #e2e8f0; }
+.time-row { border-bottom: 1px dashed #cbd5e1; }
+.day-col { border-right: 1px dashed #cbd5e1; }
 .day-col:last-child { border-right: none; }
