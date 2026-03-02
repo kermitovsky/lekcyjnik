@@ -60,7 +60,6 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                
                 <div>
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xl font-bold text-slate-900">Nadchodzące lekcje</h3>
@@ -68,17 +67,21 @@
                             Zobacz kalendarz <span>&rarr;</span>
                         </button>
                     </div>
-                    <div id="pulpit-upcoming-lessons" class="space-y-3">
-                        </div>
+                    <div id="pulpit-upcoming-lessons" class="space-y-3"></div>
                 </div>
 
                 <div>
                     <h3 class="text-xl font-bold text-rose-600 mb-4">Zaległości płatnicze</h3>
-                    <div id="pulpit-unpaid-lessons" class="space-y-3">
-                        </div>
+                    <div id="pulpit-unpaid-lessons" class="space-y-3"></div>
                 </div>
-
             </div>
+
+            <div class="mt-4">
+                <h3 class="text-2xl font-extrabold text-slate-900 mb-6 border-b-2 border-slate-200 pb-2">Plan na ten tydzień</h3>
+                <div id="pulpit-week-view" class="space-y-2">
+                    </div>
+            </div>
+
         </div>
 
         <div id="view-kalendarz" class="max-w-6xl mx-auto h-full flex flex-col hidden">
@@ -154,7 +157,7 @@
 
     <div id="modal-subject" class="fixed inset-0 bg-slate-900/50 hidden flex justify-center items-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl border-2 border-slate-800">
-            <h3 class="text-xl font-bold mb-4 text-slate-900">Nowy Przedmiot</h3>
+            <h3 class="text-xl font-bold mb-4 text-slate-900">Przedmiot</h3>
             <input type="hidden" id="subject-id">
             <input type="text" id="subject-name" placeholder="Nazwa (np. Matematyka)" class="w-full border-2 border-slate-200 p-3 rounded-xl mb-4 outline-none focus:border-indigo-500 font-medium">
             <div class="mb-6">
@@ -171,14 +174,13 @@
         </div>
     </div>
 
-    <div id="modal-student" class="fixed inset-0 bg-slate-900/50 hidden flex justify-center items-center z-50 p-4 backdrop-blur-sm">
+    <div id="modal-student" class="fixed inset-0 bg-slate-900/50 hidden flex justify-center items-center z-50 p-4 backdrop-blur-sm" data-editing-id="">
         <div class="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl border-2 border-slate-800">
             <h3 class="text-xl font-bold mb-4 text-slate-900">Uczeń</h3>
             <input type="text" id="student-name" placeholder="Imię i nazwisko" class="w-full border-2 border-slate-200 p-3 rounded-xl mb-4 outline-none focus:border-indigo-500 font-medium">
             <div class="mb-6">
                 <label class="text-sm font-bold text-slate-500 mb-2 block">Czego uczysz tę osobę?</label>
-                <div id="student-subjects-container" class="space-y-2 max-h-40 overflow-y-auto bg-slate-50 p-3 rounded-xl border-2 border-slate-100">
-                    </div>
+                <div id="student-subjects-container" class="space-y-2 max-h-40 overflow-y-auto bg-slate-50 p-3 rounded-xl border-2 border-slate-100"></div>
             </div>
             <div class="flex justify-end gap-2">
                 <button onclick="closeModals()" class="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-xl font-bold transition">Anuluj</button>
