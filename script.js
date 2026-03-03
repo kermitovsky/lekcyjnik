@@ -33,7 +33,7 @@ let chartInstances = {};
 Chart.defaults.font.family = "'Inter', 'sans-serif'";
 Chart.defaults.color = '#64748b';
 
-// --- CUSTOMOWE OKIENKA (ZAMIAST PRZEGLĄDARKOWYCH) ---
+// --- CUSTOMOWE OKIENKA ---
 function customAlert(title, message) {
     return new Promise((resolve) => {
         const modal = document.getElementById('modal-alert');
@@ -716,17 +716,31 @@ async function saveLesson() {
         let originalLesson = lessons.find(l => l.id == id);
         let oldDate = originalLesson.date;
         
-        let futureLessons = lessons.filter(l => {
-            if (l.id == id || l.date < oldDate) return false;
-            if (originalLesson.groupId && l.groupId === originalLesson.groupId) return true;
-            if (!originalLesson.groupId && l.studentId == originalLesson.studentId && l.subjectId == originalLesson.subjectId && l.startTime == originalLesson.startTime) {
-                return new Date(l.date).getDay() === new Date(oldDate).getDay();
-            }
-            return false;
-        });
+        // NOWOŚĆ: Sprawdzamy czy użytkownik zmienił DANE GŁÓWNE (nie tylko checkbox opłacenia)
+        let isStructureChanged = (
+            originalLesson.studentId !== studentId ||
+            originalLesson.subjectId !== subjectId ||
+            originalLesson.date !== date ||
+            originalLesson.startTime !== startTime ||
+            originalLesson.endTime !== endTime ||
+            originalLesson.price != price // używam != a nie !== żeby "80" nie gryzło się z 80
+        );
+
+        let futureLessons = [];
+        // Jeśli zmieniły się dane główne, dopiero wtedy szukamy cyklu do aktualizacji
+        if (isStructureChanged) {
+            futureLessons = lessons.filter(l => {
+                if (l.id == id || l.date < oldDate) return false;
+                if (originalLesson.groupId && l.groupId === originalLesson.groupId) return true;
+                if (!originalLesson.groupId && l.studentId == originalLesson.studentId && l.subjectId == originalLesson.subjectId && l.startTime == originalLesson.startTime) {
+                    return new Date(l.date).getDay() === new Date(oldDate).getDay();
+                }
+                return false;
+            });
+        }
 
         if (futureLessons.length > 0) {
-            let choice = await showSeriesChoice('Aktualizacja cyklu', 'Znalazłem zaplanowane przyszłe lekcje. Co chcesz zaktualizować?');
+            let choice = await showSeriesChoice('Aktualizacja cyklu', 'Zmieniłeś szczegóły lekcji. Co chcesz zaktualizować?');
             if (choice === 'future') {
                 let dateDiff = Math.round((new Date(date) - new Date(oldDate)) / (1000 * 60 * 60 * 24));
                 futureLessons.forEach(fl => {
@@ -748,6 +762,7 @@ async function saveLesson() {
             }
         }
 
+        // Zawsze zapisujemy oryginalną lekcję
         originalLesson.studentId = studentId;
         originalLesson.subjectId = subjectId;
         originalLesson.date = date;
