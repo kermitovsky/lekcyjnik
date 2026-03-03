@@ -75,7 +75,8 @@
                         <span class="text-xl">📅</span>
                     </div>
                     <div>
-                        <div id="dashboard-monthly-earnings" class="text-3xl md:text-4xl font-extrabold mb-1">0 zł</div>
+                        <div id="dashboard-monthly-earnings" class="text-3xl md:text-4xl font-extrabold mb-0">0 zł</div>
+                        <div id="dashboard-planned-earnings" class="text-[10px] md:text-xs font-bold mb-1 opacity-80" style="color: var(--akcent)">(w planach: +0 zł)</div>
                         <div id="dashboard-monthly-lessons" class="text-xs md:text-sm font-medium" style="color: var(--tekst-szary)">0 lekcji</div>
                     </div>
                 </div>
@@ -174,11 +175,9 @@
                 <h2 class="text-2xl md:text-3xl font-extrabold">Baza Uczniów</h2>
                 <button onclick="openStudentModal()" class="przycisk-glowny w-full sm:w-auto text-sm md:text-base">+ Dodaj ucznia</button>
             </div>
-            
             <div class="mb-6">
                 <input type="text" id="student-search" placeholder="🔍 Szukaj po imieniu..." class="pole-tekstowe mb-0 border-2" oninput="renderStudents()">
             </div>
-
             <div id="students-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </div>
 
@@ -343,7 +342,10 @@
             <select id="lesson-student" onchange="updateLessonSubjectDropdown()" class="pole-tekstowe text-sm md:text-base"></select>
             
             <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Przedmiot</label>
-            <select id="lesson-subject" class="pole-tekstowe text-sm md:text-base"></select>
+            <select id="lesson-subject" class="pole-tekstowe text-sm md:text-base mb-2"></select>
+            
+            <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Temat / Notatka (Opcjonalnie)</label>
+            <input type="text" id="lesson-topic" placeholder="np. Ułamki, Sprawdzian..." class="pole-tekstowe text-sm md:text-base">
             
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3 mb-1">
                 <div>
@@ -405,7 +407,7 @@
     <div id="modal-confirm" class="modal-tlo hidden z-[70]">
         <div class="modal-okno text-center max-w-sm">
             <h3 class="text-2xl font-extrabold mb-3" id="confirm-title">Potwierdzenie</h3>
-            <p class="mb-6 font-medium" style="color: var(--tekst-szary)" id="confirm-message"></p>
+            <p class="mb-6 font-medium whitespace-pre-line" style="color: var(--tekst-szary)" id="confirm-message"></p>
             <div class="flex justify-center gap-3">
                 <button id="btn-confirm-cancel" class="przycisk-anuluj w-1/2 border-2" style="border-color: var(--szary-ramka)">Anuluj</button>
                 <button id="btn-confirm-ok" class="przycisk-glowny w-1/2">Tak</button>
