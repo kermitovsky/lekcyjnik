@@ -20,8 +20,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <link rel="icon" type="image/png" href="ikona.png?v=2">
-    <link rel="apple-touch-icon" href="ikona.png?v=2">
+    <link rel="icon" type="image/png" href="ikona.png?v=3">
+    <link rel="apple-touch-icon" href="ikona.png?v=3">
 
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
@@ -127,14 +127,16 @@
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-3 w-full">
                 <h2 id="month-year-display" class="text-xl md:text-3xl font-extrabold w-full text-center sm:text-left"></h2>
                 
-                <div class="flex flex-wrap items-center justify-between sm:justify-end gap-2 md:gap-4 w-full sm:w-auto">
+                <div class="flex flex-wrap items-center justify-between sm:justify-end gap-2 md:gap-4 w-full sm:w-auto relative">
                     <button onclick="goToToday()" class="border-2 font-bold py-2 px-3 md:px-4 rounded-xl text-xs md:text-sm hover:opacity-70 transition shadow-[2px_2px_0px_var(--ciemny)]" style="background-color: var(--karta-bg); border-color: var(--ciemny)">Dzisiaj</button>
                     
                     <div class="flex rounded-xl border-2 items-center shadow-[2px_2px_0px_var(--ciemny)] flex-1 sm:flex-none justify-between" style="background-color: var(--karta-bg); border-color: var(--ciemny)">
                         <button onclick="changeWeek(-1)" class="px-3 py-2 font-bold border-r-2 hover:opacity-60 transition flex items-center justify-center" style="border-color: var(--ciemny); color: var(--tekst-glowny)">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                         </button>
-                        <span id="calendar-week-btn-text" class="px-2 py-2 text-xs md:text-sm font-extrabold min-w-[110px] md:min-w-[130px] text-center tracking-wide uppercase" style="color: var(--tekst-glowny)"></span>
+                        <span id="calendar-week-btn-text" onclick="openJumpPicker()" class="px-2 py-2 text-xs md:text-sm font-extrabold min-w-[110px] md:min-w-[130px] text-center tracking-wide uppercase cursor-pointer transition hover:opacity-70" style="color: var(--tekst-glowny)" title="Kliknij, aby wybrać datę"></span>
+                        <input type="text" id="jump-date-picker" class="hidden">
+                        
                         <button onclick="changeWeek(1)" class="px-3 py-2 font-bold border-l-2 hover:opacity-60 transition flex items-center justify-center" style="border-color: var(--ciemny); color: var(--tekst-glowny)">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                         </button>
@@ -168,10 +170,15 @@
         </div>
 
         <div id="view-uczniowie" class="max-w-4xl mx-auto hidden">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b-2 pb-4 gap-3" style="border-color: var(--szary-ramka)">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 border-b-2 pb-4 gap-3" style="border-color: var(--szary-ramka)">
                 <h2 class="text-2xl md:text-3xl font-extrabold">Baza Uczniów</h2>
                 <button onclick="openStudentModal()" class="przycisk-glowny w-full sm:w-auto text-sm md:text-base">+ Dodaj ucznia</button>
             </div>
+            
+            <div class="mb-6">
+                <input type="text" id="student-search" placeholder="🔍 Szukaj po imieniu..." class="pole-tekstowe mb-0 border-2" oninput="renderStudents()">
+            </div>
+
             <div id="students-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </div>
 
@@ -280,8 +287,13 @@
                 <hr style="border-color: var(--szary-ramka)">
 
                 <div>
-                    <h3 class="font-bold text-lg mb-3">Zarządzanie danymi</h3>
-                    <button onclick="pobierzKopieZapasowa()" class="przycisk-glowny w-full md:w-auto text-sm md:text-base border-slate-800" style="background-color: var(--ciemny); color: var(--karta-bg);">⬇️ Pobierz kopię zapasową (JSON)</button>
+                    <h3 class="font-bold text-lg mb-3">Zarządzanie danymi (Baza)</h3>
+                    <p class="text-sm mb-4" style="color: var(--tekst-szary)">Możesz pobrać swoją bazę na dysk lub wgrać ją z powrotem (np. na innym koncie).</p>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button onclick="eksportujDane()" class="przycisk-glowny w-full sm:w-1/2 bg-slate-800 border-slate-800 text-white flex justify-center items-center gap-2">⬆️ Pobierz (Eksport)</button>
+                        <input type="file" id="import-file" class="hidden" accept=".json" onchange="importujDane(event)">
+                        <button onclick="document.getElementById('import-file').click()" class="przycisk-anuluj w-full sm:w-1/2 border-2 flex justify-center items-center gap-2 hover:bg-slate-100" style="border-color: var(--szary-ramka); color: var(--tekst-glowny)">⬇️ Wgraj plik (Import)</button>
+                    </div>
                 </div>
             </div>
         </div>
