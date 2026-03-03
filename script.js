@@ -28,6 +28,7 @@ let currentDate = new Date();
 let datePicker; 
 let timeStartPicker;
 let timeEndPicker;
+let jumpPicker; // Nowy picker do skakania po datach
 let chartInstances = {}; 
 
 Chart.defaults.font.family = "'Inter', 'sans-serif'";
@@ -84,12 +85,27 @@ function showSeriesChoice(title, message, isDanger = false) {
     });
 }
 
-// ZAINICJOWANIE KALENDARZY 24H
+// ZAINICJOWANIE KALENDARZY 
 document.addEventListener("DOMContentLoaded", () => {
     datePicker = flatpickr("#lesson-date", { locale: "pl", dateFormat: "Y-m-d", altInput: true, altFormat: "d/m/Y", allowInput: true });
     timeStartPicker = flatpickr("#lesson-time-start", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true, onChange: autoUzupelnijCzas });
     timeEndPicker = flatpickr("#lesson-time-end", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true });
+    
+    // Niewidzialny kalendarz do szybkiego skoku
+    jumpPicker = flatpickr("#jump-date-picker", {
+        locale: "pl",
+        onChange: function(selectedDates) {
+            if(selectedDates.length > 0) {
+                currentDate = selectedDates[0];
+                renderCalendar();
+            }
+        }
+    });
 });
+
+function openJumpPicker() {
+    if(jumpPicker) jumpPicker.open();
+}
 
 // --- APLIKOWANIE USTAWIEŃ WIZUALNYCH ---
 function applyVisualSettings() {
@@ -134,6 +150,18 @@ function autoUzupelnijCzas() {
     if(timeEndPicker) timeEndPicker.setDate(endStr);
 }
 
+// --- BŁYSKAWICZNE OZNACZANIE WPŁAT (ONE-CLICK) ---
+function markAsPaid(id, event) {
+    event.stopPropagation(); // Blokuje otwarcie okna edycji po kliknięciu przycisku "Opłać"
+    let lesson = lessons.find(l => l.id == id);
+    if(lesson) {
+        lesson.paid = true;
+        saveToCloud();
+        renderDashboard();
+        if(!document.getElementById('view-kalendarz').classList.contains('hidden')) renderCalendar();
+    }
+}
+
 // --- LOGOWANIE (TYLKO GOOGLE) ---
 firebase.auth().onAuthStateChanged((user) => {
     if (user) {
@@ -160,7 +188,7 @@ async function zalogujPrzezGoogle() {
 }
 function wyloguj() { firebase.auth().signOut(); }
 
-// --- POBIERANIE I ZAPIS DANYCH ---
+// --- POBIERANIE I ZAPIS DANYCH (IMPORT / EKSPORT) ---
 function pobierzDaneZChmury() {
     db.collection("planer_korepetytora").doc(currentUser.uid).get().then((doc) => {
         if (doc.exists) {
@@ -185,7 +213,7 @@ function saveToCloud() {
     });
 }
 
-function pobierzKopieZapasowa() {
+function eksportujDane() {
     const backupData = { subjects, students, lessons, settings };
     const dataStr = JSON.stringify(backupData, null, 2);
     const blob = new Blob([dataStr], {type: "application/json"});
@@ -193,6 +221,42 @@ function pobierzKopieZapasowa() {
     const a = document.createElement('a');
     a.href = url; a.download = `Planer_Kopia_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
+}
+
+async function importujDane(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const potwierdzenie = await showConfirm('Wgrywanie bazy danych', 'Uwaga! Ta operacja bezpowrotnie zastąpi Twoje obecne dane w chmurze plikiem z dysku. Chcesz kontynuować?', true);
+    
+    if (!potwierdzenie) {
+        event.target.value = ''; 
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if(data.subjects && data.students && data.lessons) {
+                subjects = data.subjects;
+                students = data.students;
+                lessons = data.lessons;
+                if(data.settings) settings = data.settings;
+                
+                saveToCloud();
+                applyVisualSettings();
+                switchTab('pulpit');
+                await customAlert('Sukces', 'Baza danych została poprawnie wgrana!');
+            } else {
+                await customAlert('Błąd pliku', 'Ten plik jest uszkodzony lub nie pochodzi z aplikacji Planer Korepetytora.');
+            }
+        } catch (error) {
+            await customAlert('Błąd odczytu', 'Nie udało się poprawnie odczytać pliku.');
+        }
+        event.target.value = '';
+    };
+    reader.readAsText(file);
 }
 
 // --- NAWIGACJA ---
@@ -287,13 +351,20 @@ async function deleteSubject() {
     }
 }
 
-// --- UCZNIOWIE ---
+// --- UCZNIOWIE (Z WYSZUKIWARKĄ) ---
 function renderStudents() {
     const list = document.getElementById('students-list');
     list.innerHTML = '';
-    if(students.length === 0) return list.innerHTML = '<p style="color: var(--tekst-szary)">Brak uczniów. Dodaj kogoś!</p>';
+    
+    // Wyszukiwarka
+    const searchInput = document.getElementById('student-search');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+    let filteredStudents = students.filter(s => s.name.toLowerCase().includes(searchTerm));
 
-    students.forEach(student => {
+    if(students.length === 0) return list.innerHTML = '<p style="color: var(--tekst-szary)">Brak uczniów. Dodaj kogoś!</p>';
+    if(filteredStudents.length === 0) return list.innerHTML = '<p style="color: var(--tekst-szary)">Nie znaleziono ucznia o takim imieniu.</p>';
+
+    filteredStudents.forEach(student => {
         let studentSubjectsHtml = '';
         if(student.subjectIds && student.subjectIds.length > 0) {
             student.subjectIds.forEach(subId => {
@@ -316,6 +387,7 @@ function renderStudents() {
             </div>`;
     });
 }
+
 function openStudentModal() {
     document.getElementById('student-name').value = '';
     const container = document.getElementById('student-subjects-container');
@@ -457,7 +529,10 @@ function renderDashboard() {
                         <div class="font-bold text-sm md:text-base">${student.name}</div>
                         <div class="text-[10px] md:text-xs font-medium text-rose-500">${l.date} | ${l.startTime}</div>
                     </div>
-                    <div class="font-extrabold text-rose-500 text-sm md:text-base">${l.price || 0} zł</div>
+                    <div class="flex items-center gap-3">
+                        <div class="font-extrabold text-rose-500 text-sm md:text-base">${l.price || 0} zł</div>
+                        <button onclick="markAsPaid('${l.id}', event)" class="px-2 py-1 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-200 transition whitespace-nowrap">💸 Opłać</button>
+                    </div>
                 </div>`;
         });
     }
@@ -495,7 +570,7 @@ function renderDashboard() {
             } else if (l.paid) {
                 statusIcon = '<span class="px-1.5 md:px-2 py-1 rounded border text-[9px] md:text-xs font-bold shadow-sm text-emerald-600 bg-emerald-50 border-emerald-200">Opłacone</span>';
             } else {
-                statusIcon = '<span class="px-1.5 md:px-2 py-1 rounded border text-[9px] md:text-xs font-bold shadow-sm text-rose-500 bg-rose-50 border-rose-200">Brak</span>';
+                statusIcon = `<button onclick="markAsPaid('${l.id}', event)" class="px-2 py-1 rounded border text-[10px] md:text-xs font-bold shadow-sm bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 transition whitespace-nowrap">💸 Opłać</button>`;
             }
 
             let cardOpacity = l.cancelled ? 'opacity: 0.5; filter: grayscale(100%)' : '';
@@ -564,7 +639,10 @@ function renderCalendar() {
         let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
         let dateString = dayDate.toISOString().split('T')[0];
 
-        gridHtml += `<div class="relative day-col flex-1 border-r-2 last:border-r-0" style="border-color: var(--szary-ramka)" data-date="${dateString}">`;
+        // Delikatne zaciemnienie weekendu dla lepszej czytelności (propozycja z punktu 5)
+        let isWeekend = (i === 5 || i === 6) ? `background-color: rgba(120, 120, 120, 0.03);` : '';
+
+        gridHtml += `<div class="relative day-col flex-1 border-r-2 last:border-r-0" style="border-color: var(--szary-ramka); ${isWeekend}" data-date="${dateString}">`;
         for(let h = settings.startHour; h <= settings.endHour; h++) {
             gridHtml += `<div class="h-24 time-row"></div>`;
         }
@@ -716,18 +794,16 @@ async function saveLesson() {
         let originalLesson = lessons.find(l => l.id == id);
         let oldDate = originalLesson.date;
         
-        // NOWOŚĆ: Sprawdzamy czy użytkownik zmienił DANE GŁÓWNE (nie tylko checkbox opłacenia)
         let isStructureChanged = (
             originalLesson.studentId !== studentId ||
             originalLesson.subjectId !== subjectId ||
             originalLesson.date !== date ||
             originalLesson.startTime !== startTime ||
             originalLesson.endTime !== endTime ||
-            originalLesson.price != price // używam != a nie !== żeby "80" nie gryzło się z 80
+            originalLesson.price != price 
         );
 
         let futureLessons = [];
-        // Jeśli zmieniły się dane główne, dopiero wtedy szukamy cyklu do aktualizacji
         if (isStructureChanged) {
             futureLessons = lessons.filter(l => {
                 if (l.id == id || l.date < oldDate) return false;
@@ -756,13 +832,9 @@ async function saveLesson() {
                     }
                 });
             } else if (choice === 'single') {
-                // nic nie robi dla reszty
-            } else {
-                return; // anulowano
-            }
+            } else { return; }
         }
 
-        // Zawsze zapisujemy oryginalną lekcję
         originalLesson.studentId = studentId;
         originalLesson.subjectId = subjectId;
         originalLesson.date = date;
