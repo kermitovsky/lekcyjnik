@@ -28,7 +28,7 @@ let currentDate = new Date();
 let datePicker; 
 let timeStartPicker;
 let timeEndPicker;
-let jumpPicker; // Nowy picker do skakania po datach
+let jumpPicker; 
 let chartInstances = {}; 
 
 Chart.defaults.font.family = "'Inter', 'sans-serif'";
@@ -91,7 +91,6 @@ document.addEventListener("DOMContentLoaded", () => {
     timeStartPicker = flatpickr("#lesson-time-start", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true, onChange: autoUzupelnijCzas });
     timeEndPicker = flatpickr("#lesson-time-end", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true });
     
-    // Niewidzialny kalendarz do szybkiego skoku
     jumpPicker = flatpickr("#jump-date-picker", {
         locale: "pl",
         onChange: function(selectedDates) {
@@ -152,7 +151,7 @@ function autoUzupelnijCzas() {
 
 // --- BŁYSKAWICZNE OZNACZANIE WPŁAT (ONE-CLICK) ---
 function markAsPaid(id, event) {
-    event.stopPropagation(); // Blokuje otwarcie okna edycji po kliknięciu przycisku "Opłać"
+    event.stopPropagation(); 
     let lesson = lessons.find(l => l.id == id);
     if(lesson) {
         lesson.paid = true;
@@ -351,12 +350,11 @@ async function deleteSubject() {
     }
 }
 
-// --- UCZNIOWIE (Z WYSZUKIWARKĄ) ---
+// --- UCZNIOWIE ---
 function renderStudents() {
     const list = document.getElementById('students-list');
     list.innerHTML = '';
     
-    // Wyszukiwarka
     const searchInput = document.getElementById('student-search');
     const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
     let filteredStudents = students.filter(s => s.name.toLowerCase().includes(searchTerm));
@@ -531,7 +529,7 @@ function renderDashboard() {
                     </div>
                     <div class="flex items-center gap-3">
                         <div class="font-extrabold text-rose-500 text-sm md:text-base">${l.price || 0} zł</div>
-                        <button onclick="markAsPaid('${l.id}', event)" class="px-2 py-1 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-200 transition whitespace-nowrap">💸 Opłać</button>
+                        <button onclick="markAsPaid('${l.id}', event)" class="px-2 py-1 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-200 transition whitespace-nowrap">Zapłacone</button>
                     </div>
                 </div>`;
         });
@@ -570,7 +568,8 @@ function renderDashboard() {
             } else if (l.paid) {
                 statusIcon = '<span class="px-1.5 md:px-2 py-1 rounded border text-[9px] md:text-xs font-bold shadow-sm text-emerald-600 bg-emerald-50 border-emerald-200">Opłacone</span>';
             } else {
-                statusIcon = `<button onclick="markAsPaid('${l.id}', event)" class="px-2 py-1 rounded border text-[10px] md:text-xs font-bold shadow-sm bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 transition whitespace-nowrap">💸 Opłać</button>`;
+                // Przywrócono stary napis dla nieopłaconych w widoku tygodnia (zgodnie z prośbą)
+                statusIcon = '<span class="px-1.5 md:px-2 py-1 rounded border text-[9px] md:text-xs font-bold shadow-sm text-rose-500 bg-rose-50 border-rose-200">Brak</span>';
             }
 
             let cardOpacity = l.cancelled ? 'opacity: 0.5; filter: grayscale(100%)' : '';
@@ -639,7 +638,6 @@ function renderCalendar() {
         let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
         let dateString = dayDate.toISOString().split('T')[0];
 
-        // Delikatne zaciemnienie weekendu dla lepszej czytelności (propozycja z punktu 5)
         let isWeekend = (i === 5 || i === 6) ? `background-color: rgba(120, 120, 120, 0.03);` : '';
 
         gridHtml += `<div class="relative day-col flex-1 border-r-2 last:border-r-0" style="border-color: var(--szary-ramka); ${isWeekend}" data-date="${dateString}">`;
