@@ -149,7 +149,6 @@ function autoUzupelnijCzas() {
     if(timeEndPicker) timeEndPicker.setDate(endStr);
 }
 
-// --- BŁYSKAWICZNE OZNACZANIE WPŁAT (ONE-CLICK) ---
 function markAsPaid(id, event) {
     event.stopPropagation(); 
     let lesson = lessons.find(l => l.id == id);
@@ -187,7 +186,7 @@ async function zalogujPrzezGoogle() {
 }
 function wyloguj() { firebase.auth().signOut(); }
 
-// --- POBIERANIE I ZAPIS DANYCH (IMPORT / EKSPORT) ---
+// --- POBIERANIE I ZAPIS DANYCH ---
 function pobierzDaneZChmury() {
     db.collection("planer_korepetytora").doc(currentUser.uid).get().then((doc) => {
         if (doc.exists) {
@@ -457,6 +456,7 @@ function renderDashboard() {
     document.getElementById('pulpit-month-title').innerText = `Zarobki - ${monthNames[currentMonth]}`;
 
     let earnings = 0, lessonsThisMonth = 0, unpaidTotal = 0, unpaidCount = 0;
+    let plannedEarnings = 0; // NOWE: Do zliczania prognozy
     
     lessons.forEach(l => {
         let lDate = new Date(l.date);
@@ -466,6 +466,7 @@ function renderDashboard() {
             if(lDate.getMonth() === currentMonth && lDate.getFullYear() === currentYear) {
                 lessonsThisMonth++;
                 if(l.paid) earnings += price;
+                else plannedEarnings += price; // Sumowanie zaplanowanych, ale jeszcze nieopłaconych
             }
             if(!l.paid && (l.date < todayString || (l.date === todayString && l.endTime < nowTime))) {
                 unpaidTotal += price;
@@ -475,6 +476,7 @@ function renderDashboard() {
     });
 
     document.getElementById('dashboard-monthly-earnings').innerText = `${earnings} zł`;
+    document.getElementById('dashboard-planned-earnings').innerText = `(w planach: +${plannedEarnings} zł)`;
     document.getElementById('dashboard-monthly-lessons').innerText = `${lessonsThisMonth} lekcji`;
     document.getElementById('dashboard-unpaid-sum').innerText = `${unpaidTotal} zł`;
     document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} zaległych lekcji`;
@@ -568,12 +570,14 @@ function renderDashboard() {
             } else if (l.paid) {
                 statusIcon = '<span class="px-1.5 md:px-2 py-1 rounded border text-[9px] md:text-xs font-bold shadow-sm text-emerald-600 bg-emerald-50 border-emerald-200">Opłacone</span>';
             } else {
-                // Przywrócono stary napis dla nieopłaconych w widoku tygodnia (zgodnie z prośbą)
                 statusIcon = '<span class="px-1.5 md:px-2 py-1 rounded border text-[9px] md:text-xs font-bold shadow-sm text-rose-500 bg-rose-50 border-rose-200">Brak</span>';
             }
 
             let cardOpacity = l.cancelled ? 'opacity: 0.5; filter: grayscale(100%)' : '';
             let lineThrough = l.cancelled ? 'text-decoration: line-through' : '';
+
+            // Wyświetlanie tematu w widoku tygodnia (jeśli istnieje)
+            let topicHtml = l.topic ? `<p class="text-[10px] md:text-xs font-medium truncate mt-0.5" style="color: var(--tekst-szary)">📝 ${l.topic}</p>` : '';
 
             weekContainer.innerHTML += `
                 <div class="flex items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 gap-2 md:gap-4" style="background-color: var(--karta-bg); border-color: var(--ciemny); ${cardOpacity}" onclick="editLesson('${l.id}')">
@@ -582,6 +586,7 @@ function renderDashboard() {
                         <div class="truncate">
                             <p class="font-extrabold text-sm md:text-base" style="${lineThrough}">${l.startTime} - ${l.endTime}</p>
                             <p class="text-xs md:text-sm font-medium truncate" style="color: var(--tekst-szary)">${student.name} <span class="text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 border hidden sm:inline-block" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${subject.color}; border-color: ${subject.color}">${subject.name.toUpperCase()}</span></p>
+                            ${topicHtml}
                         </div>
                     </div>
                     <div class="flex flex-col items-end gap-1 md:gap-2 shrink-0">
@@ -665,6 +670,9 @@ function renderCalendar() {
             
             let opacityAndStrike = lesson.cancelled ? 'opacity: 0.5; filter: grayscale(100%); text-decoration: line-through;' : '';
 
+            // Wyświetlanie tematu w kafelku
+            let topicHtml = lesson.topic ? `<div class="truncate text-[8px] md:text-[10px] font-medium mt-0.5" style="color: var(--tekst-glowny)">📝 ${lesson.topic}</div>` : '';
+
             gridHtml += `
                 <div class="absolute w-[94%] left-[3%] rounded-lg md:rounded-xl p-1 md:p-1.5 overflow-hidden shadow-sm hover:shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 transition cursor-pointer flex flex-col border-l-2 md:border-l-4 border" 
                      style="top: ${topPosition}px; height: ${height}px; background-color: ${bgColor}; border-left-color: ${subject.color}; border-color: ${subject.color}; ${opacityAndStrike}"
@@ -675,6 +683,7 @@ function renderCalendar() {
                     </div>
                     <div class="font-extrabold truncate leading-tight text-[11px] md:text-sm">${student.name}</div>
                     <div class="font-bold truncate mt-auto text-[8px] md:text-[9px] uppercase tracking-wider" style="color: var(--tekst-szary)">${subject.name}</div>
+                    ${topicHtml}
                 </div>`;
         });
         gridHtml += `</div>`;
@@ -721,6 +730,7 @@ function updateLessonSubjectDropdown() {
 function openLessonModal() {
     document.getElementById('lesson-modal-title').innerText = 'Zaplanuj lekcję';
     document.getElementById('lesson-id').value = '';
+    document.getElementById('lesson-topic').value = ''; // Czyszczenie tematu
     
     if(datePicker) datePicker.setDate(new Date().toISOString().split('T')[0]);
     
@@ -748,6 +758,7 @@ function editLesson(id) {
     if(!lesson) return;
     document.getElementById('lesson-modal-title').innerText = 'Szczegóły lekcji';
     document.getElementById('lesson-id').value = lesson.id;
+    document.getElementById('lesson-topic').value = lesson.topic || ''; // Wczytanie tematu
     
     if(datePicker) datePicker.setDate(lesson.date);
     
@@ -778,6 +789,7 @@ async function saveLesson() {
     const id = document.getElementById('lesson-id').value;
     const studentId = document.getElementById('lesson-student').value;
     const subjectId = document.getElementById('lesson-subject').value;
+    const topic = document.getElementById('lesson-topic').value; // Zapisanie tematu
     const date = document.getElementById('lesson-date').value;
     const startTime = document.getElementById('lesson-time-start').value;
     const endTime = document.getElementById('lesson-time-end').value;
@@ -786,7 +798,21 @@ async function saveLesson() {
     const cancelled = document.getElementById('lesson-cancelled') ? document.getElementById('lesson-cancelled').checked : false;
     const isRecurring = document.getElementById('lesson-recurring') ? document.getElementById('lesson-recurring').checked : false;
 
-    if(!studentId || !date || !subjectId || !startTime || !endTime) return await customAlert('Błąd', 'Uzupełnij wszystkie dane (uczeń, przedmiot, data, godziny)!');
+    if(!studentId || !date || !subjectId || !startTime || !endTime) return await customAlert('Błąd', 'Uzupełnij wszystkie wymagane dane (uczeń, przedmiot, data, godziny)!');
+
+    // LOGIKA SPRAWDZANIA KONFLIKTÓW (ZACHODZĄCE GODZINY)
+    let isConflict = lessons.find(l => {
+        if (id && l.id == id) return false; 
+        if (l.date !== date) return false;  
+        if (l.cancelled) return false;      
+        return (startTime < l.endTime && endTime > l.startTime);
+    });
+
+    if (isConflict) {
+        let conflictStudent = students.find(s => s.id == isConflict.studentId) || {name: 'Ktoś inny'};
+        let proceed = await showConfirm('Konflikt godzin!', `Masz już zaplanowaną lekcję w tym czasie:\n${conflictStudent.name} (${isConflict.startTime} - ${isConflict.endTime})\n\nCzy na pewno chcesz zapisać nakładające się zajęcia?`, true);
+        if (!proceed) return;
+    }
 
     if (id) {
         let originalLesson = lessons.find(l => l.id == id);
@@ -823,6 +849,7 @@ async function saveLesson() {
                     fl.startTime = startTime;
                     fl.endTime = endTime;
                     fl.price = price;
+                    fl.topic = topic; // Temat też kopiujemy w przyszłość
                     if (dateDiff !== 0) {
                         let fd = new Date(fl.date);
                         fd.setDate(fd.getDate() + dateDiff);
@@ -835,6 +862,7 @@ async function saveLesson() {
 
         originalLesson.studentId = studentId;
         originalLesson.subjectId = subjectId;
+        originalLesson.topic = topic;
         originalLesson.date = date;
         originalLesson.startTime = startTime;
         originalLesson.endTime = endTime;
@@ -853,7 +881,7 @@ async function saveLesson() {
             lessons.push({
                 id: Date.now().toString() + Math.floor(Math.random() * 1000) + i,
                 groupId: isRecurring ? newGroupId : null,
-                studentId, subjectId, date: lessonDate.toISOString().split('T')[0],
+                studentId, subjectId, topic, date: lessonDate.toISOString().split('T')[0],
                 startTime, endTime, price, cancelled: false,
                 paid: (paid && i === 0) ? true : false
             });
