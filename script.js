@@ -349,40 +349,82 @@ async function deleteSubject() {
     }
 }
 
-// --- UCZNIOWIE ---
+// --- UCZNIOWIE (Z ARCHIWUM) ---
 function renderStudents() {
     const list = document.getElementById('students-list');
+    const archivedList = document.getElementById('archived-students-list');
+    const archivedSection = document.getElementById('archived-students-section');
+    
     list.innerHTML = '';
+    archivedList.innerHTML = '';
     
     const searchInput = document.getElementById('student-search');
     const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-    let filteredStudents = students.filter(s => s.name.toLowerCase().includes(searchTerm));
+    
+    let activeStudents = students.filter(s => !s.archived && s.name.toLowerCase().includes(searchTerm));
+    let archivedStudents = students.filter(s => s.archived && s.name.toLowerCase().includes(searchTerm));
 
-    if(students.length === 0) return list.innerHTML = '<p style="color: var(--tekst-szary)">Brak uczniów. Dodaj kogoś!</p>';
-    if(filteredStudents.length === 0) return list.innerHTML = '<p style="color: var(--tekst-szary)">Nie znaleziono ucznia o takim imieniu.</p>';
+    // Render Aktywnych
+    if(activeStudents.length === 0) {
+        list.innerHTML = '<p style="color: var(--tekst-szary)">Brak aktywnych uczniów.</p>';
+    } else {
+        activeStudents.forEach(student => {
+            let studentSubjectsHtml = '';
+            if(student.subjectIds && student.subjectIds.length > 0) {
+                student.subjectIds.forEach(subId => {
+                    let sub = subjects.find(s => s.id == subId);
+                    if(sub) studentSubjectsHtml += `<span class="text-[10px] md:text-xs font-bold px-2 py-1 rounded-md text-white border" style="background-color: ${sub.color}; border-color: var(--ciemny)">${sub.name.toUpperCase()}</span> `;
+                });
+            } else {
+                studentSubjectsHtml = `<span class="text-xs font-medium" style="color: var(--tekst-szary)">Brak przypisanych przedmiotów</span>`;
+            }
+            list.innerHTML += `
+                <div class="karta flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0">
+                    <div class="space-y-2">
+                        <h4 class="font-extrabold text-lg md:text-xl">${student.name}</h4>
+                        <div class="flex flex-wrap gap-1">${studentSubjectsHtml}</div>
+                    </div>
+                    <div class="flex flex-wrap sm:flex-col gap-3 sm:gap-2 w-full sm:w-auto text-center sm:text-right">
+                        <button onclick="editStudent('${student.id}')" class="text-sm font-bold hover:underline flex-1 sm:flex-none" style="color: var(--akcent)">Edytuj</button>
+                        <button onclick="toggleArchiveStudent('${student.id}')" class="text-sm font-bold hover:underline flex-1 sm:flex-none" style="color: var(--tekst-szary)">Zarchiwizuj</button>
+                        <button onclick="deleteStudent('${student.id}')" class="text-sm font-bold text-rose-500 hover:underline flex-1 sm:flex-none">Usuń</button>
+                    </div>
+                </div>`;
+        });
+    }
 
-    filteredStudents.forEach(student => {
-        let studentSubjectsHtml = '';
-        if(student.subjectIds && student.subjectIds.length > 0) {
-            student.subjectIds.forEach(subId => {
-                let sub = subjects.find(s => s.id == subId);
-                if(sub) studentSubjectsHtml += `<span class="text-[10px] md:text-xs font-bold px-2 py-1 rounded-md text-white border" style="background-color: ${sub.color}; border-color: var(--ciemny)">${sub.name.toUpperCase()}</span> `;
-            });
-        } else {
-            studentSubjectsHtml = `<span class="text-xs font-medium" style="color: var(--tekst-szary)">Brak przypisanych przedmiotów</span>`;
+    // Render Zarchiwizowanych
+    if(archivedStudents.length > 0) {
+        archivedSection.classList.remove('hidden');
+        archivedStudents.forEach(student => {
+            archivedList.innerHTML += `
+                <div class="karta flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0" style="background-color: var(--jasny)">
+                    <div class="space-y-1">
+                        <h4 class="font-extrabold text-lg md:text-xl" style="color: var(--tekst-szary)">${student.name}</h4>
+                        <span class="text-xs font-bold px-2 py-1 rounded-md text-white border bg-slate-400 border-slate-500">ARCHIWUM</span>
+                    </div>
+                    <div class="flex flex-wrap sm:flex-col gap-3 sm:gap-2 w-full sm:w-auto text-center sm:text-right">
+                        <button onclick="toggleArchiveStudent('${student.id}')" class="text-sm font-bold hover:underline flex-1 sm:flex-none" style="color: var(--akcent)">Przywróć</button>
+                        <button onclick="deleteStudent('${student.id}')" class="text-sm font-bold text-rose-500 hover:underline flex-1 sm:flex-none">Usuń na zawsze</button>
+                    </div>
+                </div>`;
+        });
+    } else {
+        archivedSection.classList.add('hidden');
+    }
+}
+
+async function toggleArchiveStudent(id) {
+    let student = students.find(s => s.id == id);
+    if(student) {
+        let action = student.archived ? "przywrócić ucznia do aktywnych" : "przenieść ucznia do archiwum";
+        if(await showConfirm('Archiwum', `Czy na pewno chcesz ${action}? Jego lekcje w historii pozostaną nienaruszone.`)) {
+            student.archived = !student.archived;
+            saveToCloud();
+            renderStudents();
+            renderDashboard(); 
         }
-        list.innerHTML += `
-            <div class="karta flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0">
-                <div class="space-y-2">
-                    <h4 class="font-extrabold text-lg md:text-xl">${student.name}</h4>
-                    <div class="flex flex-wrap gap-1">${studentSubjectsHtml}</div>
-                </div>
-                <div class="flex sm:flex-col gap-3 sm:gap-2 w-full sm:w-auto text-center sm:text-right">
-                    <button onclick="editStudent('${student.id}')" class="text-sm font-bold hover:underline flex-1 sm:flex-none" style="color: var(--akcent)">Edytuj</button>
-                    <button onclick="deleteStudent('${student.id}')" class="text-sm font-bold text-rose-500 hover:underline flex-1 sm:flex-none">Usuń</button>
-                </div>
-            </div>`;
-    });
+    }
 }
 
 function openStudentModal() {
@@ -431,15 +473,15 @@ async function saveStudent() {
         let student = students.find(s => s.id == editingId);
         student.name = name; student.subjectIds = selectedSubjects;
     } else {
-        students.push({ id: Date.now().toString(), name, subjectIds: selectedSubjects });
+        students.push({ id: Date.now().toString(), name, subjectIds: selectedSubjects, archived: false });
     }
     saveToCloud(); closeModals(); renderStudents();
 }
 async function deleteStudent(id) {
-    if(await showConfirm('Usuwanie Ucznia', 'Na pewno usunąć ucznia i wszystkie jego zaplanowane lekcje?', true)) {
+    if(await showConfirm('Usuwanie Ucznia', 'Na pewno usunąć ucznia i wszystkie jego zaplanowane lekcje? Zamiast tego możesz go po prostu zarchiwizować!', true)) {
         students = students.filter(s => s.id != id);
         lessons = lessons.filter(l => l.studentId != id);
-        saveToCloud(); renderStudents();
+        saveToCloud(); renderStudents(); renderDashboard();
     }
 }
 
@@ -456,7 +498,7 @@ function renderDashboard() {
     document.getElementById('pulpit-month-title').innerText = `Zarobki - ${monthNames[currentMonth]}`;
 
     let earnings = 0, lessonsThisMonth = 0, unpaidTotal = 0, unpaidCount = 0;
-    let plannedEarnings = 0; // NOWE: Do zliczania prognozy
+    let plannedEarnings = 0; 
     
     lessons.forEach(l => {
         let lDate = new Date(l.date);
@@ -466,7 +508,7 @@ function renderDashboard() {
             if(lDate.getMonth() === currentMonth && lDate.getFullYear() === currentYear) {
                 lessonsThisMonth++;
                 if(l.paid) earnings += price;
-                else plannedEarnings += price; // Sumowanie zaplanowanych, ale jeszcze nieopłaconych
+                else plannedEarnings += price; 
             }
             if(!l.paid && (l.date < todayString || (l.date === todayString && l.endTime < nowTime))) {
                 unpaidTotal += price;
@@ -480,7 +522,9 @@ function renderDashboard() {
     document.getElementById('dashboard-monthly-lessons').innerText = `${lessonsThisMonth} lekcji`;
     document.getElementById('dashboard-unpaid-sum').innerText = `${unpaidTotal} zł`;
     document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} zaległych lekcji`;
-    document.getElementById('dashboard-active-students').innerText = students.length;
+    
+    // Liczymy tylko aktywnych uczniów
+    document.getElementById('dashboard-active-students').innerText = students.filter(s => !s.archived).length;
 
     let upcomingLessons = lessons.filter(l => !l.cancelled && (l.date > todayString || (l.date === todayString && l.endTime >= nowTime)));
     upcomingLessons.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
@@ -576,7 +620,6 @@ function renderDashboard() {
             let cardOpacity = l.cancelled ? 'opacity: 0.5; filter: grayscale(100%)' : '';
             let lineThrough = l.cancelled ? 'text-decoration: line-through' : '';
 
-            // Wyświetlanie tematu w widoku tygodnia (jeśli istnieje)
             let topicHtml = l.topic ? `<p class="text-[10px] md:text-xs font-medium truncate mt-0.5" style="color: var(--tekst-szary)">📝 ${l.topic}</p>` : '';
 
             weekContainer.innerHTML += `
@@ -670,7 +713,6 @@ function renderCalendar() {
             
             let opacityAndStrike = lesson.cancelled ? 'opacity: 0.5; filter: grayscale(100%); text-decoration: line-through;' : '';
 
-            // Wyświetlanie tematu w kafelku
             let topicHtml = lesson.topic ? `<div class="truncate text-[8px] md:text-[10px] font-medium mt-0.5" style="color: var(--tekst-glowny)">📝 ${lesson.topic}</div>` : '';
 
             gridHtml += `
@@ -730,7 +772,7 @@ function updateLessonSubjectDropdown() {
 function openLessonModal() {
     document.getElementById('lesson-modal-title').innerText = 'Zaplanuj lekcję';
     document.getElementById('lesson-id').value = '';
-    document.getElementById('lesson-topic').value = ''; // Czyszczenie tematu
+    document.getElementById('lesson-topic').value = ''; 
     
     if(datePicker) datePicker.setDate(new Date().toISOString().split('T')[0]);
     
@@ -748,7 +790,12 @@ function openLessonModal() {
 
     const selectStudent = document.getElementById('lesson-student');
     selectStudent.innerHTML = '<option value="">Wybierz ucznia...</option>';
-    students.forEach(s => selectStudent.innerHTML += `<option value="${s.id}">${s.name}</option>`);
+    
+    // Filtr: do nowej lekcji pokazujemy tylko aktywnych uczniów
+    students.filter(s => !s.archived).forEach(s => {
+        selectStudent.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+    });
+
     document.getElementById('lesson-subject').innerHTML = '<option value="">Wybierz ucznia najpierw...</option>';
     document.getElementById('modal-lesson').classList.remove('hidden');
 }
@@ -758,7 +805,7 @@ function editLesson(id) {
     if(!lesson) return;
     document.getElementById('lesson-modal-title').innerText = 'Szczegóły lekcji';
     document.getElementById('lesson-id').value = lesson.id;
-    document.getElementById('lesson-topic').value = lesson.topic || ''; // Wczytanie tematu
+    document.getElementById('lesson-topic').value = lesson.topic || ''; 
     
     if(datePicker) datePicker.setDate(lesson.date);
     
@@ -777,7 +824,13 @@ function editLesson(id) {
 
     const selectStudent = document.getElementById('lesson-student');
     selectStudent.innerHTML = '';
-    students.forEach(s => selectStudent.innerHTML += `<option value="${s.id}" ${s.id == lesson.studentId ? 'selected' : ''}>${s.name}</option>`);
+    
+    // Przy edycji musimy pokazać zarchiwizowanych, jeśli lekcja należy do któregoś z nich
+    students.forEach(s => {
+        if(!s.archived || s.id == lesson.studentId) {
+            selectStudent.innerHTML += `<option value="${s.id}" ${s.id == lesson.studentId ? 'selected' : ''}>${s.name}</option>`;
+        }
+    });
 
     updateLessonSubjectDropdown();
     if(lesson.subjectId) document.getElementById('lesson-subject').value = lesson.subjectId;
@@ -789,7 +842,7 @@ async function saveLesson() {
     const id = document.getElementById('lesson-id').value;
     const studentId = document.getElementById('lesson-student').value;
     const subjectId = document.getElementById('lesson-subject').value;
-    const topic = document.getElementById('lesson-topic').value; // Zapisanie tematu
+    const topic = document.getElementById('lesson-topic').value; 
     const date = document.getElementById('lesson-date').value;
     const startTime = document.getElementById('lesson-time-start').value;
     const endTime = document.getElementById('lesson-time-end').value;
@@ -800,7 +853,6 @@ async function saveLesson() {
 
     if(!studentId || !date || !subjectId || !startTime || !endTime) return await customAlert('Błąd', 'Uzupełnij wszystkie wymagane dane (uczeń, przedmiot, data, godziny)!');
 
-    // LOGIKA SPRAWDZANIA KONFLIKTÓW (ZACHODZĄCE GODZINY)
     let isConflict = lessons.find(l => {
         if (id && l.id == id) return false; 
         if (l.date !== date) return false;  
@@ -849,7 +901,7 @@ async function saveLesson() {
                     fl.startTime = startTime;
                     fl.endTime = endTime;
                     fl.price = price;
-                    fl.topic = topic; // Temat też kopiujemy w przyszłość
+                    fl.topic = topic; 
                     if (dateDiff !== 0) {
                         let fd = new Date(fl.date);
                         fd.setDate(fd.getDate() + dateDiff);
