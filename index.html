@@ -125,10 +125,10 @@
         </div>
 
         <div id="view-kalendarz" class="max-w-6xl mx-auto h-full flex flex-col hidden">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-3 w-full">
-                <h2 id="month-year-display" class="text-xl md:text-3xl font-extrabold w-full text-center sm:text-left"></h2>
+            <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-4 md:mb-6 gap-3 w-full">
+                <h2 id="month-year-display" class="text-xl md:text-3xl font-extrabold w-full text-center xl:text-left"></h2>
                 
-                <div class="flex flex-wrap items-center justify-between sm:justify-end gap-2 md:gap-4 w-full sm:w-auto relative">
+                <div class="flex flex-wrap items-center justify-between xl:justify-end gap-2 md:gap-4 w-full xl:w-auto relative">
                     <button onclick="goToToday()" class="border-2 font-bold py-2 px-3 md:px-4 rounded-xl text-xs md:text-sm hover:opacity-70 transition shadow-[2px_2px_0px_var(--ciemny)]" style="background-color: var(--karta-bg); border-color: var(--ciemny)">Dzisiaj</button>
                     
                     <div class="flex rounded-xl border-2 items-center shadow-[2px_2px_0px_var(--ciemny)] flex-1 sm:flex-none justify-between" style="background-color: var(--karta-bg); border-color: var(--ciemny)">
@@ -137,13 +137,15 @@
                         </button>
                         <span id="calendar-week-btn-text" onclick="openJumpPicker()" class="px-2 py-2 text-xs md:text-sm font-extrabold min-w-[110px] md:min-w-[130px] text-center tracking-wide uppercase cursor-pointer transition hover:opacity-70" style="color: var(--tekst-glowny)" title="Kliknij, aby wybrać datę"></span>
                         <input type="text" id="jump-date-picker" class="hidden">
-                        
                         <button onclick="changeWeek(1)" class="px-3 py-2 font-bold border-l-2 hover:opacity-60 transition flex items-center justify-center" style="border-color: var(--ciemny); color: var(--tekst-glowny)">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                         </button>
                     </div>
 
-                    <button onclick="openLessonModal()" class="przycisk-glowny text-xs md:text-sm w-full sm:w-auto mt-1 sm:mt-0">+ Dodaj lekcję</button>
+                    <div class="flex gap-2 w-full sm:w-auto mt-1 sm:mt-0">
+                        <button onclick="openFindSlotModal()" class="przycisk-anuluj border-2 text-xs md:text-sm w-1/2 sm:w-auto shadow-[2px_2px_0px_var(--ciemny)] hover:translate-y-0" style="border-color: var(--ciemny); background-color: var(--jasny); color: var(--tekst-glowny)">🔍 Znajdź</button>
+                        <button onclick="openLessonModal()" class="przycisk-glowny text-xs md:text-sm w-1/2 sm:w-auto">+ Dodaj lekcję</button>
+                    </div>
                 </div>
             </div>
 
@@ -290,18 +292,30 @@
                 </div>
 
                 <hr style="border-color: var(--szary-ramka)">
+                
+                <div>
+                    <h3 class="font-bold text-lg mb-3">Mój stały grafik (Dostępność)</h3>
+                    <p class="text-sm mb-4" style="color: var(--tekst-szary)">Zaznacz dni, w które uczysz i podaj ramy czasowe. Pomoże to w automatycznym szukaniu wolnych terminów.</p>
+                    <div id="availability-container" class="space-y-2">
+                        </div>
+                </div>
+
+                <hr style="border-color: var(--szary-ramka)">
 
                 <div>
-                    <h3 class="font-bold text-lg mb-3">Zarządzanie danymi</h3>
-                    <button onclick="pobierzKopieZapasowa()" class="przycisk-glowny w-full md:w-auto text-sm md:text-base border-slate-800" style="background-color: var(--ciemny); color: var(--karta-bg);">⬇️ Pobierz kopię zapasową (JSON)</button>
-                    <input type="file" id="import-file" class="hidden" accept=".json" onchange="importujDane(event)">
-                    <button onclick="document.getElementById('import-file').click()" class="przycisk-anuluj w-full md:w-auto mt-2 md:mt-0 border-2 text-sm md:text-base" style="border-color: var(--szary-ramka); color: var(--tekst-glowny)">⬇️ Wgraj plik (Import)</button>
+                    <h3 class="font-bold text-lg mb-3">Zarządzanie danymi (Baza)</h3>
+                    <p class="text-sm mb-4" style="color: var(--tekst-szary)">Możesz pobrać swoją bazę na dysk lub wgrać ją z powrotem (np. na innym koncie).</p>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button onclick="eksportujDane()" class="przycisk-glowny w-full sm:w-1/2 bg-slate-800 border-slate-800 text-white flex justify-center items-center gap-2">⬆️ Pobierz (Eksport)</button>
+                        <input type="file" id="import-file" class="hidden" accept=".json" onchange="importujDane(event)">
+                        <button onclick="document.getElementById('import-file').click()" class="przycisk-anuluj w-full sm:w-1/2 border-2 flex justify-center items-center gap-2 hover:bg-slate-100" style="border-color: var(--szary-ramka); color: var(--tekst-glowny)">⬇️ Wgraj plik (Import)</button>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 
-    <div id="modal-subject" class="modal-tlo hidden">
+    <div id="modal-subject" class="modal-tlo hidden z-[60]">
         <div class="modal-okno">
             <h3 class="text-xl font-bold mb-4">Przedmiot</h3>
             <input type="hidden" id="subject-id">
@@ -320,7 +334,7 @@
         </div>
     </div>
 
-    <div id="modal-student" class="modal-tlo hidden" data-editing-id="">
+    <div id="modal-student" class="modal-tlo hidden z-[60]" data-editing-id="">
         <div class="modal-okno">
             <h3 class="text-xl font-bold mb-4">Uczeń</h3>
             <input type="text" id="student-name" placeholder="Imię i nazwisko" class="pole-tekstowe text-sm md:text-base">
@@ -335,7 +349,7 @@
         </div>
     </div>
 
-    <div id="modal-lesson" class="modal-tlo hidden">
+    <div id="modal-lesson" class="modal-tlo hidden z-[60]">
         <div class="modal-okno">
             <h3 id="lesson-modal-title" class="text-xl font-bold mb-4">Zaplanuj lekcję</h3>
             
@@ -399,7 +413,28 @@
         </div>
     </div>
 
-    <div id="modal-alert" class="modal-tlo hidden z-[70]">
+    <div id="modal-find-slot" class="modal-tlo hidden z-[60]">
+        <div class="modal-okno max-w-sm">
+            <div class="flex justify-between items-center mb-4 border-b-2 pb-2" style="border-color: var(--szary-ramka)">
+                <h3 class="text-xl font-extrabold">🔍 Znajdź termin</h3>
+                <button onclick="document.getElementById('modal-find-slot').classList.add('hidden')" class="font-bold text-rose-500 text-xl hover:scale-110 transition">&times;</button>
+            </div>
+            
+            <div class="mb-6">
+                <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Czas trwania lekcji (minuty)</label>
+                <div class="flex gap-2">
+                    <input type="number" id="find-slot-duration" value="60" step="15" class="pole-tekstowe mb-0">
+                    <button onclick="executeSlotSearch()" class="przycisk-glowny whitespace-nowrap">Szukaj</button>
+                </div>
+            </div>
+
+            <div id="find-slot-results" class="space-y-3 max-h-64 overflow-y-auto pr-2 no-scrollbar">
+                <p class="text-sm text-center" style="color: var(--tekst-szary)">Kliknij "Szukaj", aby pokazać wolne luki z najbliższych dni.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-alert" class="modal-tlo hidden z-[80]">
         <div class="modal-okno text-center max-w-sm">
             <h3 class="text-2xl font-extrabold mb-3" id="alert-title">Uwaga</h3>
             <p class="mb-6 font-medium" style="color: var(--tekst-szary)" id="alert-message"></p>
@@ -407,7 +442,7 @@
         </div>
     </div>
 
-    <div id="modal-confirm" class="modal-tlo hidden z-[70]">
+    <div id="modal-confirm" class="modal-tlo hidden z-[80]">
         <div class="modal-okno text-center max-w-sm">
             <h3 class="text-2xl font-extrabold mb-3" id="confirm-title">Potwierdzenie</h3>
             <p class="mb-6 font-medium whitespace-pre-line" style="color: var(--tekst-szary)" id="confirm-message"></p>
@@ -418,7 +453,7 @@
         </div>
     </div>
 
-    <div id="modal-series" class="modal-tlo hidden z-[70]">
+    <div id="modal-series" class="modal-tlo hidden z-[80]">
         <div class="modal-okno text-center max-w-sm">
             <h3 class="text-xl md:text-2xl font-extrabold mb-3" id="series-title">Cykl Lekcji</h3>
             <p class="mb-6 font-medium text-sm md:text-base" style="color: var(--tekst-szary)" id="series-message"></p>
