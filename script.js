@@ -26,7 +26,7 @@ let settings = {
 };
 
 let currentDate = new Date();
-let slotDate = new Date(); // Do nawigacji w oknie szukania terminu
+let slotDate = new Date(); 
 let datePicker; 
 let timeStartPicker;
 let timeEndPicker;
@@ -143,7 +143,6 @@ function renderAvailabilitySettings() {
     daysMap.forEach(day => {
         let av = settings.availability[day.id];
         let opacity = av.active ? '1' : '0.5';
-        // Zmiana type="time" na type="text" z klasą dla flatpickra, co wymusza format 24h bez AM/PM
         container.innerHTML += `
             <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border-2 transition gap-2 sm:gap-0" style="border-color: var(--szary-ramka); background-color: var(--jasny); opacity: ${opacity}">
                 <label class="flex items-center gap-3 font-bold w-full sm:w-1/3 cursor-pointer text-sm md:text-base">
@@ -162,7 +161,6 @@ function renderAvailabilitySettings() {
         `;
     });
 
-    // Inicjalizacja Flatpickr w formacie 24h na wygenerowanych polach
     flatpickr(".flatpickr-avail", {
         enableTime: true,
         noCalendar: true,
@@ -272,17 +270,14 @@ function renderSlotCalendar() {
         let dateString = dayDate.toISOString().split('T')[0];
         let dayOfWeek = dayDate.getDay();
 
-        // Bazowo tło kolumny jest lekko czerwone (niedostępne)
         let colBg = `background-color: rgba(244, 63, 94, 0.05);`;
 
         gridHtml += `<div class="relative day-col flex-1 border-r-2 last:border-r-0 cursor-pointer overflow-hidden transition hover:bg-slate-100/50" style="border-color: var(--szary-ramka); ${colBg}" onclick="handleSlotClick(event, '${dateString}')">`;
         
-        // Siatka godzinowa pod spodem
         for(let h = settings.startHour; h <= settings.endHour; h++) {
             gridHtml += `<div class="h-24 time-row border-rose-200 opacity-50" style="border-bottom-style: dashed; border-bottom-width: 1px;"></div>`;
         }
         
-        // ZIELONY BLOK (Dostępność z Ustawień)
         let avail = settings.availability[dayOfWeek];
         if (avail && avail.active) {
             let [sH, sM] = avail.start.split(':').map(Number);
@@ -295,16 +290,16 @@ function renderSlotCalendar() {
             if(startPos < 0) { height += startPos; startPos = 0; }
             if(startPos + height > maxPos) { height = maxPos - startPos; }
 
+            // ESTETYCZNY ZIELONY BLOK (Neo-brutalizm)
             if (height > 0 && startPos < maxPos) {
                 gridHtml += `
-                    <div class="absolute w-full left-0 opacity-80 z-0 border-y-2 border-emerald-400" 
-                         style="top: ${startPos}px; height: ${height}px; background-color: #dcfce7; border-left: 4px solid #22c55e;">
-                         <div class="p-1 text-[8px] md:text-[10px] font-extrabold text-emerald-700 uppercase tracking-widest text-center opacity-70">Dostępny</div>
+                    <div class="absolute w-[94%] left-[3%] rounded-lg border-2 shadow-[2px_2px_0_var(--ciemny)] z-0 flex flex-col items-center justify-start pt-1 md:pt-2 overflow-hidden transition-transform hover:-translate-y-0.5" 
+                         style="top: ${startPos}px; height: ${height}px; background-color: #bbf7d0; border-color: var(--ciemny);">
+                         <div class="px-1 text-[8px] md:text-[10px] font-extrabold uppercase tracking-widest text-center" style="color: var(--ciemny)">Dostępne</div>
                     </div>`;
             }
         }
 
-        // CZERWONE BLOKI (Już wpisane lekcje) - przykrywają zielone
         let dailyLessons = lessons.filter(l => l.date === dateString && !l.cancelled);
         dailyLessons.forEach(lesson => {
             let start = lesson.startTime.split(':');
@@ -317,10 +312,11 @@ function renderSlotCalendar() {
             
             if(topPosition < 0) { height += topPosition; topPosition = 0; }
 
+            // ESTETYCZNY CZERWONY BLOK (Neo-brutalizm)
             gridHtml += `
-                <div class="absolute w-[90%] left-[5%] rounded-lg opacity-95 border-2 shadow-sm z-10 flex items-center justify-center" 
-                     style="top: ${topPosition}px; height: ${height}px; background-color: #fecaca; border-color: #ef4444;">
-                    <div class="px-1 text-[8px] md:text-[10px] font-extrabold text-rose-700 text-center truncate">Zajęte</div>
+                <div class="absolute w-[90%] left-[5%] rounded-lg border-2 shadow-[2px_2px_0_var(--ciemny)] z-10 flex items-center justify-center overflow-hidden opacity-95" 
+                     style="top: ${topPosition}px; height: ${height}px; background-color: #fecaca; border-color: var(--ciemny);">
+                    <div class="px-1 text-[8px] md:text-[10px] font-extrabold uppercase text-center truncate" style="color: var(--ciemny)">Zajęte</div>
                 </div>`;
         });
 
@@ -330,35 +326,29 @@ function renderSlotCalendar() {
 }
 
 function handleSlotClick(e, dateStr) {
-    // Obliczamy kliknięcie, omijając wpływ dzieci (divów z kolorami)
     let col = e.currentTarget;
     let rect = col.getBoundingClientRect();
     let y = e.clientY - rect.top; 
     
-    // Konwersja na godziny (96px = 1 godzina)
     let rawHours = settings.startHour + (y / 96);
     let h = Math.floor(rawHours);
     let m = Math.floor((rawHours - h) * 60);
     
-    // Zaokrąglenie do najbliższych 15 minut dla wygody
     m = Math.round(m / 15) * 15;
     if(m === 60) { h++; m = 0; }
     
-    // Zabezpieczenie przed wyjściem poza ramy kalendarza
     if(h < settings.startHour) h = settings.startHour;
     if(h >= settings.endHour) { h = settings.endHour - 1; m = 45; }
     
     let startStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     
-    // Zamykamy wyszukiwarkę, otwieramy dodawanie i auto-uzupełniamy
     document.getElementById('modal-find-slot').classList.add('hidden');
     openLessonModal();
     if(datePicker) datePicker.setDate(dateStr);
     document.getElementById('lesson-time-start').value = startStr;
     if(timeStartPicker) timeStartPicker.setDate(startStr);
-    autoUzupelnijCzas(); // Samo wyliczy koniec na podstawie domyślnego czasu lekcji
+    autoUzupelnijCzas(); 
 }
-
 
 // --- LOGOWANIE (TYLKO GOOGLE) ---
 firebase.auth().onAuthStateChanged((user) => {
@@ -549,7 +539,7 @@ async function deleteSubject() {
     }
 }
 
-// --- UCZNIOWIE (Z ARCHIWUM) ---
+// --- UCZNIOWIE ---
 function renderStudents() {
     const list = document.getElementById('students-list');
     const archivedList = document.getElementById('archived-students-list');
