@@ -178,7 +178,13 @@
             <div class="mb-6">
                 <input type="text" id="student-search" placeholder="🔍 Szukaj po imieniu..." class="pole-tekstowe mb-0 border-2" oninput="renderStudents()">
             </div>
-            <div id="students-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            
+            <div id="students-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8"></div>
+
+            <div id="archived-students-section" class="hidden">
+                <h3 class="text-xl font-bold mb-4 pt-4 border-t-2" style="border-color: var(--szary-ramka); color: var(--tekst-szary)">🗄️ Zarchiwizowani Uczniowie</h3>
+                <div id="archived-students-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-70 grayscale"></div>
+            </div>
         </div>
 
         <div id="view-zarobki" class="max-w-6xl mx-auto hidden space-y-8 md:space-y-12 pb-12">
@@ -286,13 +292,10 @@
                 <hr style="border-color: var(--szary-ramka)">
 
                 <div>
-                    <h3 class="font-bold text-lg mb-3">Zarządzanie danymi (Baza)</h3>
-                    <p class="text-sm mb-4" style="color: var(--tekst-szary)">Możesz pobrać swoją bazę na dysk lub wgrać ją z powrotem (np. na innym koncie).</p>
-                    <div class="flex flex-col sm:flex-row gap-3">
-                        <button onclick="eksportujDane()" class="przycisk-glowny w-full sm:w-1/2 bg-slate-800 border-slate-800 text-white flex justify-center items-center gap-2">⬆️ Pobierz (Eksport)</button>
-                        <input type="file" id="import-file" class="hidden" accept=".json" onchange="importujDane(event)">
-                        <button onclick="document.getElementById('import-file').click()" class="przycisk-anuluj w-full sm:w-1/2 border-2 flex justify-center items-center gap-2 hover:bg-slate-100" style="border-color: var(--szary-ramka); color: var(--tekst-glowny)">⬇️ Wgraj plik (Import)</button>
-                    </div>
+                    <h3 class="font-bold text-lg mb-3">Zarządzanie danymi</h3>
+                    <button onclick="pobierzKopieZapasowa()" class="przycisk-glowny w-full md:w-auto text-sm md:text-base border-slate-800" style="background-color: var(--ciemny); color: var(--karta-bg);">⬇️ Pobierz kopię zapasową (JSON)</button>
+                    <input type="file" id="import-file" class="hidden" accept=".json" onchange="importujDane(event)">
+                    <button onclick="document.getElementById('import-file').click()" class="przycisk-anuluj w-full md:w-auto mt-2 md:mt-0 border-2 text-sm md:text-base" style="border-color: var(--szary-ramka); color: var(--tekst-glowny)">⬇️ Wgraj plik (Import)</button>
                 </div>
             </div>
         </div>
@@ -361,7 +364,7 @@
             <div class="flex gap-2 mb-1">
                 <div class="w-1/2">
                     <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Od</label>
-                    <input type="text" id="lesson-time-start" class="pole-tekstowe text-sm md:text-base" placeholder="HH:MM">
+                    <input type="text" id="lesson-time-start" class="pole-tekstowe text-sm md:text-base" placeholder="HH:MM" onchange="autoUzupelnijCzas()">
                 </div>
                 <div class="w-1/2">
                     <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Do</label>
