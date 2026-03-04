@@ -22,10 +22,11 @@ let settings = {
     startHour: 7,
     endHour: 22,
     duration: 60,
-    availability: null // Zainicjujemy niżej
+    availability: null 
 };
 
 let currentDate = new Date();
+let slotDate = new Date(); // Do nawigacji w oknie szukania terminu
 let datePicker; 
 let timeStartPicker;
 let timeEndPicker;
@@ -114,7 +115,6 @@ function applyVisualSettings() {
     document.getElementById('ust-end').value = settings.endHour;
     document.getElementById('ust-czas').value = settings.duration;
 
-    // Inicjalizacja stałego grafiku jeśli nie istnieje
     if(!settings.availability) {
         settings.availability = {
             1: { active: true, start: '15:00', end: '20:00' },
@@ -143,6 +143,7 @@ function renderAvailabilitySettings() {
     daysMap.forEach(day => {
         let av = settings.availability[day.id];
         let opacity = av.active ? '1' : '0.5';
+        // Zmiana type="time" na type="text" z klasą dla flatpickra, co wymusza format 24h bez AM/PM
         container.innerHTML += `
             <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border-2 transition gap-2 sm:gap-0" style="border-color: var(--szary-ramka); background-color: var(--jasny); opacity: ${opacity}">
                 <label class="flex items-center gap-3 font-bold w-full sm:w-1/3 cursor-pointer text-sm md:text-base">
@@ -151,14 +152,27 @@ function renderAvailabilitySettings() {
                     ${day.name}
                 </label>
                 <div class="flex items-center gap-2 w-full sm:w-2/3 sm:justify-end">
-                    <input type="time" class="p-1.5 border-2 rounded-lg text-sm font-bold w-full sm:w-24 text-center" style="border-color: var(--szary-ramka); background-color: var(--karta-bg); color: var(--tekst-glowny)" 
-                           value="${av.start}" onchange="updateDayTime(${day.id}, 'start', this.value)" ${!av.active ? 'disabled' : ''}>
+                    <input type="text" class="flatpickr-avail p-1.5 border-2 rounded-lg text-sm font-bold w-full sm:w-24 text-center cursor-pointer" style="border-color: var(--szary-ramka); background-color: var(--karta-bg); color: var(--tekst-glowny)" 
+                           data-day="${day.id}" data-type="start" value="${av.start}" ${!av.active ? 'disabled' : ''}>
                     <span class="font-bold text-xs hidden sm:block" style="color: var(--tekst-szary)">-</span>
-                    <input type="time" class="p-1.5 border-2 rounded-lg text-sm font-bold w-full sm:w-24 text-center" style="border-color: var(--szary-ramka); background-color: var(--karta-bg); color: var(--tekst-glowny)" 
-                           value="${av.end}" onchange="updateDayTime(${day.id}, 'end', this.value)" ${!av.active ? 'disabled' : ''}>
+                    <input type="text" class="flatpickr-avail p-1.5 border-2 rounded-lg text-sm font-bold w-full sm:w-24 text-center cursor-pointer" style="border-color: var(--szary-ramka); background-color: var(--karta-bg); color: var(--tekst-glowny)" 
+                           data-day="${day.id}" data-type="end" value="${av.end}" ${!av.active ? 'disabled' : ''}>
                 </div>
             </div>
         `;
+    });
+
+    // Inicjalizacja Flatpickr w formacie 24h na wygenerowanych polach
+    flatpickr(".flatpickr-avail", {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: "H:i",
+        time_24hr: true,
+        onChange: function(selectedDates, dateStr, instance) {
+            let dayId = instance.element.getAttribute('data-day');
+            let type = instance.element.getAttribute('data-type');
+            updateDayTime(dayId, type, dateStr);
+        }
     });
 }
 
@@ -208,108 +222,143 @@ function markAsPaid(id, event) {
     }
 }
 
-// --- LOGIKA SZUKANIA TERMINÓW ---
+// --- NOWY WIZUALNY SYSTEM SZUKANIA TERMINÓW ---
 function openFindSlotModal() {
-    document.getElementById('find-slot-duration').value = settings.duration;
-    document.getElementById('find-slot-results').innerHTML = '<p class="text-sm text-center" style="color: var(--tekst-szary)">Kliknij "Szukaj", aby znaleźć propozycje z najbliższych dni.</p>';
+    slotDate = new Date(); 
     document.getElementById('modal-find-slot').classList.remove('hidden');
+    renderSlotCalendar();
 }
 
-function executeSlotSearch() {
-    let duration = parseInt(document.getElementById('find-slot-duration').value) || 60;
-    let resultsContainer = document.getElementById('find-slot-results');
-    resultsContainer.innerHTML = '<p class="text-center font-bold">Skupienie... szukam okienka! 🕵️</p>';
-    
-    let results = [];
-    let checkDate = new Date();
-    let daysChecked = 0;
-    const monthNames = ["Stycznia", "Lutego", "Marca", "Kwietnia", "Maja", "Czerwca", "Lipca", "Sierpnia", "Września", "Października", "Listopada", "Grudnia"];
-    const dayNames = ["Niedziela", "Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota"];
+function changeSlotWeek(offset) {
+    slotDate = new Date(slotDate.getTime() + offset * 7 * 24 * 60 * 60 * 1000);
+    renderSlotCalendar();
+}
 
-    while(results.length < 8 && daysChecked < 21) { // Szuka max 8 opcji do 3 tygodni w przód
-        let dStr = checkDate.toISOString().split('T')[0];
-        let dayOfWeek = checkDate.getDay();
-        let avail = settings.availability[dayOfWeek];
+function renderSlotCalendar() {
+    let monday = getMonday(slotDate);
+    let sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+    const monthNames = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+    
+    let formatDay = (date) => date.getDate().toString().padStart(2, '0');
+    document.getElementById('slot-week-btn-text').innerText = `${formatDay(monday)} - ${formatDay(sunday)} ${monthNames[sunday.getMonth()].substring(0,3).toUpperCase()}`;
+
+    const daysNames = ['PON', 'WT', 'ŚR', 'CZW', 'PT', 'SOB', 'ND'];
+    let headerHtml = '<div class="border-r-2 p-1 md:p-2 w-12 shrink-0" style="background-color: var(--karta-bg); border-color: var(--ciemny)"></div>';
+    
+    for(let i=0; i<7; i++) {
+        let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
+        let isToday = dayDate.toDateString() === new Date().toDateString();
+        let circleStyle = isToday ? `background-color: var(--akcent); color: #fff; border: 2px solid var(--ciemny);` : `color: var(--tekst-glowny)`;
+        let textStyle = isToday ? `color: var(--akcent)` : `color: var(--tekst-szary)`;
         
+        headerHtml += `
+            <div class="text-center py-1 md:py-2 border-r-2 day-col flex-1" style="background-color: var(--karta-bg); border-color: var(--ciemny)">
+                <div class="text-[10px] md:text-xs font-extrabold mb-1 tracking-wider" style="${textStyle}">${daysNames[i]}</div>
+                <div class="mx-auto w-6 h-6 md:w-8 md:h-8 flex items-center justify-center rounded-full font-extrabold text-xs md:text-sm" style="${circleStyle}">
+                    ${dayDate.getDate()}
+                </div>
+            </div>`;
+    }
+    document.getElementById('slot-calendar-header').innerHTML = headerHtml;
+
+    let gridHtml = `<div class="border-r-2 relative w-12 shrink-0 z-10" style="background-color: var(--karta-bg); border-color: var(--ciemny)">`;
+    for(let h = settings.startHour; h <= settings.endHour; h++) {
+        gridHtml += `<div class="h-24 time-row text-[10px] md:text-xs text-right pr-1 pt-1 font-bold" style="color: var(--tekst-szary)">${h}:00</div>`;
+    }
+    gridHtml += `</div>`;
+
+    for(let i=0; i<7; i++) {
+        let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
+        let dateString = dayDate.toISOString().split('T')[0];
+        let dayOfWeek = dayDate.getDay();
+
+        // Bazowo tło kolumny jest lekko czerwone (niedostępne)
+        let colBg = `background-color: rgba(244, 63, 94, 0.05);`;
+
+        gridHtml += `<div class="relative day-col flex-1 border-r-2 last:border-r-0 cursor-pointer overflow-hidden transition hover:bg-slate-100/50" style="border-color: var(--szary-ramka); ${colBg}" onclick="handleSlotClick(event, '${dateString}')">`;
+        
+        // Siatka godzinowa pod spodem
+        for(let h = settings.startHour; h <= settings.endHour; h++) {
+            gridHtml += `<div class="h-24 time-row border-rose-200 opacity-50" style="border-bottom-style: dashed; border-bottom-width: 1px;"></div>`;
+        }
+        
+        // ZIELONY BLOK (Dostępność z Ustawień)
+        let avail = settings.availability[dayOfWeek];
         if (avail && avail.active) {
-            let dayLessons = lessons.filter(l => l.date === dStr && !l.cancelled);
-            
             let [sH, sM] = avail.start.split(':').map(Number);
             let [eH, eM] = avail.end.split(':').map(Number);
-            let slotStartMins = sH * 60 + sM;
-            let dayEndMins = eH * 60 + eM;
             
-            while (slotStartMins + duration <= dayEndMins && results.length < 8) {
-                let slotEndMins = slotStartMins + duration;
-                
-                let overlap = false;
-                for(let l of dayLessons) {
-                    let [lsH, lsM] = l.startTime.split(':').map(Number);
-                    let [leH, leM] = l.endTime.split(':').map(Number);
-                    let lStart = lsH * 60 + lsM;
-                    let lEnd = leH * 60 + leM;
-                    
-                    if (slotStartMins < lEnd && slotEndMins > lStart) {
-                        overlap = true;
-                        slotStartMins = lEnd; // Przewija czas na koniec tej lekcji
-                        break;
-                    }
-                }
-                
-                if (!overlap) {
-                    let now = new Date();
-                    let isToday = dStr === now.toISOString().split('T')[0];
-                    let nowMins = now.getHours() * 60 + now.getMinutes();
-                    
-                    if (!isToday || slotStartMins > nowMins + 15) { // Tylko przyszłość
-                        let startStr = `${Math.floor(slotStartMins/60).toString().padStart(2,'0')}:${(slotStartMins%60).toString().padStart(2,'0')}`;
-                        let endStr = `${Math.floor(slotEndMins/60).toString().padStart(2,'0')}:${(slotEndMins%60).toString().padStart(2,'0')}`;
-                        
-                        results.push({ 
-                            date: dStr, 
-                            start: startStr, 
-                            end: endStr,
-                            label: `${dayNames[dayOfWeek]}, ${checkDate.getDate()} ${monthNames[checkDate.getMonth()]}`
-                        });
-                    }
-                    slotStartMins += duration; // Przeskakuje do następnego logicznego okienka
-                }
+            let startPos = ((sH - settings.startHour) * 96) + (sM / 60 * 96);
+            let height = (((eH - sH) * 96) + ((eM - sM) / 60 * 96));
+            let maxPos = (settings.endHour - settings.startHour) * 96 + 96;
+            
+            if(startPos < 0) { height += startPos; startPos = 0; }
+            if(startPos + height > maxPos) { height = maxPos - startPos; }
+
+            if (height > 0 && startPos < maxPos) {
+                gridHtml += `
+                    <div class="absolute w-full left-0 opacity-80 z-0 border-y-2 border-emerald-400" 
+                         style="top: ${startPos}px; height: ${height}px; background-color: #dcfce7; border-left: 4px solid #22c55e;">
+                         <div class="p-1 text-[8px] md:text-[10px] font-extrabold text-emerald-700 uppercase tracking-widest text-center opacity-70">Dostępny</div>
+                    </div>`;
             }
         }
-        checkDate.setDate(checkDate.getDate() + 1);
-        daysChecked++;
-    }
 
-    if(results.length === 0) {
-        resultsContainer.innerHTML = '<p class="text-sm text-center text-rose-500 font-bold p-4 border-2 rounded-xl border-rose-200 bg-rose-50">Brak jakichkolwiek wolnych terminów w grafiku na najbliższe 3 tygodnie!</p>';
-    } else {
-        resultsContainer.innerHTML = '';
-        results.forEach(res => {
-            resultsContainer.innerHTML += `
-                <div class="flex justify-between items-center p-3 rounded-xl border-2 transition shadow-sm hover:shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 cursor-pointer" 
-                     style="background-color: var(--karta-bg); border-color: var(--ciemny)"
-                     onclick="bookFoundSlot('${res.date}', '${res.start}', '${res.end}')">
-                    <div>
-                        <div class="text-[10px] md:text-xs font-extrabold uppercase tracking-wider" style="color: var(--tekst-szary)">${res.label}</div>
-                        <div class="font-extrabold text-base md:text-lg" style="color: var(--akcent)">${res.start} - ${res.end}</div>
-                    </div>
-                    <div class="w-8 h-8 rounded-full border-2 flex justify-center items-center font-bold" style="background-color: var(--jasny); border-color: var(--ciemny); color: var(--tekst-glowny)">+</div>
-                </div>
-            `;
+        // CZERWONE BLOKI (Już wpisane lekcje) - przykrywają zielone
+        let dailyLessons = lessons.filter(l => l.date === dateString && !l.cancelled);
+        dailyLessons.forEach(lesson => {
+            let start = lesson.startTime.split(':');
+            let end = lesson.endTime.split(':');
+            
+            if(parseInt(start[0]) < settings.startHour && parseInt(end[0]) <= settings.startHour) return;
+
+            let topPosition = ((parseInt(start[0]) - settings.startHour) * 96) + (parseInt(start[1]) / 60 * 96);
+            let height = (((parseInt(end[0]) - parseInt(start[0])) * 96) + ((parseInt(end[1]) - parseInt(start[1])) / 60 * 96));
+            
+            if(topPosition < 0) { height += topPosition; topPosition = 0; }
+
+            gridHtml += `
+                <div class="absolute w-[90%] left-[5%] rounded-lg opacity-95 border-2 shadow-sm z-10 flex items-center justify-center" 
+                     style="top: ${topPosition}px; height: ${height}px; background-color: #fecaca; border-color: #ef4444;">
+                    <div class="px-1 text-[8px] md:text-[10px] font-extrabold text-rose-700 text-center truncate">Zajęte</div>
+                </div>`;
         });
+
+        gridHtml += `</div>`;
     }
+    document.getElementById('slot-calendar-grid').innerHTML = gridHtml;
 }
 
-function bookFoundSlot(date, start, end) {
+function handleSlotClick(e, dateStr) {
+    // Obliczamy kliknięcie, omijając wpływ dzieci (divów z kolorami)
+    let col = e.currentTarget;
+    let rect = col.getBoundingClientRect();
+    let y = e.clientY - rect.top; 
+    
+    // Konwersja na godziny (96px = 1 godzina)
+    let rawHours = settings.startHour + (y / 96);
+    let h = Math.floor(rawHours);
+    let m = Math.floor((rawHours - h) * 60);
+    
+    // Zaokrąglenie do najbliższych 15 minut dla wygody
+    m = Math.round(m / 15) * 15;
+    if(m === 60) { h++; m = 0; }
+    
+    // Zabezpieczenie przed wyjściem poza ramy kalendarza
+    if(h < settings.startHour) h = settings.startHour;
+    if(h >= settings.endHour) { h = settings.endHour - 1; m = 45; }
+    
+    let startStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    
+    // Zamykamy wyszukiwarkę, otwieramy dodawanie i auto-uzupełniamy
     document.getElementById('modal-find-slot').classList.add('hidden');
     openLessonModal();
-    
-    if(datePicker) datePicker.setDate(date);
-    document.getElementById('lesson-time-start').value = start;
-    document.getElementById('lesson-time-end').value = end;
-    if(timeStartPicker) timeStartPicker.setDate(start);
-    if(timeEndPicker) timeEndPicker.setDate(end);
+    if(datePicker) datePicker.setDate(dateStr);
+    document.getElementById('lesson-time-start').value = startStr;
+    if(timeStartPicker) timeStartPicker.setDate(startStr);
+    autoUzupelnijCzas(); // Samo wyliczy koniec na podstawie domyślnego czasu lekcji
 }
+
 
 // --- LOGOWANIE (TYLKO GOOGLE) ---
 firebase.auth().onAuthStateChanged((user) => {
