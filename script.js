@@ -21,7 +21,8 @@ let settings = {
     accent: '#4f46e5',
     startHour: 7,
     endHour: 22,
-    duration: 60
+    duration: 60,
+    availability: null // Zainicjujemy niżej
 };
 
 let currentDate = new Date();
@@ -41,7 +42,6 @@ function customAlert(title, message) {
         document.getElementById('alert-title').innerText = title;
         document.getElementById('alert-message').innerText = message;
         const btnOk = document.getElementById('btn-alert-ok');
-        
         modal.classList.remove('hidden');
         btnOk.onclick = () => { modal.classList.add('hidden'); resolve(); };
     });
@@ -54,12 +54,9 @@ function showConfirm(title, message, isDanger = false) {
         document.getElementById('confirm-message').innerText = message;
         const btnOk = document.getElementById('btn-confirm-ok');
         const btnCancel = document.getElementById('btn-confirm-cancel');
-        
         btnOk.style.backgroundColor = isDanger ? '#ef4444' : 'var(--akcent)';
-
         modal.classList.remove('hidden');
         const cleanup = () => { modal.classList.add('hidden'); btnOk.onclick = null; btnCancel.onclick = null; };
-
         btnOk.onclick = () => { cleanup(); resolve(true); };
         btnCancel.onclick = () => { cleanup(); resolve(false); };
     });
@@ -73,12 +70,9 @@ function showSeriesChoice(title, message, isDanger = false) {
         const btnSingle = document.getElementById('btn-series-single');
         const btnFuture = document.getElementById('btn-series-future');
         const btnCancel = document.getElementById('btn-series-cancel');
-
         btnFuture.style.backgroundColor = isDanger ? '#ef4444' : 'var(--akcent)';
-
         modal.classList.remove('hidden');
         const cleanup = () => { modal.classList.add('hidden'); btnSingle.onclick = null; btnFuture.onclick = null; btnCancel.onclick = null; };
-
         btnSingle.onclick = () => { cleanup(); resolve('single'); };
         btnFuture.onclick = () => { cleanup(); resolve('future'); };
         btnCancel.onclick = () => { cleanup(); resolve(null); };
@@ -90,7 +84,6 @@ document.addEventListener("DOMContentLoaded", () => {
     datePicker = flatpickr("#lesson-date", { locale: "pl", dateFormat: "Y-m-d", altInput: true, altFormat: "d/m/Y", allowInput: true });
     timeStartPicker = flatpickr("#lesson-time-start", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true, onChange: autoUzupelnijCzas });
     timeEndPicker = flatpickr("#lesson-time-end", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true });
-    
     jumpPicker = flatpickr("#jump-date-picker", {
         locale: "pl",
         onChange: function(selectedDates) {
@@ -102,11 +95,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-function openJumpPicker() {
-    if(jumpPicker) jumpPicker.open();
-}
+function openJumpPicker() { if(jumpPicker) jumpPicker.open(); }
 
-// --- APLIKOWANIE USTAWIEŃ WIZUALNYCH ---
+// --- APLIKOWANIE USTAWIEŃ WIZUALNYCH I DOSTĘPNOŚCI ---
 function applyVisualSettings() {
     if(settings.theme === 'dark') {
         document.documentElement.classList.add('dark');
@@ -123,7 +114,64 @@ function applyVisualSettings() {
     document.getElementById('ust-end').value = settings.endHour;
     document.getElementById('ust-czas').value = settings.duration;
 
+    // Inicjalizacja stałego grafiku jeśli nie istnieje
+    if(!settings.availability) {
+        settings.availability = {
+            1: { active: true, start: '15:00', end: '20:00' },
+            2: { active: true, start: '15:00', end: '20:00' },
+            3: { active: true, start: '15:00', end: '20:00' },
+            4: { active: true, start: '15:00', end: '20:00' },
+            5: { active: true, start: '15:00', end: '20:00' },
+            6: { active: false, start: '10:00', end: '14:00' },
+            0: { active: false, start: '10:00', end: '14:00' }
+        };
+    }
+
+    renderAvailabilitySettings();
     if(!document.getElementById('view-zarobki').classList.contains('hidden')) renderZarobki();
+}
+
+function renderAvailabilitySettings() {
+    const container = document.getElementById('availability-container');
+    if(!container) return;
+    container.innerHTML = '';
+    const daysMap = [
+        {id: 1, name: 'Poniedziałek'}, {id: 2, name: 'Wtorek'}, {id: 3, name: 'Środa'},
+        {id: 4, name: 'Czwartek'}, {id: 5, name: 'Piątek'}, {id: 6, name: 'Sobota'}, {id: 0, name: 'Niedziela'}
+    ];
+
+    daysMap.forEach(day => {
+        let av = settings.availability[day.id];
+        let opacity = av.active ? '1' : '0.5';
+        container.innerHTML += `
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border-2 transition gap-2 sm:gap-0" style="border-color: var(--szary-ramka); background-color: var(--jasny); opacity: ${opacity}">
+                <label class="flex items-center gap-3 font-bold w-full sm:w-1/3 cursor-pointer text-sm md:text-base">
+                    <input type="checkbox" class="w-5 h-5 rounded cursor-pointer" style="accent-color: var(--akcent)" 
+                           onchange="toggleDay(${day.id}, this.checked)" ${av.active ? 'checked' : ''}>
+                    ${day.name}
+                </label>
+                <div class="flex items-center gap-2 w-full sm:w-2/3 sm:justify-end">
+                    <input type="time" class="p-1.5 border-2 rounded-lg text-sm font-bold w-full sm:w-24 text-center" style="border-color: var(--szary-ramka); background-color: var(--karta-bg); color: var(--tekst-glowny)" 
+                           value="${av.start}" onchange="updateDayTime(${day.id}, 'start', this.value)" ${!av.active ? 'disabled' : ''}>
+                    <span class="font-bold text-xs hidden sm:block" style="color: var(--tekst-szary)">-</span>
+                    <input type="time" class="p-1.5 border-2 rounded-lg text-sm font-bold w-full sm:w-24 text-center" style="border-color: var(--szary-ramka); background-color: var(--karta-bg); color: var(--tekst-glowny)" 
+                           value="${av.end}" onchange="updateDayTime(${day.id}, 'end', this.value)" ${!av.active ? 'disabled' : ''}>
+                </div>
+            </div>
+        `;
+    });
+}
+
+function toggleDay(dayId, isChecked) {
+    settings.availability[dayId].active = isChecked;
+    saveToCloud(); renderAvailabilitySettings();
+}
+
+function updateDayTime(dayId, type, value) {
+    if(value) {
+        settings.availability[dayId][type] = value;
+        saveToCloud();
+    }
 }
 
 function ustawMotyw(theme) { settings.theme = theme; applyVisualSettings(); saveToCloud(); }
@@ -158,6 +206,109 @@ function markAsPaid(id, event) {
         renderDashboard();
         if(!document.getElementById('view-kalendarz').classList.contains('hidden')) renderCalendar();
     }
+}
+
+// --- LOGIKA SZUKANIA TERMINÓW ---
+function openFindSlotModal() {
+    document.getElementById('find-slot-duration').value = settings.duration;
+    document.getElementById('find-slot-results').innerHTML = '<p class="text-sm text-center" style="color: var(--tekst-szary)">Kliknij "Szukaj", aby znaleźć propozycje z najbliższych dni.</p>';
+    document.getElementById('modal-find-slot').classList.remove('hidden');
+}
+
+function executeSlotSearch() {
+    let duration = parseInt(document.getElementById('find-slot-duration').value) || 60;
+    let resultsContainer = document.getElementById('find-slot-results');
+    resultsContainer.innerHTML = '<p class="text-center font-bold">Skupienie... szukam okienka! 🕵️</p>';
+    
+    let results = [];
+    let checkDate = new Date();
+    let daysChecked = 0;
+    const monthNames = ["Stycznia", "Lutego", "Marca", "Kwietnia", "Maja", "Czerwca", "Lipca", "Sierpnia", "Września", "Października", "Listopada", "Grudnia"];
+    const dayNames = ["Niedziela", "Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota"];
+
+    while(results.length < 8 && daysChecked < 21) { // Szuka max 8 opcji do 3 tygodni w przód
+        let dStr = checkDate.toISOString().split('T')[0];
+        let dayOfWeek = checkDate.getDay();
+        let avail = settings.availability[dayOfWeek];
+        
+        if (avail && avail.active) {
+            let dayLessons = lessons.filter(l => l.date === dStr && !l.cancelled);
+            
+            let [sH, sM] = avail.start.split(':').map(Number);
+            let [eH, eM] = avail.end.split(':').map(Number);
+            let slotStartMins = sH * 60 + sM;
+            let dayEndMins = eH * 60 + eM;
+            
+            while (slotStartMins + duration <= dayEndMins && results.length < 8) {
+                let slotEndMins = slotStartMins + duration;
+                
+                let overlap = false;
+                for(let l of dayLessons) {
+                    let [lsH, lsM] = l.startTime.split(':').map(Number);
+                    let [leH, leM] = l.endTime.split(':').map(Number);
+                    let lStart = lsH * 60 + lsM;
+                    let lEnd = leH * 60 + leM;
+                    
+                    if (slotStartMins < lEnd && slotEndMins > lStart) {
+                        overlap = true;
+                        slotStartMins = lEnd; // Przewija czas na koniec tej lekcji
+                        break;
+                    }
+                }
+                
+                if (!overlap) {
+                    let now = new Date();
+                    let isToday = dStr === now.toISOString().split('T')[0];
+                    let nowMins = now.getHours() * 60 + now.getMinutes();
+                    
+                    if (!isToday || slotStartMins > nowMins + 15) { // Tylko przyszłość
+                        let startStr = `${Math.floor(slotStartMins/60).toString().padStart(2,'0')}:${(slotStartMins%60).toString().padStart(2,'0')}`;
+                        let endStr = `${Math.floor(slotEndMins/60).toString().padStart(2,'0')}:${(slotEndMins%60).toString().padStart(2,'0')}`;
+                        
+                        results.push({ 
+                            date: dStr, 
+                            start: startStr, 
+                            end: endStr,
+                            label: `${dayNames[dayOfWeek]}, ${checkDate.getDate()} ${monthNames[checkDate.getMonth()]}`
+                        });
+                    }
+                    slotStartMins += duration; // Przeskakuje do następnego logicznego okienka
+                }
+            }
+        }
+        checkDate.setDate(checkDate.getDate() + 1);
+        daysChecked++;
+    }
+
+    if(results.length === 0) {
+        resultsContainer.innerHTML = '<p class="text-sm text-center text-rose-500 font-bold p-4 border-2 rounded-xl border-rose-200 bg-rose-50">Brak jakichkolwiek wolnych terminów w grafiku na najbliższe 3 tygodnie!</p>';
+    } else {
+        resultsContainer.innerHTML = '';
+        results.forEach(res => {
+            resultsContainer.innerHTML += `
+                <div class="flex justify-between items-center p-3 rounded-xl border-2 transition shadow-sm hover:shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 cursor-pointer" 
+                     style="background-color: var(--karta-bg); border-color: var(--ciemny)"
+                     onclick="bookFoundSlot('${res.date}', '${res.start}', '${res.end}')">
+                    <div>
+                        <div class="text-[10px] md:text-xs font-extrabold uppercase tracking-wider" style="color: var(--tekst-szary)">${res.label}</div>
+                        <div class="font-extrabold text-base md:text-lg" style="color: var(--akcent)">${res.start} - ${res.end}</div>
+                    </div>
+                    <div class="w-8 h-8 rounded-full border-2 flex justify-center items-center font-bold" style="background-color: var(--jasny); border-color: var(--ciemny); color: var(--tekst-glowny)">+</div>
+                </div>
+            `;
+        });
+    }
+}
+
+function bookFoundSlot(date, start, end) {
+    document.getElementById('modal-find-slot').classList.add('hidden');
+    openLessonModal();
+    
+    if(datePicker) datePicker.setDate(date);
+    document.getElementById('lesson-time-start').value = start;
+    document.getElementById('lesson-time-end').value = end;
+    if(timeStartPicker) timeStartPicker.setDate(start);
+    if(timeEndPicker) timeEndPicker.setDate(end);
 }
 
 // --- LOGOWANIE (TYLKO GOOGLE) ---
@@ -364,7 +515,6 @@ function renderStudents() {
     let activeStudents = students.filter(s => !s.archived && s.name.toLowerCase().includes(searchTerm));
     let archivedStudents = students.filter(s => s.archived && s.name.toLowerCase().includes(searchTerm));
 
-    // Render Aktywnych
     if(activeStudents.length === 0) {
         list.innerHTML = '<p style="color: var(--tekst-szary)">Brak aktywnych uczniów.</p>';
     } else {
@@ -393,7 +543,6 @@ function renderStudents() {
         });
     }
 
-    // Render Zarchiwizowanych
     if(archivedStudents.length > 0) {
         archivedSection.classList.remove('hidden');
         archivedStudents.forEach(student => {
@@ -523,7 +672,6 @@ function renderDashboard() {
     document.getElementById('dashboard-unpaid-sum').innerText = `${unpaidTotal} zł`;
     document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} zaległych lekcji`;
     
-    // Liczymy tylko aktywnych uczniów
     document.getElementById('dashboard-active-students').innerText = students.filter(s => !s.archived).length;
 
     let upcomingLessons = lessons.filter(l => !l.cancelled && (l.date > todayString || (l.date === todayString && l.endTime >= nowTime)));
@@ -791,7 +939,6 @@ function openLessonModal() {
     const selectStudent = document.getElementById('lesson-student');
     selectStudent.innerHTML = '<option value="">Wybierz ucznia...</option>';
     
-    // Filtr: do nowej lekcji pokazujemy tylko aktywnych uczniów
     students.filter(s => !s.archived).forEach(s => {
         selectStudent.innerHTML += `<option value="${s.id}">${s.name}</option>`;
     });
@@ -825,7 +972,6 @@ function editLesson(id) {
     const selectStudent = document.getElementById('lesson-student');
     selectStudent.innerHTML = '';
     
-    // Przy edycji musimy pokazać zarchiwizowanych, jeśli lekcja należy do któregoś z nich
     students.forEach(s => {
         if(!s.archived || s.id == lesson.studentId) {
             selectStudent.innerHTML += `<option value="${s.id}" ${s.id == lesson.studentId ? 'selected' : ''}>${s.name}</option>`;
@@ -1090,4 +1236,5 @@ function closeModals() {
     document.getElementById('modal-student').classList.add('hidden');
     document.getElementById('modal-lesson').classList.add('hidden');
     document.getElementById('modal-subject').classList.add('hidden');
+    document.getElementById('modal-find-slot').classList.add('hidden');
 }
