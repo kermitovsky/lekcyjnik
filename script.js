@@ -290,7 +290,6 @@ function renderSlotCalendar() {
             if(startPos < 0) { height += startPos; startPos = 0; }
             if(startPos + height > maxPos) { height = maxPos - startPos; }
 
-            // ESTETYCZNY ZIELONY BLOK (Neo-brutalizm)
             if (height > 0 && startPos < maxPos) {
                 gridHtml += `
                     <div class="absolute w-[94%] left-[3%] rounded-lg border-2 shadow-[2px_2px_0_var(--ciemny)] z-0 flex flex-col items-center justify-start pt-1 md:pt-2 overflow-hidden transition-transform hover:-translate-y-0.5" 
@@ -312,11 +311,18 @@ function renderSlotCalendar() {
             
             if(topPosition < 0) { height += topPosition; topPosition = 0; }
 
-            // ESTETYCZNY CZERWONY BLOK (Neo-brutalizm)
+            // Pobieranie danych ucznia i przedmiotu do wyświetlenia na kafelku
+            let student = students.find(s => s.id == lesson.studentId) || {name: 'Nieznany'};
+            let subject = subjects.find(s => s.id == lesson.subjectId) || {name: ''};
+
+            // Zaktualizowany CZERWONY BLOK (Z detalami i stopPropagation)
             gridHtml += `
-                <div class="absolute w-[90%] left-[5%] rounded-lg border-2 shadow-[2px_2px_0_var(--ciemny)] z-10 flex items-center justify-center overflow-hidden opacity-95" 
-                     style="top: ${topPosition}px; height: ${height}px; background-color: #fecaca; border-color: var(--ciemny);">
-                    <div class="px-1 text-[8px] md:text-[10px] font-extrabold uppercase text-center truncate" style="color: var(--ciemny)">Zajęte</div>
+                <div class="absolute w-[94%] left-[3%] rounded-lg border-2 shadow-[2px_2px_0_var(--ciemny)] z-10 flex flex-col items-start justify-start p-1 overflow-hidden opacity-[0.98] cursor-not-allowed" 
+                     style="top: ${topPosition}px; height: ${height}px; background-color: #fecaca; border-color: var(--ciemny);"
+                     onclick="event.stopPropagation()">
+                    <div class="text-[8px] md:text-[9px] font-bold leading-none mb-0.5" style="color: var(--ciemny)">${lesson.startTime}-${lesson.endTime}</div>
+                    <div class="text-[9px] md:text-[10px] font-extrabold leading-tight truncate w-full" style="color: var(--ciemny)">${student.name}</div>
+                    <div class="text-[7px] md:text-[8px] font-bold uppercase tracking-wider truncate w-full mt-auto opacity-75" style="color: var(--ciemny)">${subject.name}</div>
                 </div>`;
         });
 
@@ -349,6 +355,7 @@ function handleSlotClick(e, dateStr) {
     if(timeStartPicker) timeStartPicker.setDate(startStr);
     autoUzupelnijCzas(); 
 }
+
 
 // --- LOGOWANIE (TYLKO GOOGLE) ---
 firebase.auth().onAuthStateChanged((user) => {
