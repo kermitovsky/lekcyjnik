@@ -3,12 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planer Korepetytora</title>
+    <title>Planer Korepetytora | Ogarnij swój grafik</title>
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
-                extend: { colors: { akcent: 'var(--akcent)' } }
+                extend: { 
+                    colors: { akcent: 'var(--akcent)' },
+                    animation: {
+                        'float-slow': 'float 6s ease-in-out infinite',
+                        'float-fast': 'float 4s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+                            '50%': { transform: 'translateY(-20px) rotate(2deg)' },
+                        }
+                    }
+                }
             }
         }
     </script>
@@ -29,19 +41,106 @@
 </head>
 <body class="font-sans h-screen flex flex-col overflow-hidden transition-colors duration-300">
 
-    <div id="view-login" class="flex-1 flex flex-col items-center justify-center p-4 md:p-6 hidden">
-        <div class="karta max-w-sm w-full text-center space-y-6 px-4 py-8 md:p-8">
-            <div class="text-6xl mb-4">📘</div>
-            <h1 class="text-2xl md:text-3xl font-extrabold">Planer Korepetytora</h1>
-            <p class="font-medium text-sm md:text-base pb-6 border-b-2" style="border-color: var(--szary-ramka); color: var(--tekst-szary)">Zaloguj się, aby uzyskać dostęp do swojego kalendarza i uczniów.</p>
-
-            <button onclick="zalogujPrzezGoogle()" class="w-full flex items-center justify-center gap-3 py-3 text-base md:text-lg font-bold border-2 rounded-full transition shadow-[2px_2px_0px_var(--ciemny)] hover:translate-y-0.5 hover:shadow-none" style="border-color: var(--ciemny); background-color: var(--karta-bg);">
-                <svg class="w-6 h-6 bg-white rounded-full p-1" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/><path fill="none" d="M1 1h22v22H1z"/></svg>
-                Zaloguj przez Google
+    <div id="view-login" class="absolute inset-0 z-50 bg-[#ffc900] overflow-y-auto no-scrollbar hidden transition-opacity duration-500">
+        
+        <nav class="w-full flex justify-between items-center px-4 py-4 md:px-12 md:py-6 bg-white border-b-4 border-black">
+            <h1 class="text-2xl md:text-4xl font-black tracking-tighter uppercase">Planer<span class="text-[#4f46e5]">.</span></h1>
+            <button onclick="zalogujPrzezGoogle()" class="font-extrabold text-sm md:text-lg border-4 border-black px-4 py-2 md:px-8 md:py-3 bg-[#4f46e5] text-white shadow-[4px_4px_0_black] hover:translate-x-1 hover:translate-y-1 hover:shadow-[0px_0px_0_black] transition-all flex items-center gap-3">
+                <svg class="w-5 h-5 bg-white rounded-full p-0.5 hidden sm:block" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/><path fill="none" d="M1 1h22v22H1z"/></svg>
+                Zaloguj się
             </button>
-        </div>
-    </div>
+        </nav>
 
+        <header class="max-w-7xl mx-auto px-4 py-16 md:px-12 md:py-24 flex flex-col lg:flex-row items-center gap-16 relative overflow-hidden">
+            
+            <div class="lg:w-1/2 space-y-8 z-10 relative">
+                <div class="absolute -top-12 -left-8 text-7xl animate-bounce">🔥</div>
+                <h2 class="text-6xl md:text-8xl font-black leading-[0.9] uppercase tracking-tighter text-black">
+                    Korepetycje <br>
+                    <span class="bg-white px-4 border-4 border-black shadow-[8px_8px_0_black] -rotate-2 inline-block mt-4 text-[#ec4899]">na sterydach.</span>
+                </h2>
+                <p class="text-xl md:text-2xl font-bold border-l-8 border-black pl-6 bg-white/50 p-4 rounded-r-xl">
+                    Zapomnij o chaotycznych zeszytach i pogubionych wiadomościach. Zautomatyzuj grafik, pogoń dłużników i wreszcie odzyskaj swój czas prywatny.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 pt-4">
+                    <button onclick="zalogujPrzezGoogle()" class="text-xl md:text-2xl font-black border-4 border-black px-8 py-5 bg-[#22c55e] text-black shadow-[8px_8px_0_black] hover:translate-x-2 hover:translate-y-2 hover:shadow-none transition-all flex items-center justify-center gap-4 text-center">
+                        Zacznij za darmo 🚀
+                    </button>
+                </div>
+            </div>
+
+            <div class="lg:w-1/2 relative w-full h-[400px] md:h-[500px] hidden sm:block">
+                
+                <div class="absolute top-0 right-10 w-72 bg-white border-4 border-black shadow-[12px_12px_0_black] rounded-2xl p-6 transform rotate-6 animate-float-slow z-20">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="font-extrabold text-sm uppercase text-gray-500">Zarobki z tego miesiąca</span>
+                        <span class="text-2xl">💸</span>
+                    </div>
+                    <div class="text-5xl font-black text-[#4f46e5]">4 250 zł</div>
+                    <div class="mt-4 flex items-center gap-2">
+                        <div class="w-full bg-gray-200 h-3 border-2 border-black rounded-full overflow-hidden">
+                            <div class="bg-[#22c55e] w-3/4 h-full border-r-2 border-black"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="absolute bottom-10 left-0 w-80 bg-[#ec4899] border-4 border-black shadow-[12px_12px_0_black] rounded-2xl p-5 transform -rotate-3 animate-float-fast z-30">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-white border-4 border-black rounded-full flex items-center justify-center text-xl font-black">🔍</div>
+                        <div>
+                            <div class="font-extrabold text-white text-xl">Znaleziono termin!</div>
+                            <div class="font-bold text-black bg-white inline-block px-2 border-2 border-black mt-1">Piątek, 16:00 - 17:00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="absolute top-1/2 left-20 w-48 bg-[#f97316] border-4 border-black shadow-[8px_8px_0_black] rounded-xl p-4 transform -rotate-12 animate-bounce z-10">
+                    <div class="font-black text-white text-center text-lg uppercase">Zaległości: 0 zł 😎</div>
+                </div>
+            </div>
+        </header>
+
+        <section class="bg-white border-y-4 border-black">
+            <div class="max-w-7xl mx-auto px-4 py-20 md:px-12">
+                <h2 class="text-4xl md:text-6xl font-black text-center mb-16 uppercase tracking-tight">Co potrafi Twoja nowa asystentka?</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="bg-[#f8fafc] border-4 border-black p-8 shadow-[8px_8px_0_black] hover:-translate-y-2 hover:shadow-[12px_12px_0_black] transition-all">
+                        <div class="text-6xl mb-6 bg-white border-4 border-black w-20 h-20 flex items-center justify-center rounded-2xl shadow-[4px_4px_0_black] -rotate-6">📅</div>
+                        <h3 class="text-2xl font-black mb-4 uppercase">Magiczny Kalendarz</h3>
+                        <p class="font-medium text-lg text-gray-700 leading-relaxed">Wpisujesz swoje godziny pracy, a algorytm sam znajduje luki między uczniami. Koniec ze ślęczeniem nad grafikiem i nakładającymi się lekcjami.</p>
+                    </div>
+                    <div class="bg-[#e0e7ff] border-4 border-black p-8 shadow-[8px_8px_0_black] hover:-translate-y-2 hover:shadow-[12px_12px_0_black] transition-all">
+                        <div class="text-6xl mb-6 bg-white border-4 border-black w-20 h-20 flex items-center justify-center rounded-2xl shadow-[4px_4px_0_black] rotate-3">💳</div>
+                        <h3 class="text-2xl font-black mb-4 uppercase">Hajs pod kontrolą</h3>
+                        <p class="font-medium text-lg text-gray-700 leading-relaxed">Jednym kliknięciem oznaczasz wpłaty. Aplikacja podlicza zyski, generuje piękne wykresy i krzyczy na czerwono, gdy ktoś zalega z płatnością.</p>
+                    </div>
+                    <div class="bg-[#fce7f3] border-4 border-black p-8 shadow-[8px_8px_0_black] hover:-translate-y-2 hover:shadow-[12px_12px_0_black] transition-all">
+                        <div class="text-6xl mb-6 bg-white border-4 border-black w-20 h-20 flex items-center justify-center rounded-2xl shadow-[4px_4px_0_black] -rotate-3">🗄️</div>
+                        <h3 class="text-2xl font-black mb-4 uppercase">Teczka Ucznia</h3>
+                        <p class="font-medium text-lg text-gray-700 leading-relaxed">Archiwizuj byłych klientów bez utraty danych finansowych. Zapisuj tematy zajęć i miej całą bazę swoich podopiecznych zawsze w kieszeni.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-[#1e293b] py-24 px-4 text-center border-b-4 border-black">
+            <h2 class="text-5xl md:text-7xl font-black text-white mb-8 uppercase tracking-tighter">Przestań tracić czas.</h2>
+            <button onclick="zalogujPrzezGoogle()" class="text-2xl md:text-4xl font-black border-4 border-black px-10 py-6 bg-[#ffc900] text-black shadow-[8px_8px_0_#4f46e5] hover:translate-x-2 hover:translate-y-2 hover:shadow-none transition-all inline-block">
+                Zaloguj przez Google ⚡
+            </button>
+        </section>
+
+        <footer class="bg-white p-6 text-center border-t-4 border-black">
+            <div class="flex flex-col md:flex-row justify-center items-center gap-4 font-bold text-gray-600 uppercase text-sm tracking-wider">
+                <p>&copy; 2026 Planer Korepetytora.</p>
+                <span class="hidden md:inline">|</span>
+                <a href="#" class="hover:text-[#4f46e5] underline decoration-2 underline-offset-4">Regulamin</a>
+                <span class="hidden md:inline">|</span>
+                <a href="#" class="hover:text-[#ec4899] underline decoration-2 underline-offset-4">Polityka Prywatności</a>
+            </div>
+        </footer>
+    </div>
     <nav id="app-nav" class="backdrop-blur border-b px-3 py-3 md:px-6 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 z-30 relative shadow-sm hidden" style="background-color: rgba(var(--karta-bg), 0.9); border-color: var(--szary-ramka)">
         <div class="flex items-center justify-between w-full md:w-auto gap-4">
             <h1 class="font-bold text-xl md:text-2xl tracking-tight" style="color: var(--akcent)">Planer Korepetytora</h1>
