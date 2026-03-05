@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planer Korepetytora | Profesjonalne zarządzanie zajęciami</title>
+    <title>TutoGrid | Twój Planer Korepetytora</title>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -13,6 +13,7 @@
                     animation: {
                         'float-slow': 'float 6s ease-in-out infinite',
                         'float-fast': 'float 4s ease-in-out infinite',
+                        'float-delayed': 'float 5s ease-in-out 2s infinite',
                     },
                     keyframes: {
                         float: {
@@ -45,8 +46,8 @@
         
         <nav class="w-full flex justify-between items-center px-4 py-4 md:px-12 md:py-6 bg-white border-b-4 border-black sticky top-0 z-50">
             <h1 class="text-xl md:text-3xl font-black tracking-tighter uppercase flex items-center gap-2">
-                <span class="text-3xl hidden md:inline">📘</span>
-                Planer Korepetytora<span class="text-[#4f46e5]">.</span>
+                <span class="text-3xl hidden md:inline">⬛</span>
+                TutoGrid<span class="text-[#4f46e5]">.</span>
             </h1>
             <button onclick="zalogujPrzezGoogle()" class="font-extrabold text-sm md:text-base border-4 border-black px-4 py-2 md:px-8 md:py-3 bg-[#4f46e5] text-white shadow-[4px_4px_0_black] hover:translate-x-1 hover:translate-y-1 hover:shadow-[0px_0px_0_black] transition-all flex items-center gap-3">
                 <svg class="w-5 h-5 bg-white rounded-full p-0.5 hidden sm:block" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/><path fill="none" d="M1 1h22v22H1z"/></svg>
@@ -63,7 +64,7 @@
                     <span class="bg-white px-4 border-4 border-black shadow-[8px_8px_0_black] -rotate-1 inline-block mt-4 text-[#4f46e5]">jak profesjonalista.</span>
                 </h2>
                 <p class="text-lg md:text-xl font-medium border-l-8 border-[#4f46e5] pl-6 text-gray-700">
-                    Zautomatyzuj swój grafik, precyzyjnie monitoruj płatności i zyskaj pełną kontrolę nad swoim czasem. Skup się na nauczaniu, a administrację zostaw aplikacji.
+                    Zautomatyzuj swój grafik, precyzyjnie monitoruj płatności i zyskaj pełną kontrolę nad swoim czasem. Skup się na nauczaniu, a administrację zostaw TutoGrid.
                 </p>
                 <div class="flex flex-col sm:flex-row gap-4 pt-6">
                     <button onclick="zalogujPrzezGoogle()" class="text-lg md:text-xl font-black border-4 border-black px-8 py-4 bg-[#ffc900] text-black shadow-[6px_6px_0_black] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all flex items-center justify-center gap-4 text-center">
@@ -72,15 +73,15 @@
                 </div>
             </div>
 
-            <div class="lg:w-1/2 relative w-full h-[400px] md:h-[500px] hidden sm:block">
+            <div class="lg:w-1/2 relative w-full h-[500px] lg:h-[600px] hidden sm:block">
                 
-                <div class="absolute top-0 right-10 w-80 bg-white border-4 border-black shadow-[12px_12px_0_black] rounded-2xl p-6 transform rotate-3 animate-float-slow z-20">
+                <div class="absolute top-4 right-4 w-72 bg-white border-4 border-black shadow-[12px_12px_0_black] rounded-2xl p-6 transform rotate-3 animate-float-slow z-20">
                     <div class="flex justify-between items-center mb-4">
-                        <span class="font-extrabold text-sm uppercase text-gray-500">Przychód (Bieżący miesiąc)</span>
-                        <span class="text-2xl text-emerald-500">📈</span>
+                        <span class="font-extrabold text-xs uppercase text-gray-500">Przychód (Ten miesiąc)</span>
+                        <span class="text-xl text-emerald-500">📈</span>
                     </div>
-                    <div class="text-5xl font-black text-black">4 250 zł</div>
-                    <div class="text-sm font-bold text-emerald-600 mt-2">+ 800 zł (W planach)</div>
+                    <div class="text-4xl font-black text-black">4 250 zł</div>
+                    <div class="text-xs font-bold text-emerald-600 mt-2">+ 800 zł (W planach)</div>
                     <div class="mt-4 flex items-center gap-2">
                         <div class="w-full bg-gray-100 h-3 border-2 border-black rounded-full overflow-hidden">
                             <div class="bg-[#4f46e5] w-3/4 h-full border-r-2 border-black"></div>
@@ -88,20 +89,38 @@
                     </div>
                 </div>
 
-                <div class="absolute bottom-10 left-0 w-80 bg-[#14b8a6] border-4 border-black shadow-[12px_12px_0_black] rounded-2xl p-5 transform -rotate-2 animate-float-fast z-30">
+                <div class="absolute top-12 left-0 w-56 bg-[#ffc900] border-4 border-black shadow-[8px_8px_0_black] rounded-xl p-4 transform -rotate-3 animate-float-fast z-30 flex items-start gap-3">
+                    <div class="text-2xl mt-1">⏰</div>
+                    <div>
+                        <div class="font-black text-black uppercase text-[10px] tracking-wider mb-1">Lekcja za 15 min</div>
+                        <div class="font-extrabold text-black text-sm leading-tight">Matematyka<br>Mikołaj</div>
+                    </div>
+                </div>
+
+                <div class="absolute top-[45%] left-8 w-48 bg-white border-4 border-black shadow-[8px_8px_0_black] rounded-xl p-3 transform rotate-6 animate-bounce z-10 flex items-center gap-3">
+                    <div class="w-4 h-4 bg-emerald-500 border-2 border-black rounded-full"></div>
+                    <div class="font-black text-black text-xs uppercase tracking-wide">Zaległości: 0 zł</div>
+                </div>
+
+                <div class="absolute top-[50%] right-8 w-48 bg-[#e0e7ff] border-4 border-black shadow-[8px_8px_0_black] rounded-xl p-3 transform -rotate-6 animate-float-delayed z-10 flex items-center gap-3">
+                    <div class="w-8 h-8 bg-[#4f46e5] text-white rounded-full flex items-center justify-center font-bold border-2 border-black">+</div>
+                    <div class="font-black text-xs uppercase text-black">Nowy uczeń<br>zapisany</div>
+                </div>
+
+                <div class="absolute bottom-16 right-16 w-72 bg-[#14b8a6] border-4 border-black shadow-[12px_12px_0_black] rounded-2xl p-5 transform rotate-2 animate-float-slow z-30">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 bg-white border-4 border-black rounded-full flex items-center justify-center text-xl font-black">🗓️</div>
                         <div>
-                            <div class="font-extrabold text-white text-lg">Wolny termin znaleziony</div>
-                            <div class="font-bold text-black bg-white inline-block px-2 border-2 border-black mt-1 text-sm">Czwartek, 16:00 - 17:00</div>
+                            <div class="font-extrabold text-white text-sm uppercase mb-1">Termin znaleziony</div>
+                            <div class="font-bold text-black bg-white inline-block px-2 py-0.5 border-2 border-black text-xs">Czwartek, 16:00 - 17:00</div>
                         </div>
                     </div>
                 </div>
 
-                <div class="absolute top-1/2 left-20 w-56 bg-white border-4 border-black shadow-[8px_8px_0_black] rounded-xl p-4 transform -rotate-6 animate-bounce z-10 flex items-center gap-3">
-                    <div class="w-4 h-4 bg-emerald-500 border-2 border-black rounded-full"></div>
-                    <div class="font-black text-black text-sm uppercase tracking-wide">Zaległości: 0 zł</div>
+                <div class="absolute bottom-24 left-16 bg-[#ec4899] border-4 border-black shadow-[8px_8px_0_black] rounded-full px-4 py-2 transform -rotate-12 animate-float-fast z-40">
+                    <span class="text-white font-black uppercase tracking-widest text-xs">💸 Zapłacone</span>
                 </div>
+
             </div>
         </header>
 
@@ -119,7 +138,7 @@
                 <div class="hidden md:block w-1 h-12 bg-gray-800"></div>
                 <div>
                     <div class="text-4xl font-black text-[#ec4899] mb-2">24/7</div>
-                    <div class="font-bold uppercase tracking-widest text-sm text-gray-400">Dostępność z każdego urządzenia</div>
+                    <div class="font-bold uppercase tracking-widest text-sm text-gray-400">Dostępność z chmury</div>
                 </div>
             </div>
         </section>
@@ -128,7 +147,7 @@
             <div class="max-w-7xl mx-auto px-4 py-24 md:px-12">
                 <div class="text-center mb-16">
                     <h2 class="text-4xl md:text-5xl font-black mb-4 uppercase tracking-tight">Kompleksowe rozwiązanie</h2>
-                    <p class="text-lg text-gray-600 font-medium max-w-2xl mx-auto">Wszystkie narzędzia niezbędne do prowadzenia działalności edukacyjnej zebrane w jednym, przejrzystym systemie.</p>
+                    <p class="text-lg text-gray-600 font-medium max-w-2xl mx-auto">Wszystkie narzędzia niezbędne do prowadzenia działalności edukacyjnej zebrane w jednym, przejrzystym systemie TutoGrid.</p>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -169,7 +188,7 @@
         <section class="bg-[#4f46e5] py-24 px-4 text-center border-y-4 border-black relative overflow-hidden">
             <div class="relative z-10">
                 <h2 class="text-4xl md:text-6xl font-black text-white mb-6 uppercase tracking-tight">Gotowy na optymalizację?</h2>
-                <p class="text-xl text-white/90 font-medium mb-10 max-w-xl mx-auto">Dołącz do grona zorganizowanych edukatorów. Rejestracja zajmuje mniej niż 5 sekund za pomocą konta Google.</p>
+                <p class="text-xl text-white/90 font-medium mb-10 max-w-xl mx-auto">Dołącz do grona zorganizowanych edukatorów. Rejestracja w TutoGrid zajmuje mniej niż 5 sekund za pomocą konta Google.</p>
                 <button onclick="zalogujPrzezGoogle()" class="text-xl md:text-2xl font-black border-4 border-black px-10 py-5 bg-white text-black shadow-[8px_8px_0_black] hover:translate-x-1 hover:translate-y-1 hover:shadow-[4px_4px_0_black] transition-all inline-flex items-center gap-3">
                     <svg class="w-6 h-6" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/><path fill="none" d="M1 1h22v22H1z"/></svg>
                     Zaloguj przez Google
@@ -186,8 +205,8 @@
         <footer class="bg-[#1e293b] pt-16 pb-8 border-t-4 border-black text-white">
             <div class="max-w-7xl mx-auto px-4 md:px-12 grid grid-cols-1 md:grid-cols-3 gap-12 mb-12 border-b-2 border-gray-700 pb-12">
                 <div>
-                    <h1 class="text-2xl font-black tracking-tighter uppercase flex items-center gap-2 mb-4">Planer Korepetytora<span class="text-[#4f46e5]">.</span></h1>
-                    <p class="text-gray-400 font-medium text-sm leading-relaxed">Narzędzie stworzone z myślą o osobach uczących prywatnie. Optymalizuj swój czas, kontroluj zarobki i podnieś standard swoich usług edukacyjnych.</p>
+                    <h1 class="text-2xl font-black tracking-tighter uppercase flex items-center gap-2 mb-4">TutoGrid<span class="text-[#4f46e5]">.</span></h1>
+                    <p class="text-gray-400 font-medium text-sm leading-relaxed">Twój Planer Korepetytora. Narzędzie stworzone z myślą o osobach uczących prywatnie. Optymalizuj swój czas, kontroluj zarobki i podnieś standard swoich usług edukacyjnych.</p>
                 </div>
                 <div>
                     <h3 class="text-lg font-bold mb-4 uppercase tracking-wider text-gray-300">Przydatne linki</h3>
@@ -207,13 +226,13 @@
                 </div>
             </div>
             <div class="text-center text-sm font-bold text-gray-500 tracking-wider">
-                &copy; 2026 Planer Korepetytora. Wszelkie prawa zastrzeżone.
+                &copy; 2026 TutoGrid. Wszelkie prawa zastrzeżone.
             </div>
         </footer>
     </div>
     <nav id="app-nav" class="backdrop-blur border-b px-3 py-3 md:px-6 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 z-30 relative shadow-sm hidden" style="background-color: rgba(var(--karta-bg), 0.9); border-color: var(--szary-ramka)">
         <div class="flex items-center justify-between w-full md:w-auto gap-4">
-            <h1 class="font-bold text-xl md:text-2xl tracking-tight" style="color: var(--akcent)">Planer Korepetytora</h1>
+            <h1 class="font-bold text-xl md:text-2xl tracking-tight" style="color: var(--akcent)">TutoGrid.</h1>
             <div class="flex items-center gap-1 md:gap-2 md:hidden">
                 <button onclick="switchTab('ustawienia')" class="nav-tab px-2 text-xl" title="Ustawienia">⚙️</button>
                 <button onclick="wyloguj()" class="text-rose-500 font-bold px-2 py-1.5 rounded-lg border-2 border-transparent text-sm">Wyloguj</button>
@@ -415,7 +434,7 @@
         </div>
 
         <div id="view-ustawienia" class="max-w-3xl mx-auto hidden space-y-6 pb-12">
-            <h2 class="text-2xl md:text-3xl font-extrabold mb-4 md:mb-6 border-b-2 pb-4" style="border-color: var(--szary-ramka)">Ustawienia Aplikacji</h2>
+            <h2 class="text-2xl md:text-3xl font-extrabold mb-4 md:mb-6 border-b-2 pb-4" style="border-color: var(--szary-ramka)">Ustawienia TutoGrid</h2>
             
             <div class="karta space-y-8">
                 <div>
@@ -464,7 +483,7 @@
                 
                 <div>
                     <h3 class="font-bold text-lg mb-3">Mój stały grafik (Dostępność)</h3>
-                    <p class="text-sm mb-4" style="color: var(--tekst-szary)">Ustaw, w jakich godzinach przyjmujesz uczniów. Aplikacja podświetli te okienka na zielono w wyszukiwarce terminów.</p>
+                    <p class="text-sm mb-4" style="color: var(--tekst-szary)">Ustaw, w jakich godzinach przyjmujesz uczniów. TutoGrid podświetli te okienka na zielono w wyszukiwarce terminów.</p>
                     <div id="availability-container" class="space-y-2">
                         </div>
                 </div>
