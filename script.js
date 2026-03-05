@@ -311,11 +311,9 @@ function renderSlotCalendar() {
             
             if(topPosition < 0) { height += topPosition; topPosition = 0; }
 
-            // Pobieranie danych ucznia i przedmiotu do wyświetlenia na kafelku
             let student = students.find(s => s.id == lesson.studentId) || {name: 'Nieznany'};
             let subject = subjects.find(s => s.id == lesson.subjectId) || {name: ''};
 
-            // Zaktualizowany CZERWONY BLOK (Z detalami i stopPropagation)
             gridHtml += `
                 <div class="absolute w-[94%] left-[3%] rounded-lg border-2 shadow-[2px_2px_0_var(--ciemny)] z-10 flex flex-col items-start justify-start p-1 overflow-hidden opacity-[0.98] cursor-not-allowed" 
                      style="top: ${topPosition}px; height: ${height}px; background-color: #fecaca; border-color: var(--ciemny);"
@@ -355,7 +353,6 @@ function handleSlotClick(e, dateStr) {
     if(timeStartPicker) timeStartPicker.setDate(startStr);
     autoUzupelnijCzas(); 
 }
-
 
 // --- LOGOWANIE (TYLKO GOOGLE) ---
 firebase.auth().onAuthStateChanged((user) => {
@@ -414,7 +411,7 @@ function eksportujDane() {
     const blob = new Blob([dataStr], {type: "application/json"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `Planer_Kopia_${new Date().toISOString().split('T')[0]}.json`;
+    a.href = url; a.download = `TutoGrid_Kopia_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
 }
 
@@ -444,7 +441,7 @@ async function importujDane(event) {
                 switchTab('pulpit');
                 await customAlert('Sukces', 'Baza danych została poprawnie wgrana!');
             } else {
-                await customAlert('Błąd pliku', 'Ten plik jest uszkodzony lub nie pochodzi z aplikacji Planer Korepetytora.');
+                await customAlert('Błąd pliku', 'Ten plik jest uszkodzony lub nie pochodzi z aplikacji TutoGrid.');
             }
         } catch (error) {
             await customAlert('Błąd odczytu', 'Nie udało się poprawnie odczytać pliku.');
