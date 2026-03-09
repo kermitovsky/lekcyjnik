@@ -60,6 +60,17 @@ function esc(str) {
         .replace(/'/g, '&#039;');
 }
 
+// --- OPTYMALIZACJA WYSZUKIWARKI (DEBOUNCE - PUNKT 1 z Twojej prośby) ---
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+// Funkcja czeka 150ms po wpisaniu ostatniej litery, zanim narysuje listę uczniów
+const debouncedRenderStudents = debounce(renderStudents, 150);
+
 // --- CUSTOMOWE OKIENKA ---
 function customAlert(title, message) {
     return new Promise((resolve) => {
@@ -156,13 +167,17 @@ function getWeekString(dateObj) {
 }
 
 function switchTab(tabName) {
-    ['pulpit', 'kalendarz', 'uczniowie', 'przedmioty', 'zarobki', 'ustawienia'].forEach(id => {
-        document.getElementById(`view-${id}`).classList.add('hidden');
+    ['skeleton', 'pulpit', 'kalendarz', 'uczniowie', 'przedmioty', 'zarobki', 'ustawienia'].forEach(id => {
+        let el = document.getElementById(`view-${id}`);
+        if(el) el.classList.add('hidden');
     });
     document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('aktywna'));
 
-    document.getElementById(`view-${tabName}`).classList.remove('hidden');
-    if(document.getElementById(`tab-${tabName}`)) document.getElementById(`tab-${tabName}`).classList.add('aktywna');
+    let viewEl = document.getElementById(`view-${tabName}`);
+    if(viewEl) viewEl.classList.remove('hidden');
+    
+    let tabEl = document.getElementById(`tab-${tabName}`);
+    if(tabEl) tabEl.classList.add('aktywna');
 
     if(tabName === 'pulpit') renderDashboard();
     if(tabName === 'kalendarz') renderCalendar();
@@ -183,6 +198,10 @@ firebase.auth().onAuthStateChanged((user) => {
         document.getElementById('view-login').classList.add('hidden');
         document.getElementById('app-nav').classList.remove('hidden');
         document.getElementById('main-content').classList.remove('hidden');
+        
+        // Pokaż szkielet na czas pobierania
+        switchTab('skeleton'); 
+        
         pobierzDaneZChmury(); 
     } else {
         currentUser = null;
