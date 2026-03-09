@@ -11,6 +11,15 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// PRAWIDZIWY TRYB OFFLINE (PUNKT 2)
+db.enablePersistence().catch(function(err) {
+    if (err.code == 'failed-precondition') {
+        console.warn('Masz otwartych kilka kart TutoGrid. Tryb offline działa tylko w jednej karcie na raz.');
+    } else if (err.code == 'unimplemented') {
+        console.warn('Twoja przeglądarka nie w pełni wspiera zapis offline.');
+    }
+});
+
 // --- ZMIENNE GLOBALNE ---
 let currentUser = null; 
 let subjects = [];
@@ -35,17 +44,28 @@ let jumpPicker;
 let paymentDatePicker; 
 let chartInstances = {}; 
 let currentStudentBundles = []; 
-let currentCalendarView = 'grid'; // 'grid' albo 'agenda'
+let currentCalendarView = 'grid'; 
 
 Chart.defaults.font.family = "'Inter', 'sans-serif'";
 Chart.defaults.color = '#64748b';
+
+// --- SYSTEM BEZPIECZEŃSTWA XSS (PUNKT 1) ---
+function esc(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 // --- CUSTOMOWE OKIENKA ---
 function customAlert(title, message) {
     return new Promise((resolve) => {
         const modal = document.getElementById('modal-alert');
-        document.getElementById('alert-title').innerText = title;
-        document.getElementById('alert-message').innerText = message;
+        document.getElementById('alert-title').innerText = esc(title);
+        document.getElementById('alert-message').innerText = esc(message);
         const btnOk = document.getElementById('btn-alert-ok');
         modal.classList.remove('hidden');
         btnOk.onclick = () => { modal.classList.add('hidden'); resolve(); };
@@ -55,8 +75,8 @@ function customAlert(title, message) {
 function showConfirm(title, message, isDanger = false) {
     return new Promise((resolve) => {
         const modal = document.getElementById('modal-confirm');
-        document.getElementById('confirm-title').innerText = title;
-        document.getElementById('confirm-message').innerText = message;
+        document.getElementById('confirm-title').innerText = esc(title);
+        document.getElementById('confirm-message').innerText = esc(message);
         const btnOk = document.getElementById('btn-confirm-ok');
         const btnCancel = document.getElementById('btn-confirm-cancel');
         btnOk.style.backgroundColor = isDanger ? '#ef4444' : 'var(--akcent)';
@@ -70,8 +90,8 @@ function showConfirm(title, message, isDanger = false) {
 function showSeriesChoice(title, message, isDanger = false) {
     return new Promise((resolve) => {
         const modal = document.getElementById('modal-series');
-        document.getElementById('series-title').innerText = title;
-        document.getElementById('series-message').innerText = message;
+        document.getElementById('series-title').innerText = esc(title);
+        document.getElementById('series-message').innerText = esc(message);
         const btnSingle = document.getElementById('btn-series-single');
         const btnFuture = document.getElementById('btn-series-future');
         const btnCancel = document.getElementById('btn-series-cancel');
@@ -156,7 +176,7 @@ function switchTab(tabName) {
     }
 }
 
-// --- LOGOWANIE I CHMURA ---
+// --- LOGOWANIE I MĄDRY ZAPIS DO CHMURY (PUNKT 4) ---
 firebase.auth().onAuthStateChanged((user) => {
     if (user) {
         currentUser = user;
@@ -197,11 +217,25 @@ function pobierzDaneZChmury() {
     });
 }
 
-function saveToCloud() {
+// Zoptymalizowane funkcje zapisu wysyłają tylko to co trzeba (PUNKT 4)
+function saveSubjectsToCloud() {
     if(!currentUser) return; 
-    db.collection("planer_korepetytora").doc(currentUser.uid).set({
-        subjects: subjects, students: students, lessons: lessons, settings: settings
-    });
+    db.collection("planer_korepetytora").doc(currentUser.uid).set({ subjects: subjects }, { merge: true });
+}
+
+function saveStudentsToCloud() {
+    if(!currentUser) return; 
+    db.collection("planer_korepetytora").doc(currentUser.uid).set({ students: students }, { merge: true });
+}
+
+function saveLessonsToCloud() {
+    if(!currentUser) return; 
+    db.collection("planer_korepetytora").doc(currentUser.uid).set({ lessons: lessons }, { merge: true });
+}
+
+function saveSettingsToCloud() {
+    if(!currentUser) return; 
+    db.collection("planer_korepetytora").doc(currentUser.uid).set({ settings: settings }, { merge: true });
 }
 
 function eksportujDane() {
@@ -228,7 +262,11 @@ async function importujDane(event) {
             if(data.subjects && data.students && data.lessons) {
                 subjects = data.subjects; students = data.students; lessons = data.lessons;
                 if(data.settings) settings = data.settings;
-                saveToCloud(); applyVisualSettings(); switchTab('pulpit');
+                
+                // Zapisujemy wszystko przy imporcie
+                saveSubjectsToCloud(); saveStudentsToCloud(); saveLessonsToCloud(); saveSettingsToCloud();
+                
+                applyVisualSettings(); switchTab('pulpit');
                 await customAlert('Sukces', 'Baza danych została poprawnie wgrana!');
             } else { await customAlert('Błąd pliku', 'Ten plik jest uszkodzony.'); }
         } catch (error) { await customAlert('Błąd', 'Nie udało się poprawnie odczytać pliku.'); }
@@ -283,7 +321,7 @@ function renderAvailabilitySettings() {
                 <label class="flex items-center gap-3 font-bold w-full sm:w-1/3 cursor-pointer text-sm md:text-base">
                     <input type="checkbox" class="w-5 h-5 rounded cursor-pointer" style="accent-color: var(--akcent)" 
                            onchange="toggleDay(${day.id}, this.checked)" ${av.active ? 'checked' : ''}>
-                    ${day.name}
+                    ${esc(day.name)}
                 </label>
                 <div class="flex items-center gap-2 w-full sm:w-2/3 sm:justify-end">
                     <input type="text" class="flatpickr-avail p-1.5 border-2 rounded-lg text-sm font-bold w-full sm:w-24 text-center cursor-pointer" style="border-color: var(--szary-ramka); background-color: var(--karta-bg); color: var(--tekst-glowny)" 
@@ -308,23 +346,23 @@ function renderAvailabilitySettings() {
 
 function toggleDay(dayId, isChecked) {
     settings.availability[dayId].active = isChecked;
-    saveToCloud(); renderAvailabilitySettings();
+    saveSettingsToCloud(); renderAvailabilitySettings();
 }
 
 function updateDayTime(dayId, type, value) {
-    if(value) { settings.availability[dayId][type] = value; saveToCloud(); }
+    if(value) { settings.availability[dayId][type] = value; saveSettingsToCloud(); }
 }
 
-function ustawMotyw(theme) { settings.theme = theme; applyVisualSettings(); saveToCloud(); }
-function ustawAkcent(color) { settings.accent = color; applyVisualSettings(); saveToCloud(); }
+function ustawMotyw(theme) { settings.theme = theme; applyVisualSettings(); saveSettingsToCloud(); }
+function ustawAkcent(color) { settings.accent = color; applyVisualSettings(); saveSettingsToCloud(); }
 function zapiszOpcje() {
     settings.startHour = parseInt(document.getElementById('ust-start').value) || 7;
     settings.endHour = parseInt(document.getElementById('ust-end').value) || 22;
     settings.duration = parseInt(document.getElementById('ust-czas').value) || 60;
-    saveToCloud(); renderCalendar();
+    saveSettingsToCloud(); renderCalendar();
 }
 
-// --- PRZEDMIOTY (I LINKI) ---
+// --- PRZEDMIOTY ---
 function renderSubjects() {
     const list = document.getElementById('subjects-list');
     list.innerHTML = '';
@@ -335,9 +373,9 @@ function renderSubjects() {
         list.innerHTML += `
             <div class="karta flex justify-between items-center cursor-pointer hover:-translate-y-1 transition" onclick="editSubject('${sub.id}')">
                 <div class="flex items-center gap-3">
-                    <div class="w-6 h-6 rounded-md border-2" style="background-color: ${sub.color}; border-color: var(--ciemny)"></div>
+                    <div class="w-6 h-6 rounded-md border-2" style="background-color: ${esc(sub.color)}; border-color: var(--ciemny)"></div>
                     <div class="flex flex-col">
-                        <h4 class="font-bold text-lg">${sub.name}</h4>
+                        <h4 class="font-bold text-lg">${esc(sub.name)}</h4>
                         <div class="mt-1">${hasLinks}</div>
                     </div>
                 </div>
@@ -378,13 +416,13 @@ async function saveSubject() {
     } else { 
         subjects.push({ id: Date.now().toString(), name, color, links }); 
     }
-    saveToCloud(); closeModals(); renderSubjects();
+    saveSubjectsToCloud(); closeModals(); renderSubjects();
 }
 
 async function deleteSubject() {
     const id = document.getElementById('subject-id').value;
     if(await showConfirm('Usuwanie', 'Czy na pewno usunąć ten przedmiot?', true)) {
-        subjects = subjects.filter(s => s.id != id); saveToCloud(); closeModals(); renderSubjects();
+        subjects = subjects.filter(s => s.id != id); saveSubjectsToCloud(); closeModals(); renderSubjects();
     }
 }
 
@@ -409,18 +447,15 @@ function renderStudentBundles() {
         let isMonthly = b.type === 'monthly';
         container.innerHTML += `
             <div class="flex flex-col gap-3 items-start p-4 rounded-xl border-2 bg-white border-slate-200 bundle-row shadow-sm" data-id="${b.id}">
-                
                 <div class="flex flex-col sm:flex-row gap-3 w-full">
-                    <input type="text" placeholder="Nazwa pakietu (np. Matma + Fizyka)" value="${b.name || ''}" class="bundle-name w-full sm:w-1/2 text-sm p-2 border-2 rounded-lg font-bold">
+                    <input type="text" placeholder="Nazwa pakietu (np. Matma + Fizyka)" value="${esc(b.name || '')}" class="bundle-name w-full sm:w-1/2 text-sm p-2 border-2 rounded-lg font-bold">
                     <div class="flex gap-2 w-full sm:w-1/2">
                         <input type="number" placeholder="Cena łączna (zł)" value="${b.total || ''}" class="bundle-total w-1/2 text-sm p-2 border-2 rounded-lg font-bold text-akcent">
                         <input type="number" step="0.5" placeholder="Godz. (np. 2.5)" value="${b.hours || ''}" class="bundle-hours w-1/2 text-sm p-2 border-2 rounded-lg font-bold">
                     </div>
                 </div>
-                
                 <div class="w-full bg-slate-50 p-3 rounded-lg border border-slate-200">
                     <div class="font-bold text-xs text-slate-500 mb-2 uppercase tracking-wider">Częstotliwość rozliczania:</div>
-                    
                     <div class="flex gap-6 mb-4">
                         <label class="flex items-center gap-2 cursor-pointer font-bold text-sm">
                             <input type="radio" name="b_type_${index}" value="weekly" class="bundle-type w-4 h-4" style="accent-color: var(--akcent)" onchange="toggleBundleType(this)" ${!isMonthly ? 'checked' : ''}>
@@ -431,7 +466,6 @@ function renderStudentBundles() {
                             Co miesiąc
                         </label>
                     </div>
-                    
                     <div class="bundle-payday-weekly flex items-center gap-3 ${isMonthly ? 'hidden' : ''}">
                         <span class="text-xs font-bold text-slate-600 whitespace-nowrap">Dzień wpłaty:</span>
                         <select class="bundle-payday-weekly-select flex-1 text-xs md:text-sm p-2 border-2 rounded-lg font-bold outline-none cursor-pointer bg-white focus:border-akcent transition">
@@ -445,16 +479,14 @@ function renderStudentBundles() {
                             <option value="0" ${b.payDay==='0' ? 'selected' : ''}>Zawsze w Niedzielę</option>
                         </select>
                     </div>
-
                     <div class="bundle-payday-monthly flex items-center gap-3 ${!isMonthly ? 'hidden' : ''}">
                         <span class="text-xs font-bold text-slate-600 whitespace-nowrap">Wpłata zawsze do:</span>
                         <div class="flex items-center gap-2 flex-1">
-                            <input type="number" min="1" max="31" placeholder="np. 10" value="${isMonthly ? (b.payDay||'') : ''}" class="bundle-payday-monthly-input w-20 text-sm p-2 border-2 rounded-lg font-bold text-center outline-none bg-white focus:border-akcent transition">
+                            <input type="number" min="1" max="31" placeholder="np. 10" value="${isMonthly ? (esc(b.payDay)||'') : ''}" class="bundle-payday-monthly-input w-20 text-sm p-2 border-2 rounded-lg font-bold text-center outline-none bg-white focus:border-akcent transition">
                             <span class="text-xs font-bold text-slate-500">dnia miesiąca</span>
                         </div>
                     </div>
                 </div>
-
                 <button type="button" onclick="this.closest('.bundle-row').remove()" class="text-rose-500 font-extrabold w-full text-center py-2 bg-rose-50 rounded-lg border border-rose-100 hover:bg-rose-100 transition text-xs uppercase tracking-wider mt-1">Usuń ten pakiet</button>
             </div>`;
     });
@@ -485,19 +517,19 @@ function renderStudents() {
             if(student.subjectIds && student.subjectIds.length > 0) {
                 student.subjectIds.forEach(subId => {
                     let sub = subjects.find(s => s.id == subId);
-                    if(sub) studentSubjectsHtml += `<span class="text-[10px] md:text-xs font-bold px-2 py-1 rounded-md text-white border" style="background-color: ${sub.color}; border-color: var(--ciemny)">${sub.name.toUpperCase()}</span> `;
+                    if(sub) studentSubjectsHtml += `<span class="text-[10px] md:text-xs font-bold px-2 py-1 rounded-md text-white border" style="background-color: ${esc(sub.color)}; border-color: var(--ciemny)">${esc(sub.name).toUpperCase()}</span> `;
                 });
             } else { studentSubjectsHtml = `<span class="text-xs font-medium" style="color: var(--tekst-szary)">Brak przypisanych przedmiotów</span>`; }
             
             let bundlesHtml = '';
             if(student.bundles && student.bundles.length > 0) {
-                bundlesHtml = `<div class="mt-2 text-[10px] md:text-xs font-bold text-slate-500">PAKIETY: ${student.bundles.map(b => b.name).join(', ')}</div>`;
+                bundlesHtml = `<div class="mt-2 text-[10px] md:text-xs font-bold text-slate-500">PAKIETY: ${student.bundles.map(b => esc(b.name)).join(', ')}</div>`;
             }
 
             list.innerHTML += `
                 <div class="karta flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0">
                     <div class="space-y-2">
-                        <h4 class="font-extrabold text-lg md:text-xl">${student.name}</h4>
+                        <h4 class="font-extrabold text-lg md:text-xl">${esc(student.name)}</h4>
                         <div class="flex flex-wrap gap-1">${studentSubjectsHtml}</div>
                         ${bundlesHtml}
                     </div>
@@ -516,7 +548,7 @@ function renderStudents() {
             archivedList.innerHTML += `
                 <div class="karta flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0" style="background-color: var(--jasny)">
                     <div class="space-y-1">
-                        <h4 class="font-extrabold text-lg md:text-xl" style="color: var(--tekst-szary)">${student.name}</h4>
+                        <h4 class="font-extrabold text-lg md:text-xl" style="color: var(--tekst-szary)">${esc(student.name)}</h4>
                         <span class="text-xs font-bold px-2 py-1 rounded-md text-white border bg-slate-400 border-slate-500">ARCHIWUM</span>
                     </div>
                     <div class="flex flex-wrap sm:flex-col gap-3 sm:gap-2 w-full sm:w-auto text-center sm:text-right">
@@ -533,7 +565,7 @@ async function toggleArchiveStudent(id) {
     if(student) {
         let action = student.archived ? "przywrócić ucznia do aktywnych" : "przenieść ucznia do archiwum";
         if(await showConfirm('Archiwum', `Czy na pewno chcesz ${action}? Jego lekcje w historii pozostaną nienaruszone.`)) {
-            student.archived = !student.archived; saveToCloud(); renderStudents(); renderDashboard(); 
+            student.archived = !student.archived; saveStudentsToCloud(); renderStudents(); renderDashboard(); 
         }
     }
 }
@@ -547,7 +579,7 @@ function openStudentModal() {
         container.innerHTML += `
             <label class="flex items-center gap-3 p-2 hover:bg-slate-500/10 rounded-lg cursor-pointer transition">
                 <input type="checkbox" value="${sub.id}" class="student-subject-cb w-5 h-5 rounded" style="accent-color: var(--akcent)">
-                <span class="font-bold flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background-color:${sub.color}"></div> ${sub.name}</span>
+                <span class="font-bold flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background-color:${esc(sub.color)}"></div> ${esc(sub.name)}</span>
             </label>`;
     });
     
@@ -569,7 +601,7 @@ function editStudent(id) {
         container.innerHTML += `
             <label class="flex items-center gap-3 p-2 hover:bg-slate-500/10 rounded-lg cursor-pointer transition">
                 <input type="checkbox" value="${sub.id}" class="student-subject-cb w-5 h-5 rounded" style="accent-color: var(--akcent)" ${isChecked}>
-                <span class="font-bold flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background-color:${sub.color}"></div> ${sub.name}</span>
+                <span class="font-bold flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background-color:${esc(sub.color)}"></div> ${esc(sub.name)}</span>
             </label>`;
     });
     
@@ -614,14 +646,14 @@ async function saveStudent() {
     } else {
         students.push({ id: Date.now().toString(), name, subjectIds: selectedSubjects, archived: false, bundles: finalBundles });
     }
-    saveToCloud(); closeModals(); renderStudents();
+    saveStudentsToCloud(); closeModals(); renderStudents();
 }
 
 async function deleteStudent(id) {
     if(await showConfirm('Usuwanie Ucznia', 'Na pewno usunąć ucznia i wszystkie jego zaplanowane lekcje? Zamiast tego możesz go po prostu zarchiwizować!', true)) {
         students = students.filter(s => s.id != id);
         lessons = lessons.filter(l => l.studentId != id);
-        saveToCloud(); renderStudents(); renderDashboard();
+        saveStudentsToCloud(); saveLessonsToCloud(); renderStudents(); renderDashboard();
     }
 }
 
@@ -632,11 +664,11 @@ function updateLessonSubjectDropdown() {
     const subjectSelect = document.getElementById('lesson-subject');
     subjectSelect.innerHTML = '';
     if(!student || !student.subjectIds || student.subjectIds.length === 0) {
-        subjects.forEach(sub => subjectSelect.innerHTML += `<option value="${sub.id}">${sub.name}</option>`);
+        subjects.forEach(sub => subjectSelect.innerHTML += `<option value="${sub.id}">${esc(sub.name)}</option>`);
     } else {
         student.subjectIds.forEach(subId => {
             let sub = subjects.find(s => s.id == subId);
-            if(sub) subjectSelect.innerHTML += `<option value="${sub.id}">${sub.name}</option>`;
+            if(sub) subjectSelect.innerHTML += `<option value="${sub.id}">${esc(sub.name)}</option>`;
         });
     }
 }
@@ -650,7 +682,7 @@ function updateLessonBundleDropdown() {
     if(student && student.bundles && student.bundles.length > 0) {
         student.bundles.forEach(b => {
             let bTypeText = b.type === 'monthly' ? 'Miesięczny' : 'Tygodniowy';
-            bundleSelect.innerHTML += `<option value="${b.id}">Pakiet [${bTypeText}]: ${b.name} (${b.total} zł / ${b.hours}h)</option>`;
+            bundleSelect.innerHTML += `<option value="${b.id}">Pakiet [${bTypeText}]: ${esc(b.name)} (${b.total} zł / ${b.hours}h)</option>`;
         });
     }
     handleBundleChange();
@@ -662,7 +694,6 @@ function handleBundleChange() {
     const priceLabel = document.getElementById('lesson-price-label');
     const paymentDateDiv = document.getElementById('lesson-payment-date-div');
     
-    // ZDJĘCIE BLOKADY I ZMIANA ETYKIETY - można wpisywać okrągłą kwotę
     if (bundleId) {
         if(priceLabel) priceLabel.innerText = 'Cena poza pakietem (zł)';
         paymentDateDiv.classList.remove('hidden');
@@ -738,7 +769,7 @@ function openLessonModal() {
 
     const selectStudent = document.getElementById('lesson-student');
     selectStudent.innerHTML = '<option value="">Wybierz ucznia...</option>';
-    students.filter(s => !s.archived).forEach(s => { selectStudent.innerHTML += `<option value="${s.id}">${s.name}</option>`; });
+    students.filter(s => !s.archived).forEach(s => { selectStudent.innerHTML += `<option value="${s.id}">${esc(s.name)}</option>`; });
 
     document.getElementById('lesson-subject').innerHTML = '<option value="">Wybierz ucznia najpierw...</option>';
     document.getElementById('lesson-bundle').innerHTML = '<option value="">Standardowa cena (wpisz ręcznie)</option>';
@@ -771,7 +802,7 @@ function editLesson(id) {
 
     const selectStudent = document.getElementById('lesson-student');
     selectStudent.innerHTML = '';
-    students.forEach(s => { if(!s.archived || s.id == lesson.studentId) selectStudent.innerHTML += `<option value="${s.id}" ${s.id == lesson.studentId ? 'selected' : ''}>${s.name}</option>`; });
+    students.forEach(s => { if(!s.archived || s.id == lesson.studentId) selectStudent.innerHTML += `<option value="${s.id}" ${s.id == lesson.studentId ? 'selected' : ''}>${esc(s.name)}</option>`; });
 
     updateLessonSubjectDropdown();
     if(lesson.subjectId) document.getElementById('lesson-subject').value = lesson.subjectId;
@@ -810,11 +841,10 @@ async function saveLesson() {
 
     if (isConflict) {
         let conflictStudent = students.find(s => s.id == isConflict.studentId) || {name: 'Ktoś inny'};
-        let proceed = await showConfirm('Konflikt godzin!', `Masz już zaplanowaną lekcję w tym czasie:\n${conflictStudent.name} (${isConflict.startTime} - ${isConflict.endTime})\n\nCzy na pewno chcesz zapisać nakładające się zajęcia?`, true);
+        let proceed = await showConfirm('Konflikt godzin!', `Masz już zaplanowaną lekcję w tym czasie:\n${esc(conflictStudent.name)} (${isConflict.startTime} - ${isConflict.endTime})\n\nCzy na pewno chcesz zapisać nakładające się zajęcia?`, true);
         if (!proceed) return;
     }
 
-    // Matematyka proporcjonalna dla pakietów oblicza się ukradkiem z tyłu
     let bundleValue = null;
     if (bundleId) {
         const student = students.find(s => s.id == studentId);
@@ -922,7 +952,6 @@ async function saveLesson() {
                     }
                 });
             } else if (choice === 'single') {
-                // ...
             } else { return; }
         }
 
@@ -973,7 +1002,7 @@ async function saveLesson() {
             });
         }
     }
-    saveToCloud(); closeModals(); renderCalendar();
+    saveLessonsToCloud(); closeModals(); renderCalendar();
     if(!document.getElementById('view-pulpit').classList.contains('hidden')) renderDashboard();
 }
 
@@ -1002,7 +1031,7 @@ async function deleteLesson() {
         lessons = lessons.filter(l => l.id != id);
     }
     
-    saveToCloud(); closeModals(); renderCalendar();
+    saveLessonsToCloud(); closeModals(); renderCalendar();
     if(!document.getElementById('view-pulpit').classList.contains('hidden')) renderDashboard();
 }
 
@@ -1010,7 +1039,7 @@ function markAsPaid(id, event) {
     event.stopPropagation(); 
     let lesson = lessons.find(l => l.id == id);
     if(lesson) {
-        lesson.paid = true; saveToCloud(); renderDashboard();
+        lesson.paid = true; saveLessonsToCloud(); renderDashboard();
         if(!document.getElementById('view-kalendarz').classList.contains('hidden')) renderCalendar();
     }
 }
@@ -1023,7 +1052,7 @@ function markBundleAsPaid(studentId, bundleId, paymentDate, event) {
             l.paid = true;
         }
     });
-    saveToCloud(); renderDashboard();
+    saveLessonsToCloud(); renderDashboard();
     if(!document.getElementById('view-kalendarz').classList.contains('hidden')) renderCalendar();
 }
 
@@ -1072,14 +1101,14 @@ function renderDashboard() {
             let subject = subjects.find(s => s.id == l.subjectId);
             let lDate = new Date(l.date); let dayNames = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
             let dateDisplay = l.date === todayString ? 'Dzisiaj' : `${dayNames[lDate.getDay()]}, ${lDate.getDate()} ${monthsGenitive[lDate.getMonth()]}`;
-            let badge = subject ? `<span class="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded border" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${subject.color}; border-color: ${subject.color}">${subject.name.toUpperCase()}</span>` : '';
+            let badge = subject ? `<span class="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded border" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${esc(subject.color)}; border-color: ${esc(subject.color)}">${esc(subject.name).toUpperCase()}</span>` : '';
 
             upcomingContainer.innerHTML += `
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-sm hover:shadow-md gap-2 sm:gap-0" style="background-color: var(--karta-bg); border-color: var(--szary-ramka)" onclick="editLesson('${l.id}')">
                     <div class="flex items-center gap-3 md:gap-4">
                         <div class="w-8 h-8 md:w-10 h-10 rounded-full flex items-center justify-center font-bold border text-sm md:text-base" style="background-color: var(--jasny); border-color: var(--szary-ramka); color: var(--tekst-szary)">🕒</div>
                         <div>
-                            <div class="font-extrabold text-sm md:text-base">${student.name}</div>
+                            <div class="font-extrabold text-sm md:text-base">${esc(student.name)}</div>
                             <div class="text-xs md:text-sm font-medium" style="color: var(--tekst-szary)">${dateDisplay}, ${l.startTime}</div>
                         </div>
                     </div>
@@ -1129,8 +1158,8 @@ function renderDashboard() {
             unpaidContainer.innerHTML += `
                 <div class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2 bg-rose-50 border-rose-300">
                     <div>
-                        <div class="font-bold text-sm md:text-base">${student.name}</div>
-                        <div class="text-[10px] md:text-xs font-bold text-rose-500">📦 PAKIET: ${bundleName}</div>
+                        <div class="font-bold text-sm md:text-base">${esc(student.name)}</div>
+                        <div class="text-[10px] md:text-xs font-bold text-rose-500">📦 PAKIET: ${esc(bundleName)}</div>
                         <div class="text-[9px] md:text-[10px] text-rose-400 mt-0.5">Termin wpłaty: ${group.paymentDate}</div>
                     </div>
                     <div class="flex flex-col items-end gap-2">
@@ -1145,7 +1174,7 @@ function renderDashboard() {
             unpaidContainer.innerHTML += `
                 <div class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2" style="background-color: rgba(244, 63, 94, 0.05); border-color: rgba(244, 63, 94, 0.2)" onclick="editLesson('${l.id}')">
                     <div>
-                        <div class="font-bold text-sm md:text-base">${student.name}</div>
+                        <div class="font-bold text-sm md:text-base">${esc(student.name)}</div>
                         <div class="text-[10px] md:text-xs font-medium text-rose-500">${l.date} | ${l.startTime}</div>
                     </div>
                     <div class="flex items-center gap-3">
@@ -1180,16 +1209,16 @@ function renderDashboard() {
             let statusIcon = l.cancelled ? '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm" style="background-color: var(--jasny); color: var(--tekst-szary); border-color: var(--szary-ramka)">Odwołana ❌</span>' : (l.paid ? '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm text-emerald-600 bg-emerald-50 border-emerald-200">Opłacone</span>' : '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm text-rose-500 bg-rose-50 border-rose-200">Brak</span>');
             let cardOpacity = l.cancelled ? 'opacity: 0.5; filter: grayscale(100%)' : '';
             let lineThrough = l.cancelled ? 'text-decoration: line-through' : '';
-            let topicHtml = l.topic ? `<p class="text-[10px] md:text-xs font-medium truncate mt-0.5" style="color: var(--tekst-szary)">📝 ${l.topic}</p>` : '';
+            let topicHtml = l.topic ? `<p class="text-[10px] md:text-xs font-medium truncate mt-0.5" style="color: var(--tekst-szary)">📝 ${esc(l.topic)}</p>` : '';
             let bundleBadge = l.bundleId ? `<span class="text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded ml-1 border bg-blue-50 text-blue-600 border-blue-200">📦 PAKIET</span>` : '';
 
             weekContainer.innerHTML += `
                 <div class="flex items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 gap-2 md:gap-4" style="background-color: var(--karta-bg); border-color: var(--ciemny); ${cardOpacity}" onclick="editLesson('${l.id}')">
                     <div class="flex items-center gap-3 md:gap-4 truncate">
-                        <div class="w-1.5 h-10 md:h-12 rounded-full shrink-0" style="background-color: ${subject.color}"></div>
+                        <div class="w-1.5 h-10 md:h-12 rounded-full shrink-0" style="background-color: ${esc(subject.color)}"></div>
                         <div class="truncate">
                             <p class="font-extrabold text-sm md:text-base" style="${lineThrough}">${l.startTime} - ${l.endTime}</p>
-                            <p class="text-xs md:text-sm font-medium truncate" style="color: var(--tekst-szary)">${student.name} <span class="text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 border hidden sm:inline-block" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${subject.color}; border-color: ${subject.color}">${subject.name.toUpperCase()}</span>${bundleBadge}</p>
+                            <p class="text-xs md:text-sm font-medium truncate" style="color: var(--tekst-szary)">${esc(student.name)} <span class="text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 border hidden sm:inline-block" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${esc(subject.color)}; border-color: ${esc(subject.color)}">${esc(subject.name).toUpperCase()}</span>${bundleBadge}</p>
                             ${topicHtml}
                         </div>
                     </div>
@@ -1233,13 +1262,11 @@ function renderCalendar() {
     let formatDay = (date) => date.getDate().toString().padStart(2, '0');
     document.getElementById('calendar-week-btn-text').innerText = `${formatDay(monday)} - ${formatDay(sunday)} ${monthNames[sunday.getMonth()].substring(0,3).toUpperCase()}`;
 
-    // Narysuj listę (Agendę) i zakończ funkcję, jeśli jesteśmy w widoku listy
     if (currentCalendarView === 'agenda') {
         renderAgendaView(monday, sunday);
         return;
     }
 
-    // Jeśli jesteśmy w siatce, rysuj siatkę
     const daysNames = ['PON', 'WT', 'ŚR', 'CZW', 'PT', 'SOB', 'ND'];
     let headerHtml = '<div class="border-r-2 p-1 md:p-2 w-12 md:w-16 shrink-0" style="background-color: var(--karta-bg); border-color: var(--ciemny)"></div>';
     
@@ -1288,18 +1315,18 @@ function renderCalendar() {
             let bgColor = hexToRgba(subject.color, 0.15);
             let icon = lesson.cancelled ? '❌' : (lesson.paid ? '✅' : '<span class="text-rose-500 font-extrabold text-xs md:text-sm">!</span>');
             let opacityAndStrike = lesson.cancelled ? 'opacity: 0.5; filter: grayscale(100%); text-decoration: line-through;' : '';
-            let topicHtml = lesson.topic ? `<div class="truncate text-[8px] md:text-[10px] font-medium mt-0.5" style="color: var(--tekst-glowny)">📝 ${lesson.topic}</div>` : '';
+            let topicHtml = lesson.topic ? `<div class="truncate text-[8px] md:text-[10px] font-medium mt-0.5" style="color: var(--tekst-glowny)">📝 ${esc(lesson.topic)}</div>` : '';
 
             gridHtml += `
                 <div class="absolute w-[94%] left-[3%] rounded-lg md:rounded-xl p-1 md:p-1.5 overflow-hidden shadow-sm hover:shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 transition cursor-pointer flex flex-col border-l-2 md:border-l-4 border" 
-                     style="top: ${topPosition}px; height: ${height}px; background-color: ${bgColor}; border-left-color: ${subject.color}; border-color: ${subject.color}; ${opacityAndStrike}"
+                     style="top: ${topPosition}px; height: ${height}px; background-color: ${bgColor}; border-left-color: ${esc(subject.color)}; border-color: ${esc(subject.color)}; ${opacityAndStrike}"
                      onclick="editLesson('${lesson.id}')">
-                    <div class="font-bold flex justify-between text-[9px] md:text-xs mb-0.5" style="color: ${subject.color}">
+                    <div class="font-bold flex justify-between text-[9px] md:text-xs mb-0.5" style="color: ${esc(subject.color)}">
                         <span class="whitespace-nowrap tracking-tighter md:tracking-normal">${lesson.startTime}-${lesson.endTime}</span>
                         <span title="Status" class="hidden md:inline">${icon}</span>
                     </div>
-                    <div class="font-extrabold truncate leading-tight text-[11px] md:text-sm">${student.name}</div>
-                    <div class="font-bold truncate mt-auto text-[8px] md:text-[9px] uppercase tracking-wider" style="color: var(--tekst-szary)">${subject.name}</div>
+                    <div class="font-extrabold truncate leading-tight text-[11px] md:text-sm">${esc(student.name)}</div>
+                    <div class="font-bold truncate mt-auto text-[8px] md:text-[9px] uppercase tracking-wider" style="color: var(--tekst-szary)">${esc(subject.name)}</div>
                     ${topicHtml}
                 </div>`;
         });
@@ -1347,7 +1374,7 @@ function renderAgendaView(monday, sunday) {
         let statusIcon = l.cancelled ? 'Odwołana ❌' : (l.paid ? 'Opłacone ✅' : 'Brak wpłaty ⏳');
         let opacityAndStrike = l.cancelled ? 'opacity: 0.5; filter: grayscale(100%);' : '';
         let lineThrough = l.cancelled ? 'text-decoration: line-through;' : '';
-        let topicHtml = l.topic ? `<div class="text-xs md:text-sm font-bold opacity-75 mt-1">📝 Temat: ${l.topic}</div>` : '';
+        let topicHtml = l.topic ? `<div class="text-xs md:text-sm font-bold opacity-75 mt-1">📝 Temat: ${esc(l.topic)}</div>` : '';
         
         let linksHtml = '';
         if (subject.links && subject.links.trim() !== '') {
@@ -1356,7 +1383,7 @@ function renderAgendaView(monday, sunday) {
                 linksHtml += '<div class="flex flex-wrap gap-2 mt-3 pt-3 border-t-2" style="border-color: rgba(0,0,0,0.05)">';
                 linksArr.forEach((link, idx) => {
                     let url = link.startsWith('http') ? link : 'https://' + link;
-                    linksHtml += `<a href="${url}" target="_blank" onclick="event.stopPropagation()" class="px-3 py-1.5 bg-white border-2 rounded-lg text-[10px] md:text-xs font-bold hover:-translate-y-0.5 transition shadow-[2px_2px_0_var(--ciemny)]" style="border-color: var(--ciemny); color: var(--ciemny)">🔗 Materiał ${idx+1}</a>`;
+                    linksHtml += `<a href="${esc(url)}" target="_blank" onclick="event.stopPropagation()" class="px-3 py-1.5 bg-white border-2 rounded-lg text-[10px] md:text-xs font-bold hover:-translate-y-0.5 transition shadow-[2px_2px_0_var(--ciemny)]" style="border-color: var(--ciemny); color: var(--ciemny)">🔗 Materiał ${idx+1}</a>`;
                 });
                 linksHtml += '</div>';
             }
@@ -1364,14 +1391,14 @@ function renderAgendaView(monday, sunday) {
 
         container.innerHTML += `
             <div class="karta cursor-pointer transition hover:-translate-y-1 hover:shadow-[6px_6px_0_var(--ciemny)] border-4 p-4 md:p-5 mb-4 flex flex-col bg-white" 
-                 style="border-color: var(--ciemny); border-left-width: 8px; border-left-color: ${subject.color}; ${opacityAndStrike}" 
+                 style="border-color: var(--ciemny); border-left-width: 8px; border-left-color: ${esc(subject.color)}; ${opacityAndStrike}" 
                  onclick="editLesson('${l.id}')">
                  
                 <div class="flex justify-between items-start gap-4">
                     <div class="flex-1">
                         <div class="font-black text-lg md:text-xl" style="${lineThrough}">${l.startTime} - ${l.endTime}</div>
-                        <div class="font-extrabold text-base md:text-lg mt-1">${student.name}</div>
-                        <div class="inline-block px-2 py-0.5 mt-2 rounded border-2 text-[10px] md:text-xs font-bold uppercase tracking-wider" style="background-color: ${hexToRgba(subject.color, 0.15)}; border-color: ${subject.color}; color: ${subject.color}">${subject.name}</div>
+                        <div class="font-extrabold text-base md:text-lg mt-1">${esc(student.name)}</div>
+                        <div class="inline-block px-2 py-0.5 mt-2 rounded border-2 text-[10px] md:text-xs font-bold uppercase tracking-wider" style="background-color: ${hexToRgba(subject.color, 0.15)}; border-color: ${esc(subject.color)}; color: ${esc(subject.color)}">${esc(subject.name)}</div>
                         ${topicHtml}
                     </div>
                     
@@ -1502,8 +1529,8 @@ function renderSlotCalendar() {
                      style="top: ${topPosition}px; height: ${height}px; background-color: #fecaca; border-color: var(--ciemny);"
                      onclick="event.stopPropagation()">
                     <div class="text-[8px] md:text-[9px] font-bold leading-none mb-0.5" style="color: var(--ciemny)">${lesson.startTime}-${lesson.endTime}</div>
-                    <div class="text-[9px] md:text-[10px] font-extrabold leading-tight truncate w-full" style="color: var(--ciemny)">${student.name}</div>
-                    <div class="text-[7px] md:text-[8px] font-bold uppercase tracking-wider truncate w-full mt-auto opacity-75" style="color: var(--ciemny)">${subject.name}</div>
+                    <div class="text-[9px] md:text-[10px] font-extrabold leading-tight truncate w-full" style="color: var(--ciemny)">${esc(student.name)}</div>
+                    <div class="text-[7px] md:text-[8px] font-bold uppercase tracking-wider truncate w-full mt-auto opacity-75" style="color: var(--ciemny)">${esc(subject.name)}</div>
                 </div>`;
         });
 
@@ -1577,7 +1604,7 @@ function renderChart(canvasId, type, dataArr) {
     chartInstances[canvasId] = new Chart(ctx, {
         type: type,
         data: {
-            labels: dataArr.map(d => d.name),
+            labels: dataArr.map(d => esc(d.name)),
             datasets: [{
                 data: dataArr.map(d => d.val),
                 backgroundColor: dataArr.map(d => d.color || settings.accent),
@@ -1598,7 +1625,7 @@ function renderStudentList(containerId, studentArr, total) {
         let width = total > 0 ? Math.max(5, (item.val / total) * 100) : 0;
         container.innerHTML += `
             <div class="mb-3">
-                <div class="flex justify-between text-xs md:text-sm font-bold mb-1"><span>${item.name}</span><span style="color: var(--akcent)">${item.val} zł</span></div>
+                <div class="flex justify-between text-xs md:text-sm font-bold mb-1"><span>${esc(item.name)}</span><span style="color: var(--akcent)">${item.val} zł</span></div>
                 <div class="w-full rounded-full h-2 md:h-3 border-2" style="background-color: var(--jasny); border-color: var(--szary-ramka)"><div class="h-full rounded-full" style="width: ${width}%; background-color: var(--akcent)"></div></div>
             </div>`;
     });
