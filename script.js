@@ -82,11 +82,11 @@ function showSeriesChoice(title, message, isDanger = false) {
     });
 }
 
-// ZAINICJOWANIE KALENDARZY (Poprawka: onChange przy dacie)
+// --- INICJALIZACJA KALENDARZY W FORMULARZACH ---
 document.addEventListener("DOMContentLoaded", () => {
     datePicker = flatpickr("#lesson-date", { 
         locale: "pl", dateFormat: "Y-m-d", altInput: true, altFormat: "d/m/Y", allowInput: true,
-        onChange: handleBundleChange // Automatycznie przelicza datę płatności przy zmianie daty lekcji!
+        onChange: handleBundleChange 
     });
     paymentDatePicker = flatpickr("#lesson-payment-date", { locale: "pl", dateFormat: "Y-m-d", altInput: true, altFormat: "d/m/Y", allowInput: true });
     timeStartPicker = flatpickr("#lesson-time-start", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true, onChange: autoUzupelnijCzas });
@@ -104,7 +104,138 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function openJumpPicker() { if(jumpPicker) jumpPicker.open(); }
 
-// --- APLIKOWANIE USTAWIEŃ WIZUALNYCH I DOSTĘPNOŚCI ---
+// --- POMOCNICZE FUNKCJE WIZUALNE I NAWIGACJA ---
+function closeModals() {
+    document.getElementById('modal-student').classList.add('hidden');
+    document.getElementById('modal-lesson').classList.add('hidden');
+    document.getElementById('modal-subject').classList.add('hidden');
+    document.getElementById('modal-find-slot').classList.add('hidden');
+}
+
+function hexToRgba(hex, alpha) {
+    if(!hex) return `rgba(120, 120, 120, ${alpha})`;
+    let r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function getMonday(d) {
+    d = new Date(d);
+    let day = d.getDay(), diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+    return new Date(d.setDate(diff));
+}
+
+function getWeekString(dateObj) {
+    let d = new Date(dateObj);
+    d.setHours(0,0,0,0);
+    d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+    let week1 = new Date(d.getFullYear(), 0, 4);
+    let weekNum = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+    return d.getFullYear() + '-W' + weekNum.toString().padStart(2, '0');
+}
+
+function switchTab(tabName) {
+    ['pulpit', 'kalendarz', 'uczniowie', 'przedmioty', 'zarobki', 'ustawienia'].forEach(id => {
+        document.getElementById(`view-${id}`).classList.add('hidden');
+    });
+    document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('aktywna'));
+
+    document.getElementById(`view-${tabName}`).classList.remove('hidden');
+    if(document.getElementById(`tab-${tabName}`)) document.getElementById(`tab-${tabName}`).classList.add('aktywna');
+
+    if(tabName === 'pulpit') renderDashboard();
+    if(tabName === 'kalendarz') renderCalendar();
+    if(tabName === 'uczniowie') renderStudents();
+    if(tabName === 'przedmioty') renderSubjects();
+    if(tabName === 'zarobki') {
+        const now = new Date();
+        document.getElementById('earnings-month-picker').value = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}`;
+        document.getElementById('earnings-week-picker').value = getWeekString(now); 
+        renderZarobki();
+    }
+}
+
+// --- LOGOWANIE I BAZA DANYCH ---
+firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+        currentUser = user;
+        document.getElementById('view-login').classList.add('hidden');
+        document.getElementById('app-nav').classList.remove('hidden');
+        document.getElementById('main-content').classList.remove('hidden');
+        pobierzDaneZChmury(); 
+    } else {
+        currentUser = null;
+        document.getElementById('view-login').classList.remove('hidden');
+        document.getElementById('app-nav').classList.add('hidden');
+        document.getElementById('main-content').classList.add('hidden');
+    }
+});
+
+async function zalogujPrzezGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    try { await firebase.auth().signInWithPopup(provider); } 
+    catch (e) { await customAlert("Błąd logowania", e.message); }
+}
+
+function wyloguj() { firebase.auth().signOut(); }
+
+function pobierzDaneZChmury() {
+    db.collection("planer_korepetytora").doc(currentUser.uid).get().then((doc) => {
+        if (doc.exists) {
+            let data = doc.data();
+            subjects = data.subjects || []; students = data.students || []; lessons = data.lessons || [];
+            if(data.settings) settings = data.settings;
+        } else {
+            subjects = []; students = []; lessons = [];
+        }
+        applyVisualSettings();
+        switchTab('pulpit');
+    }).catch((error) => {
+        console.error("Błąd połączenia z bazą:", error);
+        switchTab('pulpit'); 
+    });
+}
+
+function saveToCloud() {
+    if(!currentUser) return; 
+    db.collection("planer_korepetytora").doc(currentUser.uid).set({
+        subjects: subjects, students: students, lessons: lessons, settings: settings
+    });
+}
+
+function eksportujDane() {
+    const backupData = { subjects, students, lessons, settings };
+    const dataStr = JSON.stringify(backupData, null, 2);
+    const blob = new Blob([dataStr], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `TutoGrid_Kopia_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+}
+
+async function importujDane(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const potwierdzenie = await showConfirm('Wgrywanie bazy danych', 'Uwaga! Ta operacja bezpowrotnie zastąpi Twoje obecne dane w chmurze plikiem z dysku. Chcesz kontynuować?', true);
+    if (!potwierdzenie) { event.target.value = ''; return; }
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if(data.subjects && data.students && data.lessons) {
+                subjects = data.subjects; students = data.students; lessons = data.lessons;
+                if(data.settings) settings = data.settings;
+                saveToCloud(); applyVisualSettings(); switchTab('pulpit');
+                await customAlert('Sukces', 'Baza danych została poprawnie wgrana!');
+            } else { await customAlert('Błąd pliku', 'Ten plik jest uszkodzony.'); }
+        } catch (error) { await customAlert('Błąd', 'Nie udało się poprawnie odczytać pliku.'); }
+        event.target.value = '';
+    };
+    reader.readAsText(file);
+}
+
+// --- USTAWIENIA WIZUALNE I KALENDARZA ---
 function applyVisualSettings() {
     if(settings.theme === 'dark') {
         document.documentElement.classList.add('dark');
@@ -123,16 +254,12 @@ function applyVisualSettings() {
 
     if(!settings.availability) {
         settings.availability = {
-            1: { active: true, start: '15:00', end: '20:00' },
-            2: { active: true, start: '15:00', end: '20:00' },
-            3: { active: true, start: '15:00', end: '20:00' },
-            4: { active: true, start: '15:00', end: '20:00' },
-            5: { active: true, start: '15:00', end: '20:00' },
-            6: { active: false, start: '10:00', end: '14:00' },
+            1: { active: true, start: '15:00', end: '20:00' }, 2: { active: true, start: '15:00', end: '20:00' },
+            3: { active: true, start: '15:00', end: '20:00' }, 4: { active: true, start: '15:00', end: '20:00' },
+            5: { active: true, start: '15:00', end: '20:00' }, 6: { active: false, start: '10:00', end: '14:00' },
             0: { active: false, start: '10:00', end: '14:00' }
         };
     }
-
     renderAvailabilitySettings();
     if(!document.getElementById('view-zarobki').classList.contains('hidden')) renderZarobki();
 }
@@ -168,10 +295,7 @@ function renderAvailabilitySettings() {
     });
 
     flatpickr(".flatpickr-avail", {
-        enableTime: true,
-        noCalendar: true,
-        dateFormat: "H:i",
-        time_24hr: true,
+        enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true,
         onChange: function(selectedDates, dateStr, instance) {
             let dayId = instance.element.getAttribute('data-day');
             let type = instance.element.getAttribute('data-type');
@@ -186,10 +310,7 @@ function toggleDay(dayId, isChecked) {
 }
 
 function updateDayTime(dayId, type, value) {
-    if(value) {
-        settings.availability[dayId][type] = value;
-        saveToCloud();
-    }
+    if(value) { settings.availability[dayId][type] = value; saveToCloud(); }
 }
 
 function ustawMotyw(theme) { settings.theme = theme; applyVisualSettings(); saveToCloud(); }
@@ -199,6 +320,322 @@ function zapiszOpcje() {
     settings.endHour = parseInt(document.getElementById('ust-end').value) || 22;
     settings.duration = parseInt(document.getElementById('ust-czas').value) || 60;
     saveToCloud(); renderCalendar();
+}
+
+// --- ZAKŁADKA PRZEDMIOTY ---
+function renderSubjects() {
+    const list = document.getElementById('subjects-list');
+    list.innerHTML = '';
+    if(subjects.length === 0) return list.innerHTML = '<p style="color: var(--tekst-szary)">Brak przedmiotów. Dodaj pierwszy!</p>';
+    
+    subjects.forEach(sub => {
+        list.innerHTML += `
+            <div class="karta flex justify-between items-center cursor-pointer" onclick="editSubject('${sub.id}')">
+                <div class="flex items-center gap-3">
+                    <div class="w-6 h-6 rounded-md border-2" style="background-color: ${sub.color}; border-color: var(--ciemny)"></div>
+                    <h4 class="font-bold text-lg">${sub.name}</h4>
+                </div>
+            </div>`;
+    });
+}
+
+function openSubjectModal() {
+    document.getElementById('subject-id').value = '';
+    document.getElementById('subject-name').value = '';
+    document.getElementById('subject-color').value = '#ef4444';
+    document.getElementById('btn-delete-subject').classList.add('hidden');
+    document.getElementById('modal-subject').classList.remove('hidden');
+}
+
+function editSubject(id) {
+    const sub = subjects.find(s => s.id == id);
+    if(!sub) return;
+    document.getElementById('subject-id').value = sub.id;
+    document.getElementById('subject-name').value = sub.name;
+    document.getElementById('subject-color').value = sub.color;
+    document.getElementById('btn-delete-subject').classList.remove('hidden');
+    document.getElementById('modal-subject').classList.remove('hidden');
+}
+
+async function saveSubject() {
+    const id = document.getElementById('subject-id').value;
+    const name = document.getElementById('subject-name').value;
+    const color = document.getElementById('subject-color').value;
+    if(!name) return await customAlert('Błąd', 'Wpisz nazwę przedmiotu!');
+    if(id) { let sub = subjects.find(s => s.id == id); sub.name = name; sub.color = color; } 
+    else { subjects.push({ id: Date.now().toString(), name, color }); }
+    saveToCloud(); closeModals(); renderSubjects();
+}
+
+async function deleteSubject() {
+    const id = document.getElementById('subject-id').value;
+    if(await showConfirm('Usuwanie', 'Czy na pewno usunąć ten przedmiot?', true)) {
+        subjects = subjects.filter(s => s.id != id); saveToCloud(); closeModals(); renderSubjects();
+    }
+}
+
+// --- ZAKŁADKA UCZNIOWIE (I PAKIETY) ---
+function renderStudentBundles() {
+    const container = document.getElementById('student-bundles-container');
+    container.innerHTML = '';
+    currentStudentBundles.forEach(b => {
+        container.innerHTML += `
+            <div class="flex flex-col gap-2 items-start p-3 rounded-xl border-2 bg-white border-slate-200 bundle-row" data-id="${b.id}">
+                <div class="flex flex-col sm:flex-row gap-2 w-full">
+                    <input type="text" placeholder="Nazwa (np. Matma + Fizyka)" value="${b.name || ''}" class="bundle-name w-full sm:w-1/3 text-sm p-2 border-2 rounded-lg font-bold">
+                    <div class="flex gap-2 w-full sm:w-2/3">
+                        <input type="number" placeholder="Razem (zł)" value="${b.total || ''}" class="bundle-total w-1/2 text-sm p-2 border-2 rounded-lg font-bold text-akcent">
+                        <input type="number" step="0.5" placeholder="Suma godz. (np. 2.5)" value="${b.hours || ''}" class="bundle-hours w-1/2 text-sm p-2 border-2 rounded-lg font-bold">
+                    </div>
+                </div>
+                <div class="flex gap-2 items-center w-full mt-1 border-t-2 border-slate-100 pt-2">
+                    <label class="text-[10px] md:text-xs font-bold text-slate-500 whitespace-nowrap">Dzień wpłaty:</label>
+                    <select class="bundle-payday flex-1 text-xs md:text-sm p-1.5 border-2 rounded-lg font-bold text-slate-700 bg-slate-50 outline-none focus:border-akcent transition cursor-pointer">
+                        <option value="" ${b.payDay==='' ? 'selected' : ''}>Ustawiam ręcznie przy lekcji</option>
+                        <option value="1" ${b.payDay==='1' ? 'selected' : ''}>Zawsze w Poniedziałek</option>
+                        <option value="2" ${b.payDay==='2' ? 'selected' : ''}>Zawsze we Wtorek</option>
+                        <option value="3" ${b.payDay==='3' ? 'selected' : ''}>Zawsze w Środę</option>
+                        <option value="4" ${b.payDay==='4' ? 'selected' : ''}>Zawsze w Czwartek</option>
+                        <option value="5" ${b.payDay==='5' ? 'selected' : ''}>Zawsze w Piątek</option>
+                        <option value="6" ${b.payDay==='6' ? 'selected' : ''}>Zawsze w Sobotę</option>
+                        <option value="0" ${b.payDay==='0' ? 'selected' : ''}>Zawsze w Niedzielę</option>
+                    </select>
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-rose-500 font-extrabold px-3 py-1.5 bg-rose-50 rounded-lg hover:bg-rose-100 transition text-xs uppercase tracking-wider">Usuń</button>
+                </div>
+            </div>`;
+    });
+}
+
+function addBundleToStudent() {
+    currentStudentBundles.push({ id: 'b_' + Date.now(), name: '', total: '', hours: '', payDay: '' });
+    renderStudentBundles();
+}
+
+function renderStudents() {
+    const list = document.getElementById('students-list');
+    const archivedList = document.getElementById('archived-students-list');
+    const archivedSection = document.getElementById('archived-students-section');
+    
+    list.innerHTML = ''; archivedList.innerHTML = '';
+    const searchInput = document.getElementById('student-search');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+    
+    let activeStudents = students.filter(s => !s.archived && s.name.toLowerCase().includes(searchTerm));
+    let archivedStudents = students.filter(s => s.archived && s.name.toLowerCase().includes(searchTerm));
+
+    if(activeStudents.length === 0) {
+        list.innerHTML = '<p style="color: var(--tekst-szary)">Brak aktywnych uczniów.</p>';
+    } else {
+        activeStudents.forEach(student => {
+            let studentSubjectsHtml = '';
+            if(student.subjectIds && student.subjectIds.length > 0) {
+                student.subjectIds.forEach(subId => {
+                    let sub = subjects.find(s => s.id == subId);
+                    if(sub) studentSubjectsHtml += `<span class="text-[10px] md:text-xs font-bold px-2 py-1 rounded-md text-white border" style="background-color: ${sub.color}; border-color: var(--ciemny)">${sub.name.toUpperCase()}</span> `;
+                });
+            } else { studentSubjectsHtml = `<span class="text-xs font-medium" style="color: var(--tekst-szary)">Brak przypisanych przedmiotów</span>`; }
+            
+            let bundlesHtml = '';
+            if(student.bundles && student.bundles.length > 0) {
+                bundlesHtml = `<div class="mt-2 text-[10px] md:text-xs font-bold text-slate-500">PAKIETY: ${student.bundles.map(b => b.name).join(', ')}</div>`;
+            }
+
+            list.innerHTML += `
+                <div class="karta flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0">
+                    <div class="space-y-2">
+                        <h4 class="font-extrabold text-lg md:text-xl">${student.name}</h4>
+                        <div class="flex flex-wrap gap-1">${studentSubjectsHtml}</div>
+                        ${bundlesHtml}
+                    </div>
+                    <div class="flex flex-wrap sm:flex-col gap-3 sm:gap-2 w-full sm:w-auto text-center sm:text-right">
+                        <button onclick="editStudent('${student.id}')" class="text-sm font-bold hover:underline flex-1 sm:flex-none" style="color: var(--akcent)">Edytuj</button>
+                        <button onclick="toggleArchiveStudent('${student.id}')" class="text-sm font-bold hover:underline flex-1 sm:flex-none" style="color: var(--tekst-szary)">Zarchiwizuj</button>
+                        <button onclick="deleteStudent('${student.id}')" class="text-sm font-bold text-rose-500 hover:underline flex-1 sm:flex-none">Usuń</button>
+                    </div>
+                </div>`;
+        });
+    }
+
+    if(archivedStudents.length > 0) {
+        archivedSection.classList.remove('hidden');
+        archivedStudents.forEach(student => {
+            archivedList.innerHTML += `
+                <div class="karta flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0" style="background-color: var(--jasny)">
+                    <div class="space-y-1">
+                        <h4 class="font-extrabold text-lg md:text-xl" style="color: var(--tekst-szary)">${student.name}</h4>
+                        <span class="text-xs font-bold px-2 py-1 rounded-md text-white border bg-slate-400 border-slate-500">ARCHIWUM</span>
+                    </div>
+                    <div class="flex flex-wrap sm:flex-col gap-3 sm:gap-2 w-full sm:w-auto text-center sm:text-right">
+                        <button onclick="toggleArchiveStudent('${student.id}')" class="text-sm font-bold hover:underline flex-1 sm:flex-none" style="color: var(--akcent)">Przywróć</button>
+                        <button onclick="deleteStudent('${student.id}')" class="text-sm font-bold text-rose-500 hover:underline flex-1 sm:flex-none">Usuń na zawsze</button>
+                    </div>
+                </div>`;
+        });
+    } else { archivedSection.classList.add('hidden'); }
+}
+
+async function toggleArchiveStudent(id) {
+    let student = students.find(s => s.id == id);
+    if(student) {
+        let action = student.archived ? "przywrócić ucznia do aktywnych" : "przenieść ucznia do archiwum";
+        if(await showConfirm('Archiwum', `Czy na pewno chcesz ${action}? Jego lekcje w historii pozostaną nienaruszone.`)) {
+            student.archived = !student.archived; saveToCloud(); renderStudents(); renderDashboard(); 
+        }
+    }
+}
+
+function openStudentModal() {
+    document.getElementById('student-name').value = '';
+    const container = document.getElementById('student-subjects-container');
+    container.innerHTML = '';
+    if(subjects.length === 0) container.innerHTML = '<p class="text-sm text-rose-500 font-bold">Najpierw dodaj przedmioty w zakładce "Przedmioty"!</p>';
+    else subjects.forEach(sub => {
+        container.innerHTML += `
+            <label class="flex items-center gap-3 p-2 hover:bg-slate-500/10 rounded-lg cursor-pointer transition">
+                <input type="checkbox" value="${sub.id}" class="student-subject-cb w-5 h-5 rounded" style="accent-color: var(--akcent)">
+                <span class="font-bold flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background-color:${sub.color}"></div> ${sub.name}</span>
+            </label>`;
+    });
+    
+    currentStudentBundles = [];
+    renderStudentBundles();
+    
+    document.getElementById('modal-student').setAttribute('data-editing-id', '');
+    document.getElementById('modal-student').classList.remove('hidden');
+}
+
+function editStudent(id) {
+    const student = students.find(s => s.id == id);
+    if(!student) return;
+    document.getElementById('student-name').value = student.name;
+    const container = document.getElementById('student-subjects-container');
+    container.innerHTML = '';
+    subjects.forEach(sub => {
+        let isChecked = (student.subjectIds || []).includes(sub.id) ? 'checked' : '';
+        container.innerHTML += `
+            <label class="flex items-center gap-3 p-2 hover:bg-slate-500/10 rounded-lg cursor-pointer transition">
+                <input type="checkbox" value="${sub.id}" class="student-subject-cb w-5 h-5 rounded" style="accent-color: var(--akcent)" ${isChecked}>
+                <span class="font-bold flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background-color:${sub.color}"></div> ${sub.name}</span>
+            </label>`;
+    });
+    
+    currentStudentBundles = student.bundles ? JSON.parse(JSON.stringify(student.bundles)) : [];
+    renderStudentBundles();
+
+    document.getElementById('modal-student').setAttribute('data-editing-id', id);
+    document.getElementById('modal-student').classList.remove('hidden');
+}
+
+async function saveStudent() {
+    const name = document.getElementById('student-name').value;
+    const editingId = document.getElementById('modal-student').getAttribute('data-editing-id');
+    if(!name) return await customAlert('Błąd', 'Wpisz imię ucznia!');
+    let selectedSubjects = [];
+    document.querySelectorAll('.student-subject-cb:checked').forEach(cb => selectedSubjects.push(cb.value));
+    
+    let finalBundles = [];
+    document.querySelectorAll('.bundle-row').forEach(row => {
+        let bName = row.querySelector('.bundle-name').value;
+        let bTotal = parseFloat(row.querySelector('.bundle-total').value);
+        let bHours = parseFloat(row.querySelector('.bundle-hours').value);
+        let bPayDay = row.querySelector('.bundle-payday').value; 
+        if(bName && bTotal && bHours) {
+            finalBundles.push({ id: row.getAttribute('data-id'), name: bName, total: bTotal, hours: bHours, payDay: bPayDay });
+        }
+    });
+
+    if(editingId) {
+        let student = students.find(s => s.id == editingId);
+        student.name = name; student.subjectIds = selectedSubjects; student.bundles = finalBundles;
+    } else {
+        students.push({ id: Date.now().toString(), name, subjectIds: selectedSubjects, archived: false, bundles: finalBundles });
+    }
+    saveToCloud(); closeModals(); renderStudents();
+}
+
+async function deleteStudent(id) {
+    if(await showConfirm('Usuwanie Ucznia', 'Na pewno usunąć ucznia i wszystkie jego zaplanowane lekcje? Zamiast tego możesz go po prostu zarchiwizować!', true)) {
+        students = students.filter(s => s.id != id);
+        lessons = lessons.filter(l => l.studentId != id);
+        saveToCloud(); renderStudents(); renderDashboard();
+    }
+}
+
+// --- LOGIKA FORMULARZA LEKCJI ---
+function updateLessonSubjectDropdown() {
+    const stId = document.getElementById('lesson-student').value;
+    const student = students.find(s => s.id == stId);
+    const subjectSelect = document.getElementById('lesson-subject');
+    subjectSelect.innerHTML = '';
+    if(!student || !student.subjectIds || student.subjectIds.length === 0) {
+        subjects.forEach(sub => subjectSelect.innerHTML += `<option value="${sub.id}">${sub.name}</option>`);
+    } else {
+        student.subjectIds.forEach(subId => {
+            let sub = subjects.find(s => s.id == subId);
+            if(sub) subjectSelect.innerHTML += `<option value="${sub.id}">${sub.name}</option>`;
+        });
+    }
+}
+
+function updateLessonBundleDropdown() {
+    const stId = document.getElementById('lesson-student').value;
+    const student = students.find(s => s.id == stId);
+    const bundleSelect = document.getElementById('lesson-bundle');
+    bundleSelect.innerHTML = '<option value="">Standardowa cena (wpisz ręcznie)</option>';
+    
+    if(student && student.bundles && student.bundles.length > 0) {
+        student.bundles.forEach(b => {
+            bundleSelect.innerHTML += `<option value="${b.id}">Pakiet: ${b.name} (${b.total} zł / ${b.hours}h)</option>`;
+        });
+    }
+    handleBundleChange();
+}
+
+function handleBundleChange() {
+    const bundleId = document.getElementById('lesson-bundle').value;
+    const priceInput = document.getElementById('lesson-price');
+    const paymentDateDiv = document.getElementById('lesson-payment-date-div');
+    
+    if (bundleId) {
+        const stId = document.getElementById('lesson-student').value;
+        const student = students.find(s => s.id == stId);
+        const bundle = student.bundles.find(b => b.id == bundleId);
+        
+        let start = document.getElementById('lesson-time-start').value;
+        let end = document.getElementById('lesson-time-end').value;
+        if(start && end && bundle) {
+            let [sh, sm] = start.split(':').map(Number);
+            let [eh, em] = end.split(':').map(Number);
+            let durationHours = ((eh*60+em) - (sh*60+sm)) / 60;
+            let calculatedPrice = (durationHours / bundle.hours) * bundle.total;
+            priceInput.value = Math.round(calculatedPrice);
+        }
+        priceInput.readOnly = true;
+        priceInput.classList.add('bg-slate-100', 'text-slate-500');
+        paymentDateDiv.classList.remove('hidden');
+        
+        if (bundle && bundle.payDay !== undefined && bundle.payDay !== "") {
+            let lDateStr = document.getElementById('lesson-date').value;
+            let lDate = lDateStr ? new Date(lDateStr) : new Date();
+            let weekMonday = getMonday(lDate);
+            let offset = parseInt(bundle.payDay);
+            if (offset === 0) offset = 7; // Jeśli niedziela to dzień 7 dla formatu tygodnia PL (od poniedziałku)
+            else offset = offset - 1; // 1-Pon, 2-Wt, itd. -> offset względem poniedziałku
+            
+            // Logika PL: poniedziałek = 1 ... niedziela = 0
+            if (bundle.payDay === '0') {
+                weekMonday.setDate(weekMonday.getDate() + 6); // Niedziela tego samego tygodnia
+            } else {
+                weekMonday.setDate(weekMonday.getDate() + (parseInt(bundle.payDay) - 1));
+            }
+            let payDateStr = weekMonday.toISOString().split('T')[0];
+            paymentDatePicker.setDate(payDateStr);
+        }
+    } else {
+        priceInput.readOnly = false;
+        priceInput.classList.remove('bg-slate-100', 'text-slate-500');
+        paymentDateDiv.classList.add('hidden');
+    }
 }
 
 function autoUzupelnijCzas() {
@@ -213,17 +650,249 @@ function autoUzupelnijCzas() {
     
     document.getElementById('lesson-time-end').value = endStr;
     if(timeEndPicker) timeEndPicker.setDate(endStr);
-    
     handleBundleChange(); 
+}
+
+function openLessonModal() {
+    document.getElementById('lesson-modal-title').innerText = 'Zaplanuj lekcję';
+    document.getElementById('lesson-id').value = '';
+    document.getElementById('lesson-topic').value = ''; 
+    
+    let defaultDate = new Date().toISOString().split('T')[0];
+    if(datePicker) datePicker.setDate(defaultDate);
+    if(paymentDatePicker) paymentDatePicker.setDate('');
+    
+    document.getElementById('lesson-time-start').value = '15:00';
+    if(timeStartPicker) timeStartPicker.setDate('15:00');
+    autoUzupelnijCzas();
+
+    document.getElementById('lesson-price').value = '';
+    document.getElementById('lesson-paid').checked = false;
+    document.getElementById('lesson-cancelled').checked = false;
+    
+    document.getElementById('recurring-box').classList.remove('hidden');
+    document.getElementById('cancelled-box').classList.add('hidden'); 
+    document.getElementById('btn-delete-lesson').classList.add('hidden');
+
+    const selectStudent = document.getElementById('lesson-student');
+    selectStudent.innerHTML = '<option value="">Wybierz ucznia...</option>';
+    students.filter(s => !s.archived).forEach(s => { selectStudent.innerHTML += `<option value="${s.id}">${s.name}</option>`; });
+
+    document.getElementById('lesson-subject').innerHTML = '<option value="">Wybierz ucznia najpierw...</option>';
+    document.getElementById('lesson-bundle').innerHTML = '<option value="">Standardowa cena (wpisz ręcznie)</option>';
+    document.getElementById('modal-lesson').classList.remove('hidden');
+    handleBundleChange();
+}
+
+function editLesson(id) {
+    const lesson = lessons.find(l => l.id == id);
+    if(!lesson) return;
+    document.getElementById('lesson-modal-title').innerText = 'Szczegóły lekcji';
+    document.getElementById('lesson-id').value = lesson.id;
+    document.getElementById('lesson-topic').value = lesson.topic || ''; 
+    
+    if(datePicker) datePicker.setDate(lesson.date);
+    if(paymentDatePicker) paymentDatePicker.setDate(lesson.paymentDate || lesson.date);
+    
+    document.getElementById('lesson-time-start').value = lesson.startTime;
+    document.getElementById('lesson-time-end').value = lesson.endTime;
+    if(timeStartPicker) timeStartPicker.setDate(lesson.startTime);
+    if(timeEndPicker) timeEndPicker.setDate(lesson.endTime);
+
+    document.getElementById('lesson-price').value = lesson.price || '';
+    document.getElementById('lesson-paid').checked = lesson.paid || false;
+    document.getElementById('lesson-cancelled').checked = lesson.cancelled || false;
+
+    document.getElementById('recurring-box').classList.add('hidden');
+    document.getElementById('cancelled-box').classList.remove('hidden'); 
+    document.getElementById('btn-delete-lesson').classList.remove('hidden');
+
+    const selectStudent = document.getElementById('lesson-student');
+    selectStudent.innerHTML = '';
+    students.forEach(s => { if(!s.archived || s.id == lesson.studentId) selectStudent.innerHTML += `<option value="${s.id}" ${s.id == lesson.studentId ? 'selected' : ''}>${s.name}</option>`; });
+
+    updateLessonSubjectDropdown();
+    if(lesson.subjectId) document.getElementById('lesson-subject').value = lesson.subjectId;
+    
+    updateLessonBundleDropdown();
+    if(lesson.bundleId) document.getElementById('lesson-bundle').value = lesson.bundleId;
+
+    document.getElementById('modal-lesson').classList.remove('hidden');
+    handleBundleChange();
+}
+
+async function saveLesson() {
+    const id = document.getElementById('lesson-id').value;
+    const studentId = document.getElementById('lesson-student').value;
+    const subjectId = document.getElementById('lesson-subject').value;
+    const bundleId = document.getElementById('lesson-bundle').value;
+    const topic = document.getElementById('lesson-topic').value; 
+    const date = document.getElementById('lesson-date').value;
+    const startTime = document.getElementById('lesson-time-start').value;
+    const endTime = document.getElementById('lesson-time-end').value;
+    const price = document.getElementById('lesson-price').value;
+    const paid = document.getElementById('lesson-paid').checked;
+    const cancelled = document.getElementById('lesson-cancelled') ? document.getElementById('lesson-cancelled').checked : false;
+    const isRecurring = document.getElementById('lesson-recurring') ? document.getElementById('lesson-recurring').checked : false;
+    
+    const paymentDate = bundleId ? document.getElementById('lesson-payment-date').value : date;
+
+    if(!studentId || !date || !subjectId || !startTime || !endTime) return await customAlert('Błąd', 'Uzupełnij wszystkie wymagane dane (uczeń, przedmiot, data, godziny)!');
+
+    let isConflict = lessons.find(l => {
+        if (id && l.id == id) return false; 
+        if (l.date !== date) return false;  
+        if (l.cancelled) return false;      
+        return (startTime < l.endTime && endTime > l.startTime);
+    });
+
+    if (isConflict) {
+        let conflictStudent = students.find(s => s.id == isConflict.studentId) || {name: 'Ktoś inny'};
+        let proceed = await showConfirm('Konflikt godzin!', `Masz już zaplanowaną lekcję w tym czasie:\n${conflictStudent.name} (${isConflict.startTime} - ${isConflict.endTime})\n\nCzy na pewno chcesz zapisać nakładające się zajęcia?`, true);
+        if (!proceed) return;
+    }
+
+    if (id) {
+        let originalLesson = lessons.find(l => l.id == id);
+        let oldDate = originalLesson.date;
+        
+        let isStructureChanged = (
+            originalLesson.studentId !== studentId ||
+            originalLesson.subjectId !== subjectId ||
+            originalLesson.date !== date ||
+            originalLesson.startTime !== startTime ||
+            originalLesson.endTime !== endTime ||
+            originalLesson.price != price ||
+            originalLesson.bundleId !== bundleId ||
+            originalLesson.paymentDate !== paymentDate
+        );
+
+        let futureLessons = [];
+        if (isStructureChanged) {
+            futureLessons = lessons.filter(l => {
+                if (l.id == id || l.date < oldDate) return false;
+                if (originalLesson.groupId && l.groupId === originalLesson.groupId) return true;
+                
+                // MĄDRE SZUKANIE: Wystarczy ten sam uczeń, przedmiot i dzień tygodnia
+                if (!originalLesson.groupId && l.studentId == originalLesson.studentId && l.subjectId == originalLesson.subjectId) {
+                    return new Date(l.date).getDay() === new Date(oldDate).getDay();
+                }
+                return false;
+            });
+        }
+
+        if (futureLessons.length > 0) {
+            let choice = await showSeriesChoice('Aktualizacja cyklu', 'Zmieniłeś szczegóły lekcji. Co chcesz zaktualizować?');
+            if (choice === 'future') {
+                let dateDiff = Math.round((new Date(date) - new Date(oldDate)) / (1000 * 60 * 60 * 24));
+                futureLessons.forEach(fl => {
+                    fl.studentId = studentId; fl.subjectId = subjectId; fl.bundleId = bundleId;
+                    fl.startTime = startTime; fl.endTime = endTime; fl.price = price; fl.topic = topic; 
+                    
+                    if (dateDiff !== 0) {
+                        let fd = new Date(fl.date);
+                        fd.setDate(fd.getDate() + dateDiff);
+                        fl.date = fd.toISOString().split('T')[0];
+                        
+                        if(bundleId) {
+                            const st = students.find(s => s.id == studentId);
+                            const bun = st ? st.bundles.find(b => b.id == bundleId) : null;
+                            if(bun && bun.payDay !== undefined && bun.payDay !== "") {
+                                let wMon = getMonday(fl.date);
+                                let offset = parseInt(bun.payDay);
+                                if (offset === 0) { weekMonday.setDate(weekMonday.getDate() + 6); } 
+                                else { wMon.setDate(wMon.getDate() + (offset - 1)); }
+                                fl.paymentDate = wMon.toISOString().split('T')[0];
+                            } else {
+                                let pd = new Date(fl.paymentDate || fl.date);
+                                pd.setDate(pd.getDate() + dateDiff);
+                                fl.paymentDate = pd.toISOString().split('T')[0];
+                            }
+                        } else { fl.paymentDate = fl.date; }
+                    } else {
+                        if(bundleId) {
+                            const st = students.find(s => s.id == studentId);
+                            const bun = st ? st.bundles.find(b => b.id == bundleId) : null;
+                            if(bun && bun.payDay !== undefined && bun.payDay !== "") {
+                                let wMon = getMonday(fl.date);
+                                let offset = parseInt(bun.payDay);
+                                if (offset === 0) { wMon.setDate(wMon.getDate() + 6); } 
+                                else { wMon.setDate(wMon.getDate() + (offset - 1)); }
+                                fl.paymentDate = wMon.toISOString().split('T')[0];
+                            }
+                        }
+                    }
+                });
+            } else if (choice === 'single') {
+                // Do nothing to futures
+            } else { return; }
+        }
+
+        originalLesson.studentId = studentId; originalLesson.subjectId = subjectId;
+        originalLesson.bundleId = bundleId; originalLesson.paymentDate = paymentDate;
+        originalLesson.topic = topic; originalLesson.date = date;
+        originalLesson.startTime = startTime; originalLesson.endTime = endTime;
+        originalLesson.price = price; originalLesson.paid = paid; originalLesson.cancelled = cancelled;
+
+    } else {
+        const repetitions = isRecurring ? 156 : 1; 
+        let baseDate = new Date(date);
+        let basePayDate = new Date(paymentDate);
+        let newGroupId = "grp_" + Date.now().toString() + Math.floor(Math.random() * 1000); 
+
+        for(let i=0; i<repetitions; i++) {
+            let lessonDate = new Date(baseDate); lessonDate.setDate(baseDate.getDate() + (i * 7));
+            let pDate = new Date(basePayDate); pDate.setDate(basePayDate.getDate() + (i * 7));
+            
+            lessons.push({
+                id: Date.now().toString() + Math.floor(Math.random() * 1000) + i,
+                groupId: isRecurring ? newGroupId : null,
+                studentId, subjectId, bundleId, 
+                paymentDate: bundleId ? pDate.toISOString().split('T')[0] : lessonDate.toISOString().split('T')[0],
+                topic, date: lessonDate.toISOString().split('T')[0],
+                startTime, endTime, price, cancelled: false,
+                paid: (paid && i === 0) ? true : false
+            });
+        }
+    }
+    saveToCloud(); closeModals(); renderCalendar();
+    if(!document.getElementById('view-pulpit').classList.contains('hidden')) renderDashboard();
+}
+
+async function deleteLesson() {
+    const id = document.getElementById('lesson-id').value;
+    let originalLesson = lessons.find(l => l.id == id);
+    
+    let futureLessons = lessons.filter(l => {
+        if (l.id == id || l.date < originalLesson.date) return false;
+        if (originalLesson.groupId && l.groupId === originalLesson.groupId) return true;
+        if (!originalLesson.groupId && l.studentId == originalLesson.studentId && l.subjectId == originalLesson.subjectId) {
+            return new Date(l.date).getDay() === new Date(originalLesson.date).getDay();
+        }
+        return false;
+    });
+
+    if (futureLessons.length > 0) {
+        let choice = await showSeriesChoice('Usuwanie cyklu', 'Wybierz zakres usuwania. Zamiast usuwać, możesz zaznaczyć lekcję jako Odwołaną.', true);
+        if (choice === 'single') { lessons = lessons.filter(l => l.id != id); } 
+        else if (choice === 'future') {
+            let idsToDelete = futureLessons.map(f => f.id); idsToDelete.push(id);
+            lessons = lessons.filter(l => !idsToDelete.includes(l.id));
+        } else { return; }
+    } else {
+        if(!await showConfirm('Usuwanie lekcji', 'Na pewno całkowicie USUNĄĆ tę lekcję?', true)) return;
+        lessons = lessons.filter(l => l.id != id);
+    }
+    
+    saveToCloud(); closeModals(); renderCalendar();
+    if(!document.getElementById('view-pulpit').classList.contains('hidden')) renderDashboard();
 }
 
 function markAsPaid(id, event) {
     event.stopPropagation(); 
     let lesson = lessons.find(l => l.id == id);
     if(lesson) {
-        lesson.paid = true;
-        saveToCloud();
-        renderDashboard();
+        lesson.paid = true; saveToCloud(); renderDashboard();
         if(!document.getElementById('view-kalendarz').classList.contains('hidden')) renderCalendar();
     }
 }
@@ -236,11 +905,113 @@ function markBundleAsPaid(studentId, bundleId, paymentDate, event) {
             l.paid = true;
         }
     });
-    saveToCloud();
-    renderDashboard();
+    saveToCloud(); renderDashboard();
     if(!document.getElementById('view-kalendarz').classList.contains('hidden')) renderCalendar();
 }
 
+// --- WIDOK KALENDARZA ---
+function changeWeek(offset) {
+    currentDate = new Date(currentDate.getTime() + offset * 7 * 24 * 60 * 60 * 1000);
+    renderCalendar();
+}
+
+function goToToday() { currentDate = new Date(); renderCalendar(); }
+
+function renderCalendar() {
+    let monday = getMonday(currentDate); let sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+    const monthNames = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+    
+    document.getElementById('month-year-display').innerText = `${monthNames[sunday.getMonth()]} ${sunday.getFullYear()}`;
+    let formatDay = (date) => date.getDate().toString().padStart(2, '0');
+    document.getElementById('calendar-week-btn-text').innerText = `${formatDay(monday)} - ${formatDay(sunday)} ${monthNames[sunday.getMonth()].substring(0,3).toUpperCase()}`;
+
+    const daysNames = ['PON', 'WT', 'ŚR', 'CZW', 'PT', 'SOB', 'ND'];
+    let headerHtml = '<div class="border-r-2 p-1 md:p-2 w-12 md:w-16 shrink-0" style="background-color: var(--karta-bg); border-color: var(--ciemny)"></div>';
+    
+    for(let i=0; i<7; i++) {
+        let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
+        let isToday = dayDate.toDateString() === new Date().toDateString();
+        let circleStyle = isToday ? `background-color: var(--akcent); color: #fff; border: 2px solid var(--ciemny); box-shadow: 2px 2px 0 var(--ciemny)` : `color: var(--tekst-glowny)`;
+        let textStyle = isToday ? `color: var(--akcent)` : `color: var(--tekst-szary)`;
+        
+        headerHtml += `
+            <div class="text-center py-2 md:py-3 border-r-2 day-col flex-1" style="background-color: var(--karta-bg); border-color: var(--ciemny)">
+                <div class="text-[10px] md:text-xs font-extrabold mb-1 md:mb-2 tracking-wider" style="${textStyle}">${daysNames[i]}</div>
+                <div class="mx-auto w-8 h-8 md:w-12 md:h-12 flex items-center justify-center rounded-full font-extrabold text-sm md:text-xl" style="${circleStyle}">
+                    ${dayDate.getDate()}
+                </div>
+            </div>`;
+    }
+    document.getElementById('calendar-header').innerHTML = headerHtml;
+
+    let gridHtml = `<div class="border-r-2 relative w-12 md:w-16 shrink-0 z-10" style="background-color: var(--karta-bg); border-color: var(--ciemny)">`;
+    for(let h = settings.startHour; h <= settings.endHour; h++) {
+        gridHtml += `<div class="h-24 time-row text-[10px] md:text-xs text-right pr-1 md:pr-2 pt-1 font-bold" style="color: var(--tekst-szary)">${h}:00</div>`;
+    }
+    gridHtml += `</div>`;
+
+    for(let i=0; i<7; i++) {
+        let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
+        let dateString = dayDate.toISOString().split('T')[0];
+        let isWeekend = (i === 5 || i === 6) ? `background-color: rgba(120, 120, 120, 0.03);` : '';
+
+        gridHtml += `<div class="relative day-col flex-1 border-r-2 last:border-r-0" style="border-color: var(--szary-ramka); ${isWeekend}" data-date="${dateString}">`;
+        for(let h = settings.startHour; h <= settings.endHour; h++) { gridHtml += `<div class="h-24 time-row"></div>`; }
+        
+        let dailyLessons = lessons.filter(l => l.date === dateString);
+        dailyLessons.forEach(lesson => {
+            let start = lesson.startTime.split(':'); let end = lesson.endTime.split(':');
+            if(parseInt(start[0]) < settings.startHour && parseInt(end[0]) <= settings.startHour) return;
+
+            let topPosition = ((parseInt(start[0]) - settings.startHour) * 96) + (parseInt(start[1]) / 60 * 96);
+            let height = (((parseInt(end[0]) - parseInt(start[0])) * 96) + ((parseInt(end[1]) - parseInt(start[1])) / 60 * 96));
+            if(topPosition < 0) { height += topPosition; topPosition = 0; }
+
+            let student = students.find(s => s.id == lesson.studentId) || {name: 'Usunięty'};
+            let subject = subjects.find(s => s.id == lesson.subjectId) || {name: '', color: '#cbd5e1'};
+            
+            let bgColor = hexToRgba(subject.color, 0.15);
+            let icon = lesson.cancelled ? '❌' : (lesson.paid ? '✅' : '<span class="text-rose-500 font-extrabold text-xs md:text-sm">!</span>');
+            let opacityAndStrike = lesson.cancelled ? 'opacity: 0.5; filter: grayscale(100%); text-decoration: line-through;' : '';
+            let topicHtml = lesson.topic ? `<div class="truncate text-[8px] md:text-[10px] font-medium mt-0.5" style="color: var(--tekst-glowny)">📝 ${lesson.topic}</div>` : '';
+
+            gridHtml += `
+                <div class="absolute w-[94%] left-[3%] rounded-lg md:rounded-xl p-1 md:p-1.5 overflow-hidden shadow-sm hover:shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 transition cursor-pointer flex flex-col border-l-2 md:border-l-4 border" 
+                     style="top: ${topPosition}px; height: ${height}px; background-color: ${bgColor}; border-left-color: ${subject.color}; border-color: ${subject.color}; ${opacityAndStrike}"
+                     onclick="editLesson('${lesson.id}')">
+                    <div class="font-bold flex justify-between text-[9px] md:text-xs mb-0.5" style="color: ${subject.color}">
+                        <span class="whitespace-nowrap tracking-tighter md:tracking-normal">${lesson.startTime}-${lesson.endTime}</span>
+                        <span title="Status" class="hidden md:inline">${icon}</span>
+                    </div>
+                    <div class="font-extrabold truncate leading-tight text-[11px] md:text-sm">${student.name}</div>
+                    <div class="font-bold truncate mt-auto text-[8px] md:text-[9px] uppercase tracking-wider" style="color: var(--tekst-szary)">${subject.name}</div>
+                    ${topicHtml}
+                </div>`;
+        });
+        gridHtml += `</div>`;
+    }
+    document.getElementById('calendar-grid').innerHTML = gridHtml;
+    updateCurrentTimeLine();
+}
+
+function updateCurrentTimeLine() {
+    const line = document.getElementById('current-time-line');
+    if(!line) return;
+    const now = new Date(); const monday = getMonday(currentDate);
+    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+    
+    if (now >= monday && now <= new Date(sunday.setHours(23,59,59))) {
+        line.classList.remove('hidden');
+        let hours = now.getHours(); let minutes = now.getMinutes();
+        if(hours >= settings.startHour && hours <= settings.endHour) {
+            let top = ((hours - settings.startHour) * 96) + (minutes / 60 * 96);
+            line.style.top = `${top}px`;
+        } else { line.classList.add('hidden'); }
+    } else { line.classList.add('hidden'); }
+}
+setInterval(updateCurrentTimeLine, 60000);
+
+// --- SZUKANIE TERMINU ---
 function openFindSlotModal() {
     slotDate = new Date(); 
     document.getElementById('modal-find-slot').classList.remove('hidden');
@@ -374,360 +1145,7 @@ function handleSlotClick(e, dateStr) {
     autoUzupelnijCzas(); 
 }
 
-firebase.auth().onAuthStateChanged((user) => {
-    if (user) {
-        currentUser = user;
-        document.getElementById('view-login').classList.add('hidden');
-        document.getElementById('app-nav').classList.remove('hidden');
-        document.getElementById('main-content').classList.remove('hidden');
-        pobierzDaneZChmury(); 
-    } else {
-        currentUser = null;
-        document.getElementById('view-login').classList.remove('hidden');
-        document.getElementById('app-nav').classList.add('hidden');
-        document.getElementById('main-content').classList.add('hidden');
-    }
-});
-
-async function zalogujPrzezGoogle() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    try {
-        await firebase.auth().signInWithPopup(provider);
-    } catch (e) {
-        await customAlert("Błąd logowania", e.message);
-    }
-}
-function wyloguj() { firebase.auth().signOut(); }
-
-function pobierzDaneZChmury() {
-    db.collection("planer_korepetytora").doc(currentUser.uid).get().then((doc) => {
-        if (doc.exists) {
-            let data = doc.data();
-            subjects = data.subjects || []; students = data.students || []; lessons = data.lessons || [];
-            if(data.settings) settings = data.settings;
-        } else {
-            subjects = []; students = []; lessons = [];
-        }
-        applyVisualSettings();
-        switchTab('pulpit');
-    }).catch((error) => {
-        console.error("Błąd połączenia z bazą:", error);
-        switchTab('pulpit'); 
-    });
-}
-
-function saveToCloud() {
-    if(!currentUser) return; 
-    db.collection("planer_korepetytora").doc(currentUser.uid).set({
-        subjects: subjects, students: students, lessons: lessons, settings: settings
-    });
-}
-
-function eksportujDane() {
-    const backupData = { subjects, students, lessons, settings };
-    const dataStr = JSON.stringify(backupData, null, 2);
-    const blob = new Blob([dataStr], {type: "application/json"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `TutoGrid_Kopia_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-}
-
-async function importujDane(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const potwierdzenie = await showConfirm('Wgrywanie bazy danych', 'Uwaga! Ta operacja bezpowrotnie zastąpi Twoje obecne dane w chmurze plikiem z dysku. Chcesz kontynuować?', true);
-    if (!potwierdzenie) { event.target.value = ''; return; }
-
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        try {
-            const data = JSON.parse(e.target.result);
-            if(data.subjects && data.students && data.lessons) {
-                subjects = data.subjects; students = data.students; lessons = data.lessons;
-                if(data.settings) settings = data.settings;
-                saveToCloud(); applyVisualSettings(); switchTab('pulpit');
-                await customAlert('Sukces', 'Baza danych została poprawnie wgrana!');
-            } else { await customAlert('Błąd pliku', 'Ten plik jest uszkodzony.'); }
-        } catch (error) { await customAlert('Błąd', 'Nie udało się poprawnie odczytać pliku.'); }
-        event.target.value = '';
-    };
-    reader.readAsText(file);
-}
-
-function switchTab(tabName) {
-    ['pulpit', 'kalendarz', 'uczniowie', 'przedmioty', 'zarobki', 'ustawienia'].forEach(id => {
-        document.getElementById(`view-${id}`).classList.add('hidden');
-    });
-    document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('aktywna'));
-
-    document.getElementById(`view-${tabName}`).classList.remove('hidden');
-    if(document.getElementById(`tab-${tabName}`)) document.getElementById(`tab-${tabName}`).classList.add('aktywna');
-
-    if(tabName === 'pulpit') renderDashboard();
-    if(tabName === 'kalendarz') renderCalendar();
-    if(tabName === 'uczniowie') renderStudents();
-    if(tabName === 'przedmioty') renderSubjects();
-    if(tabName === 'zarobki') {
-        const now = new Date();
-        document.getElementById('earnings-month-picker').value = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}`;
-        document.getElementById('earnings-week-picker').value = getWeekString(now); 
-        renderZarobki();
-    }
-}
-
-function getMonday(d) {
-    d = new Date(d);
-    let day = d.getDay(), diff = d.getDate() - day + (day === 0 ? -6 : 1); 
-    return new Date(d.setDate(diff));
-}
-
-function getWeekString(dateObj) {
-    let d = new Date(dateObj);
-    d.setHours(0,0,0,0);
-    d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
-    let week1 = new Date(d.getFullYear(), 0, 4);
-    let weekNum = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
-    return d.getFullYear() + '-W' + weekNum.toString().padStart(2, '0');
-}
-
-function hexToRgba(hex, alpha) {
-    if(!hex) return `rgba(120, 120, 120, ${alpha})`;
-    let r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-function renderSubjects() {
-    const list = document.getElementById('subjects-list');
-    list.innerHTML = '';
-    if(subjects.length === 0) return list.innerHTML = '<p style="color: var(--tekst-szary)">Brak przedmiotów. Dodaj pierwszy!</p>';
-    
-    subjects.forEach(sub => {
-        list.innerHTML += `
-            <div class="karta flex justify-between items-center cursor-pointer" onclick="editSubject('${sub.id}')">
-                <div class="flex items-center gap-3">
-                    <div class="w-6 h-6 rounded-md border-2" style="background-color: ${sub.color}; border-color: var(--ciemny)"></div>
-                    <h4 class="font-bold text-lg">${sub.name}</h4>
-                </div>
-            </div>`;
-    });
-}
-function openSubjectModal() {
-    document.getElementById('subject-id').value = ''; document.getElementById('subject-name').value = '';
-    document.getElementById('subject-color').value = '#ef4444'; document.getElementById('btn-delete-subject').classList.add('hidden');
-    document.getElementById('modal-subject').classList.remove('hidden');
-}
-function editSubject(id) {
-    const sub = subjects.find(s => s.id == id);
-    if(!sub) return;
-    document.getElementById('subject-id').value = sub.id; document.getElementById('subject-name').value = sub.name;
-    document.getElementById('subject-color').value = sub.color; document.getElementById('btn-delete-subject').classList.remove('hidden');
-    document.getElementById('modal-subject').classList.remove('hidden');
-}
-async function saveSubject() {
-    const id = document.getElementById('subject-id').value;
-    const name = document.getElementById('subject-name').value;
-    const color = document.getElementById('subject-color').value;
-    if(!name) return await customAlert('Błąd', 'Wpisz nazwę przedmiotu!');
-    if(id) { let sub = subjects.find(s => s.id == id); sub.name = name; sub.color = color; } 
-    else { subjects.push({ id: Date.now().toString(), name, color }); }
-    saveToCloud(); closeModals(); renderSubjects();
-}
-async function deleteSubject() {
-    const id = document.getElementById('subject-id').value;
-    if(await showConfirm('Usuwanie', 'Czy na pewno usunąć ten przedmiot?', true)) {
-        subjects = subjects.filter(s => s.id != id); saveToCloud(); closeModals(); renderSubjects();
-    }
-}
-
-// --- NOWE: PAKIETY I DNI PŁATNOŚCI W UCZNIU ---
-function renderStudentBundles() {
-    const container = document.getElementById('student-bundles-container');
-    container.innerHTML = '';
-    currentStudentBundles.forEach(b => {
-        container.innerHTML += `
-            <div class="flex flex-col gap-2 items-start p-3 rounded-xl border-2 bg-white border-slate-200 bundle-row" data-id="${b.id}">
-                <div class="flex flex-col sm:flex-row gap-2 w-full">
-                    <input type="text" placeholder="Nazwa (np. Matma + Fizyka)" value="${b.name || ''}" class="bundle-name w-full sm:w-1/3 text-sm p-2 border-2 rounded-lg font-bold">
-                    <div class="flex gap-2 w-full sm:w-2/3">
-                        <input type="number" placeholder="Razem (zł)" value="${b.total || ''}" class="bundle-total w-1/2 text-sm p-2 border-2 rounded-lg font-bold text-akcent">
-                        <input type="number" step="0.5" placeholder="Suma godz. (np. 2.5)" value="${b.hours || ''}" class="bundle-hours w-1/2 text-sm p-2 border-2 rounded-lg font-bold">
-                    </div>
-                </div>
-                <div class="flex gap-2 items-center w-full mt-1 border-t-2 border-slate-100 pt-2">
-                    <label class="text-[10px] md:text-xs font-bold text-slate-500 whitespace-nowrap">Dzień wpłaty:</label>
-                    <select class="bundle-payday flex-1 text-xs md:text-sm p-1.5 border-2 rounded-lg font-bold text-slate-700 bg-slate-50 outline-none focus:border-akcent transition cursor-pointer">
-                        <option value="" ${b.payDay==='' ? 'selected' : ''}>Ustawiam ręcznie przy lekcji</option>
-                        <option value="0" ${b.payDay==='0' ? 'selected' : ''}>Zawsze w Poniedziałek</option>
-                        <option value="1" ${b.payDay==='1' ? 'selected' : ''}>Zawsze we Wtorek</option>
-                        <option value="2" ${b.payDay==='2' ? 'selected' : ''}>Zawsze w Środę</option>
-                        <option value="3" ${b.payDay==='3' ? 'selected' : ''}>Zawsze w Czwartek</option>
-                        <option value="4" ${b.payDay==='4' ? 'selected' : ''}>Zawsze w Piątek</option>
-                        <option value="5" ${b.payDay==='5' ? 'selected' : ''}>Zawsze w Sobotę</option>
-                        <option value="6" ${b.payDay==='6' ? 'selected' : ''}>Zawsze w Niedzielę</option>
-                    </select>
-                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-rose-500 font-extrabold px-3 py-1.5 bg-rose-50 rounded-lg hover:bg-rose-100 transition text-xs uppercase tracking-wider">Usuń</button>
-                </div>
-            </div>`;
-    });
-}
-
-function addBundleToStudent() {
-    currentStudentBundles.push({ id: 'b_' + Date.now(), name: '', total: '', hours: '', payDay: '' });
-    renderStudentBundles();
-}
-
-function renderStudents() {
-    const list = document.getElementById('students-list');
-    const archivedList = document.getElementById('archived-students-list');
-    const archivedSection = document.getElementById('archived-students-section');
-    
-    list.innerHTML = ''; archivedList.innerHTML = '';
-    const searchInput = document.getElementById('student-search');
-    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-    
-    let activeStudents = students.filter(s => !s.archived && s.name.toLowerCase().includes(searchTerm));
-    let archivedStudents = students.filter(s => s.archived && s.name.toLowerCase().includes(searchTerm));
-
-    if(activeStudents.length === 0) list.innerHTML = '<p style="color: var(--tekst-szary)">Brak aktywnych uczniów.</p>';
-    else {
-        activeStudents.forEach(student => {
-            let studentSubjectsHtml = '';
-            if(student.subjectIds && student.subjectIds.length > 0) {
-                student.subjectIds.forEach(subId => {
-                    let sub = subjects.find(s => s.id == subId);
-                    if(sub) studentSubjectsHtml += `<span class="text-[10px] md:text-xs font-bold px-2 py-1 rounded-md text-white border" style="background-color: ${sub.color}; border-color: var(--ciemny)">${sub.name.toUpperCase()}</span> `;
-                });
-            } else { studentSubjectsHtml = `<span class="text-xs font-medium" style="color: var(--tekst-szary)">Brak przypisanych przedmiotów</span>`; }
-            
-            let bundlesHtml = '';
-            if(student.bundles && student.bundles.length > 0) {
-                bundlesHtml = `<div class="mt-2 text-[10px] md:text-xs font-bold text-slate-500">PAKIETY: ${student.bundles.map(b => b.name).join(', ')}</div>`;
-            }
-
-            list.innerHTML += `
-                <div class="karta flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0">
-                    <div class="space-y-2">
-                        <h4 class="font-extrabold text-lg md:text-xl">${student.name}</h4>
-                        <div class="flex flex-wrap gap-1">${studentSubjectsHtml}</div>
-                        ${bundlesHtml}
-                    </div>
-                    <div class="flex flex-wrap sm:flex-col gap-3 sm:gap-2 w-full sm:w-auto text-center sm:text-right">
-                        <button onclick="editStudent('${student.id}')" class="text-sm font-bold hover:underline flex-1 sm:flex-none" style="color: var(--akcent)">Edytuj</button>
-                        <button onclick="toggleArchiveStudent('${student.id}')" class="text-sm font-bold hover:underline flex-1 sm:flex-none" style="color: var(--tekst-szary)">Zarchiwizuj</button>
-                        <button onclick="deleteStudent('${student.id}')" class="text-sm font-bold text-rose-500 hover:underline flex-1 sm:flex-none">Usuń</button>
-                    </div>
-                </div>`;
-        });
-    }
-
-    if(archivedStudents.length > 0) {
-        archivedSection.classList.remove('hidden');
-        archivedStudents.forEach(student => {
-            archivedList.innerHTML += `
-                <div class="karta flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0" style="background-color: var(--jasny)">
-                    <div class="space-y-1">
-                        <h4 class="font-extrabold text-lg md:text-xl" style="color: var(--tekst-szary)">${student.name}</h4>
-                        <span class="text-xs font-bold px-2 py-1 rounded-md text-white border bg-slate-400 border-slate-500">ARCHIWUM</span>
-                    </div>
-                    <div class="flex flex-wrap sm:flex-col gap-3 sm:gap-2 w-full sm:w-auto text-center sm:text-right">
-                        <button onclick="toggleArchiveStudent('${student.id}')" class="text-sm font-bold hover:underline flex-1 sm:flex-none" style="color: var(--akcent)">Przywróć</button>
-                        <button onclick="deleteStudent('${student.id}')" class="text-sm font-bold text-rose-500 hover:underline flex-1 sm:flex-none">Usuń na zawsze</button>
-                    </div>
-                </div>`;
-        });
-    } else { archivedSection.classList.add('hidden'); }
-}
-
-async function toggleArchiveStudent(id) {
-    let student = students.find(s => s.id == id);
-    if(student) {
-        let action = student.archived ? "przywrócić ucznia do aktywnych" : "przenieść ucznia do archiwum";
-        if(await showConfirm('Archiwum', `Czy na pewno chcesz ${action}? Jego lekcje w historii pozostaną nienaruszone.`)) {
-            student.archived = !student.archived; saveToCloud(); renderStudents(); renderDashboard(); 
-        }
-    }
-}
-
-function openStudentModal() {
-    document.getElementById('student-name').value = '';
-    const container = document.getElementById('student-subjects-container');
-    container.innerHTML = '';
-    if(subjects.length === 0) container.innerHTML = '<p class="text-sm text-rose-500 font-bold">Najpierw dodaj przedmioty w zakładce "Przedmioty"!</p>';
-    else subjects.forEach(sub => {
-        container.innerHTML += `
-            <label class="flex items-center gap-3 p-2 hover:bg-slate-500/10 rounded-lg cursor-pointer transition">
-                <input type="checkbox" value="${sub.id}" class="student-subject-cb w-5 h-5 rounded" style="accent-color: var(--akcent)">
-                <span class="font-bold flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background-color:${sub.color}"></div> ${sub.name}</span>
-            </label>`;
-    });
-    
-    currentStudentBundles = [];
-    renderStudentBundles();
-    
-    document.getElementById('modal-student').setAttribute('data-editing-id', '');
-    document.getElementById('modal-student').classList.remove('hidden');
-}
-
-function editStudent(id) {
-    const student = students.find(s => s.id == id);
-    if(!student) return;
-    document.getElementById('student-name').value = student.name;
-    const container = document.getElementById('student-subjects-container');
-    container.innerHTML = '';
-    subjects.forEach(sub => {
-        let isChecked = (student.subjectIds || []).includes(sub.id) ? 'checked' : '';
-        container.innerHTML += `
-            <label class="flex items-center gap-3 p-2 hover:bg-slate-500/10 rounded-lg cursor-pointer transition">
-                <input type="checkbox" value="${sub.id}" class="student-subject-cb w-5 h-5 rounded" style="accent-color: var(--akcent)" ${isChecked}>
-                <span class="font-bold flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background-color:${sub.color}"></div> ${sub.name}</span>
-            </label>`;
-    });
-    
-    currentStudentBundles = student.bundles ? JSON.parse(JSON.stringify(student.bundles)) : [];
-    renderStudentBundles();
-
-    document.getElementById('modal-student').setAttribute('data-editing-id', id);
-    document.getElementById('modal-student').classList.remove('hidden');
-}
-
-async function saveStudent() {
-    const name = document.getElementById('student-name').value;
-    const editingId = document.getElementById('modal-student').getAttribute('data-editing-id');
-    if(!name) return await customAlert('Błąd', 'Wpisz imię ucznia!');
-    let selectedSubjects = [];
-    document.querySelectorAll('.student-subject-cb:checked').forEach(cb => selectedSubjects.push(cb.value));
-    
-    let finalBundles = [];
-    document.querySelectorAll('.bundle-row').forEach(row => {
-        let bName = row.querySelector('.bundle-name').value;
-        let bTotal = parseFloat(row.querySelector('.bundle-total').value);
-        let bHours = parseFloat(row.querySelector('.bundle-hours').value);
-        let bPayDay = row.querySelector('.bundle-payday').value; // Pobieranie ustawionego dnia
-        if(bName && bTotal && bHours) {
-            finalBundles.push({ id: row.getAttribute('data-id'), name: bName, total: bTotal, hours: bHours, payDay: bPayDay });
-        }
-    });
-
-    if(editingId) {
-        let student = students.find(s => s.id == editingId);
-        student.name = name; student.subjectIds = selectedSubjects; student.bundles = finalBundles;
-    } else {
-        students.push({ id: Date.now().toString(), name, subjectIds: selectedSubjects, archived: false, bundles: finalBundles });
-    }
-    saveToCloud(); closeModals(); renderStudents();
-}
-
-async function deleteStudent(id) {
-    if(await showConfirm('Usuwanie Ucznia', 'Na pewno usunąć ucznia i wszystkie jego zaplanowane lekcje? Zamiast tego możesz go po prostu zarchiwizować!', true)) {
-        students = students.filter(s => s.id != id);
-        lessons = lessons.filter(l => l.studentId != id);
-        saveToCloud(); renderStudents(); renderDashboard();
-    }
-}
-
-// --- PULPIT I ZALEGŁOŚCI ---
+// --- WIDOK PULPITU ---
 function renderDashboard() {
     const now = new Date(); const currentMonth = now.getMonth(); const currentYear = now.getFullYear();
     const todayString = now.toISOString().split('T')[0];
@@ -891,405 +1309,7 @@ function renderDashboard() {
     }
 }
 
-function renderCalendar() {
-    let monday = getMonday(currentDate); let sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
-    const monthNames = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
-    
-    document.getElementById('month-year-display').innerText = `${monthNames[sunday.getMonth()]} ${sunday.getFullYear()}`;
-    let formatDay = (date) => date.getDate().toString().padStart(2, '0');
-    document.getElementById('calendar-week-btn-text').innerText = `${formatDay(monday)} - ${formatDay(sunday)} ${monthNames[sunday.getMonth()].substring(0,3).toUpperCase()}`;
-
-    const daysNames = ['PON', 'WT', 'ŚR', 'CZW', 'PT', 'SOB', 'ND'];
-    let headerHtml = '<div class="border-r-2 p-1 md:p-2 w-12 md:w-16 shrink-0" style="background-color: var(--karta-bg); border-color: var(--ciemny)"></div>';
-    
-    for(let i=0; i<7; i++) {
-        let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
-        let isToday = dayDate.toDateString() === new Date().toDateString();
-        let circleStyle = isToday ? `background-color: var(--akcent); color: #fff; border: 2px solid var(--ciemny); box-shadow: 2px 2px 0 var(--ciemny)` : `color: var(--tekst-glowny)`;
-        let textStyle = isToday ? `color: var(--akcent)` : `color: var(--tekst-szary)`;
-        
-        headerHtml += `
-            <div class="text-center py-2 md:py-3 border-r-2 day-col flex-1" style="background-color: var(--karta-bg); border-color: var(--ciemny)">
-                <div class="text-[10px] md:text-xs font-extrabold mb-1 md:mb-2 tracking-wider" style="${textStyle}">${daysNames[i]}</div>
-                <div class="mx-auto w-8 h-8 md:w-12 md:h-12 flex items-center justify-center rounded-full font-extrabold text-sm md:text-xl" style="${circleStyle}">
-                    ${dayDate.getDate()}
-                </div>
-            </div>`;
-    }
-    document.getElementById('calendar-header').innerHTML = headerHtml;
-
-    let gridHtml = `<div class="border-r-2 relative w-12 md:w-16 shrink-0 z-10" style="background-color: var(--karta-bg); border-color: var(--ciemny)">`;
-    for(let h = settings.startHour; h <= settings.endHour; h++) {
-        gridHtml += `<div class="h-24 time-row text-[10px] md:text-xs text-right pr-1 md:pr-2 pt-1 font-bold" style="color: var(--tekst-szary)">${h}:00</div>`;
-    }
-    gridHtml += `</div>`;
-
-    for(let i=0; i<7; i++) {
-        let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
-        let dateString = dayDate.toISOString().split('T')[0];
-        let isWeekend = (i === 5 || i === 6) ? `background-color: rgba(120, 120, 120, 0.03);` : '';
-
-        gridHtml += `<div class="relative day-col flex-1 border-r-2 last:border-r-0" style="border-color: var(--szary-ramka); ${isWeekend}" data-date="${dateString}">`;
-        for(let h = settings.startHour; h <= settings.endHour; h++) { gridHtml += `<div class="h-24 time-row"></div>`; }
-        
-        let dailyLessons = lessons.filter(l => l.date === dateString);
-        dailyLessons.forEach(lesson => {
-            let start = lesson.startTime.split(':'); let end = lesson.endTime.split(':');
-            if(parseInt(start[0]) < settings.startHour && parseInt(end[0]) <= settings.startHour) return;
-
-            let topPosition = ((parseInt(start[0]) - settings.startHour) * 96) + (parseInt(start[1]) / 60 * 96);
-            let height = (((parseInt(end[0]) - parseInt(start[0])) * 96) + ((parseInt(end[1]) - parseInt(start[1])) / 60 * 96));
-            if(topPosition < 0) { height += topPosition; topPosition = 0; }
-
-            let student = students.find(s => s.id == lesson.studentId) || {name: 'Usunięty'};
-            let subject = subjects.find(s => s.id == lesson.subjectId) || {name: '', color: '#cbd5e1'};
-            
-            let bgColor = hexToRgba(subject.color, 0.15);
-            let icon = lesson.cancelled ? '❌' : (lesson.paid ? '✅' : '<span class="text-rose-500 font-extrabold text-xs md:text-sm">!</span>');
-            let opacityAndStrike = lesson.cancelled ? 'opacity: 0.5; filter: grayscale(100%); text-decoration: line-through;' : '';
-            let topicHtml = lesson.topic ? `<div class="truncate text-[8px] md:text-[10px] font-medium mt-0.5" style="color: var(--tekst-glowny)">📝 ${lesson.topic}</div>` : '';
-
-            gridHtml += `
-                <div class="absolute w-[94%] left-[3%] rounded-lg md:rounded-xl p-1 md:p-1.5 overflow-hidden shadow-sm hover:shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 transition cursor-pointer flex flex-col border-l-2 md:border-l-4 border" 
-                     style="top: ${topPosition}px; height: ${height}px; background-color: ${bgColor}; border-left-color: ${subject.color}; border-color: ${subject.color}; ${opacityAndStrike}"
-                     onclick="editLesson('${lesson.id}')">
-                    <div class="font-bold flex justify-between text-[9px] md:text-xs mb-0.5" style="color: ${subject.color}">
-                        <span class="whitespace-nowrap tracking-tighter md:tracking-normal">${lesson.startTime}-${lesson.endTime}</span>
-                        <span title="Status" class="hidden md:inline">${icon}</span>
-                    </div>
-                    <div class="font-extrabold truncate leading-tight text-[11px] md:text-sm">${student.name}</div>
-                    <div class="font-bold truncate mt-auto text-[8px] md:text-[9px] uppercase tracking-wider" style="color: var(--tekst-szary)">${subject.name}</div>
-                    ${topicHtml}
-                </div>`;
-        });
-        gridHtml += `</div>`;
-    }
-    document.getElementById('calendar-grid').innerHTML = gridHtml;
-    updateCurrentTimeLine();
-}
-
-function updateCurrentTimeLine() {
-    const line = document.getElementById('current-time-line');
-    if(!line) return;
-    const now = new Date(); const monday = getMonday(currentDate);
-    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
-    
-    if (now >= monday && now <= new Date(sunday.setHours(23,59,59))) {
-        line.classList.remove('hidden');
-        let hours = now.getHours(); let minutes = now.getMinutes();
-        if(hours >= settings.startHour && hours <= settings.endHour) {
-            let top = ((hours - settings.startHour) * 96) + (minutes / 60 * 96);
-            line.style.top = `${top}px`;
-        } else { line.classList.add('hidden'); }
-    } else { line.classList.add('hidden'); }
-}
-setInterval(updateCurrentTimeLine, 60000);
-
-// --- LEKCJE ---
-function updateLessonSubjectDropdown() {
-    const stId = document.getElementById('lesson-student').value;
-    const student = students.find(s => s.id == stId);
-    const subjectSelect = document.getElementById('lesson-subject');
-    subjectSelect.innerHTML = '';
-    if(!student || !student.subjectIds || student.subjectIds.length === 0) {
-        subjects.forEach(sub => subjectSelect.innerHTML += `<option value="${sub.id}">${sub.name}</option>`);
-    } else {
-        student.subjectIds.forEach(subId => {
-            let sub = subjects.find(s => s.id == subId);
-            if(sub) subjectSelect.innerHTML += `<option value="${sub.id}">${sub.name}</option>`;
-        });
-    }
-}
-
-function updateLessonBundleDropdown() {
-    const stId = document.getElementById('lesson-student').value;
-    const student = students.find(s => s.id == stId);
-    const bundleSelect = document.getElementById('lesson-bundle');
-    bundleSelect.innerHTML = '<option value="">Standardowa cena (wpisz ręcznie)</option>';
-    
-    if(student && student.bundles && student.bundles.length > 0) {
-        student.bundles.forEach(b => {
-            bundleSelect.innerHTML += `<option value="${b.id}">Pakiet: ${b.name} (${b.total} zł / ${b.hours}h)</option>`;
-        });
-    }
-    handleBundleChange();
-}
-
-// ZAUTOMATYZOWANA DATA PŁATNOŚCI W ZALEŻNOŚCI OD PROFILU
-function handleBundleChange() {
-    const bundleId = document.getElementById('lesson-bundle').value;
-    const priceInput = document.getElementById('lesson-price');
-    const paymentDateDiv = document.getElementById('lesson-payment-date-div');
-    
-    if (bundleId) {
-        const stId = document.getElementById('lesson-student').value;
-        const student = students.find(s => s.id == stId);
-        const bundle = student.bundles.find(b => b.id == bundleId);
-        
-        let start = document.getElementById('lesson-time-start').value;
-        let end = document.getElementById('lesson-time-end').value;
-        if(start && end && bundle) {
-            let [sh, sm] = start.split(':').map(Number);
-            let [eh, em] = end.split(':').map(Number);
-            let durationHours = ((eh*60+em) - (sh*60+sm)) / 60;
-            
-            let calculatedPrice = (durationHours / bundle.hours) * bundle.total;
-            priceInput.value = Math.round(calculatedPrice);
-        }
-        priceInput.readOnly = true;
-        priceInput.classList.add('bg-slate-100', 'text-slate-500');
-        paymentDateDiv.classList.remove('hidden');
-        
-        // NOWOŚĆ: Auto-uzupełnianie daty jeśli zdefiniowano w profilu ucznia
-        if (bundle && bundle.payDay !== undefined && bundle.payDay !== "") {
-            let lDateStr = document.getElementById('lesson-date').value;
-            let lDate = lDateStr ? new Date(lDateStr) : new Date();
-            let weekMonday = getMonday(lDate);
-            weekMonday.setDate(weekMonday.getDate() + parseInt(bundle.payDay));
-            let payDateStr = weekMonday.toISOString().split('T')[0];
-            paymentDatePicker.setDate(payDateStr);
-        }
-    } else {
-        priceInput.readOnly = false;
-        priceInput.classList.remove('bg-slate-100', 'text-slate-500');
-        paymentDateDiv.classList.add('hidden');
-    }
-}
-
-function openLessonModal() {
-    document.getElementById('lesson-modal-title').innerText = 'Zaplanuj lekcję';
-    document.getElementById('lesson-id').value = '';
-    document.getElementById('lesson-topic').value = ''; 
-    
-    let defaultDate = new Date().toISOString().split('T')[0];
-    if(datePicker) datePicker.setDate(defaultDate);
-    if(paymentDatePicker) paymentDatePicker.setDate('');
-    
-    document.getElementById('lesson-time-start').value = '15:00';
-    if(timeStartPicker) timeStartPicker.setDate('15:00');
-    autoUzupelnijCzas();
-
-    document.getElementById('lesson-price').value = '';
-    document.getElementById('lesson-paid').checked = false;
-    document.getElementById('lesson-cancelled').checked = false;
-    
-    document.getElementById('recurring-box').classList.remove('hidden');
-    document.getElementById('cancelled-box').classList.add('hidden'); 
-    document.getElementById('btn-delete-lesson').classList.add('hidden');
-
-    const selectStudent = document.getElementById('lesson-student');
-    selectStudent.innerHTML = '<option value="">Wybierz ucznia...</option>';
-    students.filter(s => !s.archived).forEach(s => { selectStudent.innerHTML += `<option value="${s.id}">${s.name}</option>`; });
-
-    document.getElementById('lesson-subject').innerHTML = '<option value="">Wybierz ucznia najpierw...</option>';
-    document.getElementById('lesson-bundle').innerHTML = '<option value="">Standardowa cena (wpisz ręcznie)</option>';
-    document.getElementById('modal-lesson').classList.remove('hidden');
-    handleBundleChange();
-}
-
-function editLesson(id) {
-    const lesson = lessons.find(l => l.id == id);
-    if(!lesson) return;
-    document.getElementById('lesson-modal-title').innerText = 'Szczegóły lekcji';
-    document.getElementById('lesson-id').value = lesson.id;
-    document.getElementById('lesson-topic').value = lesson.topic || ''; 
-    
-    if(datePicker) datePicker.setDate(lesson.date);
-    if(paymentDatePicker) paymentDatePicker.setDate(lesson.paymentDate || lesson.date);
-    
-    document.getElementById('lesson-time-start').value = lesson.startTime;
-    document.getElementById('lesson-time-end').value = lesson.endTime;
-    if(timeStartPicker) timeStartPicker.setDate(lesson.startTime);
-    if(timeEndPicker) timeEndPicker.setDate(lesson.endTime);
-
-    document.getElementById('lesson-price').value = lesson.price || '';
-    document.getElementById('lesson-paid').checked = lesson.paid || false;
-    document.getElementById('lesson-cancelled').checked = lesson.cancelled || false;
-
-    document.getElementById('recurring-box').classList.add('hidden');
-    document.getElementById('cancelled-box').classList.remove('hidden'); 
-    document.getElementById('btn-delete-lesson').classList.remove('hidden');
-
-    const selectStudent = document.getElementById('lesson-student');
-    selectStudent.innerHTML = '';
-    students.forEach(s => { if(!s.archived || s.id == lesson.studentId) selectStudent.innerHTML += `<option value="${s.id}" ${s.id == lesson.studentId ? 'selected' : ''}>${s.name}</option>`; });
-
-    updateLessonSubjectDropdown();
-    if(lesson.subjectId) document.getElementById('lesson-subject').value = lesson.subjectId;
-    
-    updateLessonBundleDropdown();
-    if(lesson.bundleId) document.getElementById('lesson-bundle').value = lesson.bundleId;
-
-    document.getElementById('modal-lesson').classList.remove('hidden');
-    handleBundleChange();
-}
-
-async function saveLesson() {
-    const id = document.getElementById('lesson-id').value;
-    const studentId = document.getElementById('lesson-student').value;
-    const subjectId = document.getElementById('lesson-subject').value;
-    const bundleId = document.getElementById('lesson-bundle').value;
-    const topic = document.getElementById('lesson-topic').value; 
-    const date = document.getElementById('lesson-date').value;
-    const startTime = document.getElementById('lesson-time-start').value;
-    const endTime = document.getElementById('lesson-time-end').value;
-    const price = document.getElementById('lesson-price').value;
-    const paid = document.getElementById('lesson-paid').checked;
-    const cancelled = document.getElementById('lesson-cancelled') ? document.getElementById('lesson-cancelled').checked : false;
-    const isRecurring = document.getElementById('lesson-recurring') ? document.getElementById('lesson-recurring').checked : false;
-    
-    const paymentDate = bundleId ? document.getElementById('lesson-payment-date').value : date;
-
-    if(!studentId || !date || !subjectId || !startTime || !endTime) return await customAlert('Błąd', 'Uzupełnij wszystkie wymagane dane (uczeń, przedmiot, data, godziny)!');
-
-    let isConflict = lessons.find(l => {
-        if (id && l.id == id) return false; 
-        if (l.date !== date) return false;  
-        if (l.cancelled) return false;      
-        return (startTime < l.endTime && endTime > l.startTime);
-    });
-
-    if (isConflict) {
-        let conflictStudent = students.find(s => s.id == isConflict.studentId) || {name: 'Ktoś inny'};
-        let proceed = await showConfirm('Konflikt godzin!', `Masz już zaplanowaną lekcję w tym czasie:\n${conflictStudent.name} (${isConflict.startTime} - ${isConflict.endTime})\n\nCzy na pewno chcesz zapisać nakładające się zajęcia?`, true);
-        if (!proceed) return;
-    }
-
-    if (id) {
-        let originalLesson = lessons.find(l => l.id == id);
-        let oldDate = originalLesson.date;
-        
-        let isStructureChanged = (
-            originalLesson.studentId !== studentId ||
-            originalLesson.subjectId !== subjectId ||
-            originalLesson.date !== date ||
-            originalLesson.startTime !== startTime ||
-            originalLesson.endTime !== endTime ||
-            originalLesson.price != price ||
-            originalLesson.bundleId !== bundleId ||
-            originalLesson.paymentDate !== paymentDate
-        );
-
-        let futureLessons = [];
-        if (isStructureChanged) {
-            futureLessons = lessons.filter(l => {
-                if (l.id == id || l.date < oldDate) return false;
-                if (originalLesson.groupId && l.groupId === originalLesson.groupId) return true;
-                
-                // POPRAWKA: Usunęliśmy sztywny wymóg identycznej godziny!
-                // Wystarczy że to ten sam uczeń, ten sam przedmiot i odbywa się w ten sam dzień tygodnia.
-                if (!originalLesson.groupId && l.studentId == originalLesson.studentId && l.subjectId == originalLesson.subjectId) {
-                    return new Date(l.date).getDay() === new Date(oldDate).getDay();
-                }
-                return false;
-            });
-        }
-
-        if (futureLessons.length > 0) {
-            let choice = await showSeriesChoice('Aktualizacja cyklu', 'Zmieniłeś szczegóły lekcji. Co chcesz zaktualizować?');
-            if (choice === 'future') {
-                let dateDiff = Math.round((new Date(date) - new Date(oldDate)) / (1000 * 60 * 60 * 24));
-                futureLessons.forEach(fl => {
-                    fl.studentId = studentId; fl.subjectId = subjectId; fl.bundleId = bundleId;
-                    fl.startTime = startTime; fl.endTime = endTime; fl.price = price; fl.topic = topic; 
-                    
-                    if (dateDiff !== 0) {
-                        let fd = new Date(fl.date);
-                        fd.setDate(fd.getDate() + dateDiff);
-                        fl.date = fd.toISOString().split('T')[0];
-                        
-                        // POPRAWKA: Sprytne aktualizowanie daty zapłaty w przyszłych lekcjach
-                        if(bundleId) {
-                            const st = students.find(s => s.id == studentId);
-                            const bun = st ? st.bundles.find(b => b.id == bundleId) : null;
-                            if(bun && bun.payDay !== undefined && bun.payDay !== "") {
-                                let wMon = getMonday(fl.date);
-                                wMon.setDate(wMon.getDate() + parseInt(bun.payDay));
-                                fl.paymentDate = wMon.toISOString().split('T')[0];
-                            } else {
-                                let pd = new Date(fl.paymentDate || fl.date);
-                                pd.setDate(pd.getDate() + dateDiff);
-                                fl.paymentDate = pd.toISOString().split('T')[0];
-                            }
-                        } else { fl.paymentDate = fl.date; }
-                    } else {
-                        // Niestandardowa zmiana na sam pakiet bez zmiany daty
-                        if(bundleId) {
-                            const st = students.find(s => s.id == studentId);
-                            const bun = st ? st.bundles.find(b => b.id == bundleId) : null;
-                            if(bun && bun.payDay !== undefined && bun.payDay !== "") {
-                                let wMon = getMonday(fl.date);
-                                wMon.setDate(wMon.getDate() + parseInt(bun.payDay));
-                                fl.paymentDate = wMon.toISOString().split('T')[0];
-                            }
-                        }
-                    }
-                });
-            } else if (choice === 'single') {
-            } else { return; }
-        }
-
-        originalLesson.studentId = studentId; originalLesson.subjectId = subjectId;
-        originalLesson.bundleId = bundleId; originalLesson.paymentDate = paymentDate;
-        originalLesson.topic = topic; originalLesson.date = date;
-        originalLesson.startTime = startTime; originalLesson.endTime = endTime;
-        originalLesson.price = price; originalLesson.paid = paid; originalLesson.cancelled = cancelled;
-
-    } else {
-        const repetitions = isRecurring ? 156 : 1; 
-        let baseDate = new Date(date);
-        let basePayDate = new Date(paymentDate);
-        let newGroupId = "grp_" + Date.now().toString() + Math.floor(Math.random() * 1000); 
-
-        for(let i=0; i<repetitions; i++) {
-            let lessonDate = new Date(baseDate); lessonDate.setDate(baseDate.getDate() + (i * 7));
-            let pDate = new Date(basePayDate); pDate.setDate(basePayDate.getDate() + (i * 7));
-            
-            lessons.push({
-                id: Date.now().toString() + Math.floor(Math.random() * 1000) + i,
-                groupId: isRecurring ? newGroupId : null,
-                studentId, subjectId, bundleId, 
-                paymentDate: bundleId ? pDate.toISOString().split('T')[0] : lessonDate.toISOString().split('T')[0],
-                topic, date: lessonDate.toISOString().split('T')[0],
-                startTime, endTime, price, cancelled: false,
-                paid: (paid && i === 0) ? true : false
-            });
-        }
-    }
-    saveToCloud(); closeModals(); renderCalendar();
-    if(!document.getElementById('view-pulpit').classList.contains('hidden')) renderDashboard();
-}
-
-async function deleteLesson() {
-    const id = document.getElementById('lesson-id').value;
-    let originalLesson = lessons.find(l => l.id == id);
-    
-    let futureLessons = lessons.filter(l => {
-        if (l.id == id || l.date < originalLesson.date) return false;
-        if (originalLesson.groupId && l.groupId === originalLesson.groupId) return true;
-        // Poprawka: luźniejsze szukanie starych lekcji (bez sztywnej godziny)
-        if (!originalLesson.groupId && l.studentId == originalLesson.studentId && l.subjectId == originalLesson.subjectId) {
-            return new Date(l.date).getDay() === new Date(originalLesson.date).getDay();
-        }
-        return false;
-    });
-
-    if (futureLessons.length > 0) {
-        let choice = await showSeriesChoice('Usuwanie cyklu', 'Wybierz zakres usuwania. Zamiast usuwać, możesz zaznaczyć lekcję jako Odwołaną.', true);
-        if (choice === 'single') { lessons = lessons.filter(l => l.id != id); } 
-        else if (choice === 'future') {
-            let idsToDelete = futureLessons.map(f => f.id); idsToDelete.push(id);
-            lessons = lessons.filter(l => !idsToDelete.includes(l.id));
-        } else { return; }
-    } else {
-        if(!await showConfirm('Usuwanie lekcji', 'Na pewno całkowicie USUNĄĆ tę lekcję?', true)) return;
-        lessons = lessons.filter(l => l.id != id);
-    }
-    
-    saveToCloud(); closeModals(); renderCalendar();
-    if(!document.getElementById('view-pulpit').classList.contains('hidden')) renderDashboard();
-}
-
+// --- WIDOK ZAROBKÓW ---
 function processEarningsData(lessonsArray) {
     let total = 0; let byStudent = {}; let bySubject = {};
 
@@ -1370,11 +1390,4 @@ function renderZarobki() {
         document.getElementById('total-week-earnings').innerText = `${weekData.total} zł`;
         renderChart('chart-week-subject', 'bar', weekData.subjectArr);
     }
-}
-
-function closeModals() {
-    document.getElementById('modal-student').classList.add('hidden');
-    document.getElementById('modal-lesson').classList.add('hidden');
-    document.getElementById('modal-subject').classList.add('hidden');
-    document.getElementById('modal-find-slot').classList.add('hidden');
 }
