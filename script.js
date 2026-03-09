@@ -31,7 +31,9 @@ let datePicker;
 let timeStartPicker;
 let timeEndPicker;
 let jumpPicker; 
+let paymentDatePicker; // Nowy picker do pakietów
 let chartInstances = {}; 
+let currentStudentBundles = []; // Zmienna tymczasowa do edycji ucznia
 
 Chart.defaults.font.family = "'Inter', 'sans-serif'";
 Chart.defaults.color = '#64748b';
@@ -83,8 +85,9 @@ function showSeriesChoice(title, message, isDanger = false) {
 // ZAINICJOWANIE KALENDARZY 
 document.addEventListener("DOMContentLoaded", () => {
     datePicker = flatpickr("#lesson-date", { locale: "pl", dateFormat: "Y-m-d", altInput: true, altFormat: "d/m/Y", allowInput: true });
+    paymentDatePicker = flatpickr("#lesson-payment-date", { locale: "pl", dateFormat: "Y-m-d", altInput: true, altFormat: "d/m/Y", allowInput: true });
     timeStartPicker = flatpickr("#lesson-time-start", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true, onChange: autoUzupelnijCzas });
-    timeEndPicker = flatpickr("#lesson-time-end", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true });
+    timeEndPicker = flatpickr("#lesson-time-end", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true, onChange: handleBundleChange });
     jumpPicker = flatpickr("#jump-date-picker", {
         locale: "pl",
         onChange: function(selectedDates) {
@@ -207,6 +210,8 @@ function autoUzupelnijCzas() {
     
     document.getElementById('lesson-time-end').value = endStr;
     if(timeEndPicker) timeEndPicker.setDate(endStr);
+    
+    handleBundleChange(); // Przelicz cenę jeśli mamy pakiet
 }
 
 function markAsPaid(id, event) {
@@ -218,6 +223,19 @@ function markAsPaid(id, event) {
         renderDashboard();
         if(!document.getElementById('view-kalendarz').classList.contains('hidden')) renderCalendar();
     }
+}
+
+function markBundleAsPaid(studentId, bundleId, paymentDate, event) {
+    event.stopPropagation();
+    lessons.forEach(l => {
+        let lPayDate = l.paymentDate || l.date;
+        if (l.studentId == studentId && l.bundleId == bundleId && lPayDate === paymentDate) {
+            l.paid = true;
+        }
+    });
+    saveToCloud();
+    renderDashboard();
+    if(!document.getElementById('view-kalendarz').classList.contains('hidden')) renderCalendar();
 }
 
 // --- NOWY WIZUALNY SYSTEM SZUKANIA TERMINÓW ---
@@ -543,6 +561,27 @@ async function deleteSubject() {
     }
 }
 
+// --- PAKIETY W UCZNIU ---
+function renderStudentBundles() {
+    const container = document.getElementById('student-bundles-container');
+    container.innerHTML = '';
+    currentStudentBundles.forEach(b => {
+        container.innerHTML += `
+            <div class="flex flex-col sm:flex-row gap-2 items-center p-2 rounded-xl border-2 bg-white border-slate-200 bundle-row" data-id="${b.id}">
+                <input type="text" placeholder="Nazwa (np. Matma + Fizyka)" value="${b.name || ''}" class="bundle-name w-full sm:w-1/3 text-sm p-2 border-2 rounded-lg font-bold">
+                <div class="flex gap-2 w-full sm:w-2/3">
+                    <input type="number" placeholder="Razem (zł)" value="${b.total || ''}" class="bundle-total w-1/2 text-sm p-2 border-2 rounded-lg font-bold text-akcent">
+                    <input type="number" step="0.5" placeholder="Suma godz. (np. 2.5)" value="${b.hours || ''}" class="bundle-hours w-1/2 text-sm p-2 border-2 rounded-lg font-bold">
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-rose-500 font-extrabold px-2 text-xl hover:scale-110">&times;</button>
+                </div>
+            </div>`;
+    });
+}
+function addBundleToStudent() {
+    currentStudentBundles.push({ id: 'b_' + Date.now(), name: '', total: '', hours: '' });
+    renderStudentBundles();
+}
+
 // --- UCZNIOWIE ---
 function renderStudents() {
     const list = document.getElementById('students-list');
@@ -571,11 +610,18 @@ function renderStudents() {
             } else {
                 studentSubjectsHtml = `<span class="text-xs font-medium" style="color: var(--tekst-szary)">Brak przypisanych przedmiotów</span>`;
             }
+            
+            let bundlesHtml = '';
+            if(student.bundles && student.bundles.length > 0) {
+                bundlesHtml = `<div class="mt-2 text-[10px] md:text-xs font-bold text-slate-500">PAKIETY: ${student.bundles.map(b => b.name).join(', ')}</div>`;
+            }
+
             list.innerHTML += `
                 <div class="karta flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0">
                     <div class="space-y-2">
                         <h4 class="font-extrabold text-lg md:text-xl">${student.name}</h4>
                         <div class="flex flex-wrap gap-1">${studentSubjectsHtml}</div>
+                        ${bundlesHtml}
                     </div>
                     <div class="flex flex-wrap sm:flex-col gap-3 sm:gap-2 w-full sm:w-auto text-center sm:text-right">
                         <button onclick="editStudent('${student.id}')" class="text-sm font-bold hover:underline flex-1 sm:flex-none" style="color: var(--akcent)">Edytuj</button>
@@ -633,9 +679,14 @@ function openStudentModal() {
                 </span>
             </label>`;
     });
+    
+    currentStudentBundles = [];
+    renderStudentBundles();
+    
     document.getElementById('modal-student').setAttribute('data-editing-id', '');
     document.getElementById('modal-student').classList.remove('hidden');
 }
+
 function editStudent(id) {
     const student = students.find(s => s.id == id);
     if(!student) return;
@@ -652,23 +703,43 @@ function editStudent(id) {
                 </span>
             </label>`;
     });
+    
+    currentStudentBundles = student.bundles ? JSON.parse(JSON.stringify(student.bundles)) : [];
+    renderStudentBundles();
+
     document.getElementById('modal-student').setAttribute('data-editing-id', id);
     document.getElementById('modal-student').classList.remove('hidden');
 }
+
 async function saveStudent() {
     const name = document.getElementById('student-name').value;
     const editingId = document.getElementById('modal-student').getAttribute('data-editing-id');
     if(!name) return await customAlert('Błąd', 'Wpisz imię ucznia!');
     let selectedSubjects = [];
     document.querySelectorAll('.student-subject-cb:checked').forEach(cb => selectedSubjects.push(cb.value));
+    
+    // Zapisywanie pakietów
+    let finalBundles = [];
+    document.querySelectorAll('.bundle-row').forEach(row => {
+        let bName = row.querySelector('.bundle-name').value;
+        let bTotal = parseFloat(row.querySelector('.bundle-total').value);
+        let bHours = parseFloat(row.querySelector('.bundle-hours').value);
+        if(bName && bTotal && bHours) {
+            finalBundles.push({ id: row.getAttribute('data-id'), name: bName, total: bTotal, hours: bHours });
+        }
+    });
+
     if(editingId) {
         let student = students.find(s => s.id == editingId);
-        student.name = name; student.subjectIds = selectedSubjects;
+        student.name = name; 
+        student.subjectIds = selectedSubjects;
+        student.bundles = finalBundles;
     } else {
-        students.push({ id: Date.now().toString(), name, subjectIds: selectedSubjects, archived: false });
+        students.push({ id: Date.now().toString(), name, subjectIds: selectedSubjects, archived: false, bundles: finalBundles });
     }
     saveToCloud(); closeModals(); renderStudents();
 }
+
 async function deleteStudent(id) {
     if(await showConfirm('Usuwanie Ucznia', 'Na pewno usunąć ucznia i wszystkie jego zaplanowane lekcje? Zamiast tego możesz go po prostu zarchiwizować!', true)) {
         students = students.filter(s => s.id != id);
@@ -689,7 +760,7 @@ function renderDashboard() {
     
     document.getElementById('pulpit-month-title').innerText = `Zarobki - ${monthNames[currentMonth]}`;
 
-    let earnings = 0, lessonsThisMonth = 0, unpaidTotal = 0, unpaidCount = 0;
+    let earnings = 0, lessonsThisMonth = 0;
     let plannedEarnings = 0; 
     
     lessons.forEach(l => {
@@ -702,18 +773,12 @@ function renderDashboard() {
                 if(l.paid) earnings += price;
                 else plannedEarnings += price; 
             }
-            if(!l.paid && (l.date < todayString || (l.date === todayString && l.endTime < nowTime))) {
-                unpaidTotal += price;
-                unpaidCount++;
-            }
         }
     });
 
     document.getElementById('dashboard-monthly-earnings').innerText = `${earnings} zł`;
     document.getElementById('dashboard-planned-earnings').innerText = `(w planach: +${plannedEarnings} zł)`;
     document.getElementById('dashboard-monthly-lessons').innerText = `${lessonsThisMonth} lekcji`;
-    document.getElementById('dashboard-unpaid-sum').innerText = `${unpaidTotal} zł`;
-    document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} zaległych lekcji`;
     
     document.getElementById('dashboard-active-students').innerText = students.filter(s => !s.archived).length;
 
@@ -748,18 +813,70 @@ function renderDashboard() {
         });
     }
 
-    let unpaidLessons = lessons.filter(l => !l.cancelled && !l.paid && (l.date < todayString || (l.date === todayString && l.endTime < nowTime)));
-    unpaidLessons.sort((a,b) => (b.date + b.startTime).localeCompare(a.date + a.startTime)); 
+    // --- LOGIKA ZALEGŁOŚCI (ZGŁASZANIE PAKIETÓW) ---
+    let unpaidLessonsRaw = lessons.filter(l => {
+        if(l.cancelled || l.paid) return false;
+        let payDate = l.paymentDate || l.date;
+        return (payDate < todayString || (payDate === todayString && l.endTime < nowTime));
+    });
     
+    let bundledPayments = {}; 
+    let individualPayments = [];
+    
+    let unpaidTotal = 0;
+    let unpaidCount = 0;
+
+    unpaidLessonsRaw.forEach(l => {
+        unpaidTotal += Number(l.price || 0);
+        unpaidCount++;
+        
+        if (l.bundleId) {
+            let payDate = l.paymentDate || l.date;
+            let key = `${l.studentId}_${l.bundleId}_${payDate}`;
+            if(!bundledPayments[key]) {
+                bundledPayments[key] = { lessons: [], total: 0, studentId: l.studentId, bundleId: l.bundleId, paymentDate: payDate };
+            }
+            bundledPayments[key].lessons.push(l);
+            bundledPayments[key].total += Number(l.price || 0);
+        } else {
+            individualPayments.push(l);
+        }
+    });
+
+    document.getElementById('dashboard-unpaid-sum').innerText = `${unpaidTotal} zł`;
+    document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} zaległych lekcji`;
+
     const unpaidContainer = document.getElementById('pulpit-unpaid-lessons');
     unpaidContainer.innerHTML = '';
-    if(unpaidLessons.length === 0) {
+
+    if(unpaidCount === 0) {
         unpaidContainer.innerHTML = `<div class="border-2 p-4 md:p-6 rounded-xl text-center" style="background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3)"><div class="text-2xl md:text-3xl mb-1 md:mb-2">🎉</div><p class="text-emerald-500 font-bold text-sm md:text-base">Uczniowie nie mają zaległości.</p></div>`;
     } else {
-        unpaidLessons.slice(0, 5).forEach(l => {
+        // Renderuj paczki (pakiety)
+        Object.values(bundledPayments).forEach(group => {
+            let student = students.find(s => s.id == group.studentId) || {name: 'Nieznany uczeń'};
+            let bundle = student.bundles ? student.bundles.find(b => b.id == group.bundleId) : null;
+            let bundleName = bundle ? bundle.name : 'Usunięty pakiet';
+            
+            unpaidContainer.innerHTML += `
+                <div class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2 bg-rose-50 border-rose-300">
+                    <div>
+                        <div class="font-bold text-sm md:text-base">${student.name}</div>
+                        <div class="text-[10px] md:text-xs font-bold text-rose-500">📦 PAKIET: ${bundleName} (Zalega od: ${group.paymentDate})</div>
+                        <div class="text-[9px] md:text-[10px] text-rose-400 mt-0.5">Liczba połączonych lekcji: ${group.lessons.length}</div>
+                    </div>
+                    <div class="flex flex-col items-end gap-2">
+                        <div class="font-extrabold text-rose-600 text-sm md:text-base">${Math.round(group.total)} zł</div>
+                        <button onclick="markBundleAsPaid('${group.studentId}', '${group.bundleId}', '${group.paymentDate}', event)" class="px-3 py-1.5 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-200 transition whitespace-nowrap">Opłać pakiet</button>
+                    </div>
+                </div>`;
+        });
+
+        // Renderuj pojedyncze
+        individualPayments.sort((a,b) => (b.date + b.startTime).localeCompare(a.date + a.startTime)).slice(0, 5).forEach(l => {
             let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
             unpaidContainer.innerHTML += `
-                <div class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition" style="background-color: rgba(244, 63, 94, 0.05); border-color: rgba(244, 63, 94, 0.2)" onclick="editLesson('${l.id}')">
+                <div class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2" style="background-color: rgba(244, 63, 94, 0.05); border-color: rgba(244, 63, 94, 0.2)" onclick="editLesson('${l.id}')">
                     <div>
                         <div class="font-bold text-sm md:text-base">${student.name}</div>
                         <div class="text-[10px] md:text-xs font-medium text-rose-500">${l.date} | ${l.startTime}</div>
@@ -812,6 +929,8 @@ function renderDashboard() {
             let lineThrough = l.cancelled ? 'text-decoration: line-through' : '';
 
             let topicHtml = l.topic ? `<p class="text-[10px] md:text-xs font-medium truncate mt-0.5" style="color: var(--tekst-szary)">📝 ${l.topic}</p>` : '';
+            
+            let bundleBadge = l.bundleId ? `<span class="text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded ml-1 border bg-blue-50 text-blue-600 border-blue-200">📦 W PAKIECIE</span>` : '';
 
             weekContainer.innerHTML += `
                 <div class="flex items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 gap-2 md:gap-4" style="background-color: var(--karta-bg); border-color: var(--ciemny); ${cardOpacity}" onclick="editLesson('${l.id}')">
@@ -819,7 +938,7 @@ function renderDashboard() {
                         <div class="w-1.5 h-10 md:h-12 rounded-full shrink-0" style="background-color: ${subject.color}"></div>
                         <div class="truncate">
                             <p class="font-extrabold text-sm md:text-base" style="${lineThrough}">${l.startTime} - ${l.endTime}</p>
-                            <p class="text-xs md:text-sm font-medium truncate" style="color: var(--tekst-szary)">${student.name} <span class="text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 border hidden sm:inline-block" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${subject.color}; border-color: ${subject.color}">${subject.name.toUpperCase()}</span></p>
+                            <p class="text-xs md:text-sm font-medium truncate" style="color: var(--tekst-szary)">${student.name} <span class="text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 border hidden sm:inline-block" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${subject.color}; border-color: ${subject.color}">${subject.name.toUpperCase()}</span>${bundleBadge}</p>
                             ${topicHtml}
                         </div>
                     </div>
@@ -960,12 +1079,66 @@ function updateLessonSubjectDropdown() {
     }
 }
 
+function updateLessonBundleDropdown() {
+    const stId = document.getElementById('lesson-student').value;
+    const student = students.find(s => s.id == stId);
+    const bundleSelect = document.getElementById('lesson-bundle');
+    bundleSelect.innerHTML = '<option value="">Standardowa cena (wpisz ręcznie)</option>';
+    
+    if(student && student.bundles && student.bundles.length > 0) {
+        student.bundles.forEach(b => {
+            bundleSelect.innerHTML += `<option value="${b.id}">Pakiet: ${b.name} (${b.total} zł / ${b.hours}h)</option>`;
+        });
+    }
+    handleBundleChange();
+}
+
+function handleBundleChange() {
+    const bundleId = document.getElementById('lesson-bundle').value;
+    const priceInput = document.getElementById('lesson-price');
+    const paymentDateDiv = document.getElementById('lesson-payment-date-div');
+    
+    if (bundleId) {
+        const stId = document.getElementById('lesson-student').value;
+        const student = students.find(s => s.id == stId);
+        const bundle = student.bundles.find(b => b.id == bundleId);
+        
+        let start = document.getElementById('lesson-time-start').value;
+        let end = document.getElementById('lesson-time-end').value;
+        if(start && end && bundle) {
+            let [sh, sm] = start.split(':').map(Number);
+            let [eh, em] = end.split(':').map(Number);
+            let durationHours = ((eh*60+em) - (sh*60+sm)) / 60;
+            
+            let calculatedPrice = (durationHours / bundle.hours) * bundle.total;
+            priceInput.value = Math.round(calculatedPrice);
+        }
+        priceInput.readOnly = true;
+        priceInput.classList.add('bg-slate-100', 'text-slate-500');
+        paymentDateDiv.classList.remove('hidden');
+        
+        // Domyślna data płatności jeśli pusta (na koniec tego samego tygodnia)
+        if(!document.getElementById('lesson-payment-date').value) {
+            let lDate = new Date(document.getElementById('lesson-date').value || new Date());
+            let sun = new Date(getMonday(lDate));
+            sun.setDate(sun.getDate() + 6);
+            paymentDatePicker.setDate(sun.toISOString().split('T')[0]);
+        }
+    } else {
+        priceInput.readOnly = false;
+        priceInput.classList.remove('bg-slate-100', 'text-slate-500');
+        paymentDateDiv.classList.add('hidden');
+    }
+}
+
 function openLessonModal() {
     document.getElementById('lesson-modal-title').innerText = 'Zaplanuj lekcję';
     document.getElementById('lesson-id').value = '';
     document.getElementById('lesson-topic').value = ''; 
     
-    if(datePicker) datePicker.setDate(new Date().toISOString().split('T')[0]);
+    let defaultDate = new Date().toISOString().split('T')[0];
+    if(datePicker) datePicker.setDate(defaultDate);
+    if(paymentDatePicker) paymentDatePicker.setDate('');
     
     document.getElementById('lesson-time-start').value = '15:00';
     if(timeStartPicker) timeStartPicker.setDate('15:00');
@@ -987,7 +1160,9 @@ function openLessonModal() {
     });
 
     document.getElementById('lesson-subject').innerHTML = '<option value="">Wybierz ucznia najpierw...</option>';
+    document.getElementById('lesson-bundle').innerHTML = '<option value="">Standardowa cena (wpisz ręcznie)</option>';
     document.getElementById('modal-lesson').classList.remove('hidden');
+    handleBundleChange();
 }
 
 function editLesson(id) {
@@ -998,6 +1173,7 @@ function editLesson(id) {
     document.getElementById('lesson-topic').value = lesson.topic || ''; 
     
     if(datePicker) datePicker.setDate(lesson.date);
+    if(paymentDatePicker) paymentDatePicker.setDate(lesson.paymentDate || lesson.date);
     
     document.getElementById('lesson-time-start').value = lesson.startTime;
     document.getElementById('lesson-time-end').value = lesson.endTime;
@@ -1023,14 +1199,19 @@ function editLesson(id) {
 
     updateLessonSubjectDropdown();
     if(lesson.subjectId) document.getElementById('lesson-subject').value = lesson.subjectId;
+    
+    updateLessonBundleDropdown();
+    if(lesson.bundleId) document.getElementById('lesson-bundle').value = lesson.bundleId;
 
     document.getElementById('modal-lesson').classList.remove('hidden');
+    handleBundleChange();
 }
 
 async function saveLesson() {
     const id = document.getElementById('lesson-id').value;
     const studentId = document.getElementById('lesson-student').value;
     const subjectId = document.getElementById('lesson-subject').value;
+    const bundleId = document.getElementById('lesson-bundle').value;
     const topic = document.getElementById('lesson-topic').value; 
     const date = document.getElementById('lesson-date').value;
     const startTime = document.getElementById('lesson-time-start').value;
@@ -1039,6 +1220,8 @@ async function saveLesson() {
     const paid = document.getElementById('lesson-paid').checked;
     const cancelled = document.getElementById('lesson-cancelled') ? document.getElementById('lesson-cancelled').checked : false;
     const isRecurring = document.getElementById('lesson-recurring') ? document.getElementById('lesson-recurring').checked : false;
+    
+    const paymentDate = bundleId ? document.getElementById('lesson-payment-date').value : date;
 
     if(!studentId || !date || !subjectId || !startTime || !endTime) return await customAlert('Błąd', 'Uzupełnij wszystkie wymagane dane (uczeń, przedmiot, data, godziny)!');
 
@@ -1065,7 +1248,9 @@ async function saveLesson() {
             originalLesson.date !== date ||
             originalLesson.startTime !== startTime ||
             originalLesson.endTime !== endTime ||
-            originalLesson.price != price 
+            originalLesson.price != price ||
+            originalLesson.bundleId !== bundleId ||
+            originalLesson.paymentDate !== paymentDate
         );
 
         let futureLessons = [];
@@ -1087,6 +1272,8 @@ async function saveLesson() {
                 futureLessons.forEach(fl => {
                     fl.studentId = studentId;
                     fl.subjectId = subjectId;
+                    fl.bundleId = bundleId;
+                    fl.paymentDate = bundleId ? paymentDate : fl.date;
                     fl.startTime = startTime;
                     fl.endTime = endTime;
                     fl.price = price;
@@ -1095,6 +1282,12 @@ async function saveLesson() {
                         let fd = new Date(fl.date);
                         fd.setDate(fd.getDate() + dateDiff);
                         fl.date = fd.toISOString().split('T')[0];
+                        
+                        if(bundleId) {
+                            let pd = new Date(fl.paymentDate);
+                            pd.setDate(pd.getDate() + dateDiff);
+                            fl.paymentDate = pd.toISOString().split('T')[0];
+                        }
                     }
                 });
             } else if (choice === 'single') {
@@ -1103,6 +1296,8 @@ async function saveLesson() {
 
         originalLesson.studentId = studentId;
         originalLesson.subjectId = subjectId;
+        originalLesson.bundleId = bundleId;
+        originalLesson.paymentDate = paymentDate;
         originalLesson.topic = topic;
         originalLesson.date = date;
         originalLesson.startTime = startTime;
@@ -1114,15 +1309,22 @@ async function saveLesson() {
     } else {
         const repetitions = isRecurring ? 156 : 1; 
         let baseDate = new Date(date);
+        let basePayDate = new Date(paymentDate);
         let newGroupId = "grp_" + Date.now().toString() + Math.floor(Math.random() * 1000); 
 
         for(let i=0; i<repetitions; i++) {
             let lessonDate = new Date(baseDate);
             lessonDate.setDate(baseDate.getDate() + (i * 7));
+            
+            let pDate = new Date(basePayDate);
+            pDate.setDate(basePayDate.getDate() + (i * 7));
+            
             lessons.push({
                 id: Date.now().toString() + Math.floor(Math.random() * 1000) + i,
                 groupId: isRecurring ? newGroupId : null,
-                studentId, subjectId, topic, date: lessonDate.toISOString().split('T')[0],
+                studentId, subjectId, bundleId, 
+                paymentDate: bundleId ? pDate.toISOString().split('T')[0] : lessonDate.toISOString().split('T')[0],
+                topic, date: lessonDate.toISOString().split('T')[0],
                 startTime, endTime, price, cancelled: false,
                 paid: (paid && i === 0) ? true : false
             });
