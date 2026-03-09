@@ -43,7 +43,6 @@
 <body class="font-sans h-screen flex flex-col overflow-hidden transition-colors duration-300">
 
     <div id="view-login" class="absolute inset-0 z-50 bg-[#f8fafc] overflow-y-auto no-scrollbar hidden transition-opacity duration-500">
-        
         <nav class="w-full flex justify-between items-center px-4 py-4 md:px-12 md:py-6 bg-white border-b-4 border-black sticky top-0 z-50">
             <div class="flex items-center gap-8">
                 <h1 class="text-xl md:text-2xl font-black tracking-tighter uppercase flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
@@ -68,12 +67,10 @@
         </nav>
 
         <header class="max-w-7xl mx-auto px-4 py-16 md:px-12 md:py-24 flex flex-col lg:flex-row items-center gap-16 relative overflow-hidden">
-            
             <div class="lg:w-1/2 space-y-8 z-10 relative">
                 <div class="inline-block px-3 py-1 border-4 border-black font-black text-sm bg-[#ffc900] shadow-[4px_4px_0_black] mb-2 uppercase tracking-widest">Dla nauczycieli i edukatorów</div>
                 <h2 class="text-5xl md:text-7xl font-black leading-[1.0] tracking-tighter text-black flex flex-col items-start">
                     Zarządzaj swoimi <br>zajęciami
-                    
                     <div class="inline-flex flex-col bg-white px-6 py-4 border-4 border-black shadow-[8px_8px_0_black] mt-4">
                         <span class="text-[#4f46e5] text-5xl md:text-7xl leading-none tracking-tighter mb-1">jak</span>
                         <span class="text-[#4f46e5] text-5xl md:text-7xl leading-none tracking-tighter">profesjonalista.</span>
@@ -90,7 +87,6 @@
             </div>
 
             <div class="lg:w-1/2 relative w-full h-[500px] lg:h-[600px] hidden sm:block">
-                
                 <div class="absolute top-0 right-4 w-72 bg-white border-4 border-black shadow-[10px_10px_0_black] rounded-2xl p-6 transform rotate-2 animate-float-slow z-20">
                     <div class="flex justify-between items-center mb-4">
                         <span class="font-black text-[10px] uppercase text-gray-500 tracking-widest">Przychód (Ten miesiąc)</span>
@@ -137,7 +133,6 @@
                     <span class="text-white text-lg">💸</span>
                     <span class="text-white font-black uppercase tracking-widest text-xs">Zapłacone</span>
                 </div>
-
             </div>
         </header>
 
@@ -211,39 +206,14 @@
                     Zaloguj przez Google
                 </button>
             </div>
-            
-            <div class="absolute top-0 left-0 w-full h-full opacity-10 flex justify-around items-center pointer-events-none">
-                <div class="text-9xl font-black">📝</div>
-                <div class="text-9xl font-black hidden md:block">📐</div>
-                <div class="text-9xl font-black hidden lg:block">📈</div>
-            </div>
         </section>
 
         <footer class="bg-[#1e293b] pt-16 pb-8 border-t-4 border-black text-white">
             <div class="max-w-7xl mx-auto px-4 md:px-12 grid grid-cols-1 md:grid-cols-3 gap-12 mb-12 border-b-2 border-gray-700 pb-12">
                 <div>
                     <h1 class="text-2xl font-black tracking-tighter uppercase flex items-center gap-2 mb-4">TutoGrid<span class="text-[#4f46e5]">.</span></h1>
-                    <p class="text-gray-400 font-bold text-sm leading-relaxed">Twój Planer Korepetytora. Narzędzie stworzone z myślą o osobach uczących prywatnie. Optymalizuj swój czas, kontroluj zarobki i podnieś standard swoich usług edukacyjnych.</p>
+                    <p class="text-gray-400 font-bold text-sm leading-relaxed">Twój Planer Korepetytora.</p>
                 </div>
-                <div>
-                    <h3 class="text-lg font-black mb-4 uppercase tracking-wider text-gray-300">Przydatne linki</h3>
-                    <ul class="space-y-2 text-sm font-bold text-gray-400">
-                        <li><a href="#funkcje" class="hover:text-white transition">O aplikacji</a></li>
-                        <li><a href="#" class="hover:text-white transition">Często zadawane pytania (FAQ)</a></li>
-                        <li><a href="#" class="hover:text-white transition">Kontakt z pomocą techniczną</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h3 class="text-lg font-black mb-4 uppercase tracking-wider text-gray-300">Informacje prawne</h3>
-                    <ul class="space-y-2 text-sm font-bold text-gray-400">
-                        <li><a href="#" class="hover:text-[#ffc900] transition">Regulamin świadczenia usług</a></li>
-                        <li><a href="#" class="hover:text-[#ffc900] transition">Polityka Prywatności</a></li>
-                        <li><a href="#" class="hover:text-[#ffc900] transition">Zgłaszanie błędów</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="text-center text-sm font-black text-gray-500 tracking-wider uppercase">
-                &copy; 2026 TutoGrid. Wszelkie prawa zastrzeżone.
             </div>
         </footer>
     </div>
@@ -333,10 +303,8 @@
         <div id="view-kalendarz" class="max-w-6xl mx-auto h-full flex flex-col hidden">
             <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-4 md:mb-6 gap-3 w-full">
                 <h2 id="month-year-display" class="text-xl md:text-3xl font-extrabold w-full text-center xl:text-left"></h2>
-                
                 <div class="flex flex-wrap items-center justify-between xl:justify-end gap-2 md:gap-4 w-full xl:w-auto relative">
                     <button onclick="goToToday()" class="border-2 font-bold py-2 px-3 md:px-4 rounded-xl text-xs md:text-sm hover:opacity-70 transition shadow-[2px_2px_0px_var(--ciemny)]" style="background-color: var(--karta-bg); border-color: var(--ciemny)">Dzisiaj</button>
-                    
                     <div class="flex rounded-xl border-2 items-center shadow-[2px_2px_0px_var(--ciemny)] flex-1 sm:flex-none justify-between" style="background-color: var(--karta-bg); border-color: var(--ciemny)">
                         <button onclick="changeWeek(-1)" class="px-3 py-2 font-bold border-r-2 hover:opacity-60 transition flex items-center justify-center" style="border-color: var(--ciemny); color: var(--tekst-glowny)">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -347,14 +315,12 @@
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                         </button>
                     </div>
-
                     <div class="flex gap-2 w-full sm:w-auto mt-1 sm:mt-0">
                         <button onclick="openFindSlotModal()" class="przycisk-anuluj border-2 text-xs md:text-sm w-1/2 sm:w-auto shadow-[2px_2px_0px_var(--ciemny)] hover:translate-y-0" style="border-color: var(--ciemny); background-color: var(--jasny); color: var(--tekst-glowny)">🔍 Znajdź termin</button>
                         <button onclick="openLessonModal()" class="przycisk-glowny text-xs md:text-sm w-1/2 sm:w-auto">+ Dodaj lekcję</button>
                     </div>
                 </div>
             </div>
-
             <div class="rounded-2xl shadow-[4px_4px_0px_var(--ciemny)] border-2 flex-1 flex flex-col overflow-hidden" style="background-color: var(--karta-bg); border-color: var(--ciemny)">
                 <div class="overflow-x-auto flex-1 flex flex-col">
                     <div class="min-w-[700px] flex-1 flex flex-col">
@@ -386,9 +352,7 @@
             <div class="mb-6">
                 <input type="text" id="student-search" placeholder="🔍 Szukaj po imieniu..." class="pole-tekstowe mb-0 border-2" oninput="renderStudents()">
             </div>
-            
             <div id="students-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8"></div>
-
             <div id="archived-students-section" class="hidden">
                 <h3 class="text-xl font-bold mb-4 pt-4 border-t-2" style="border-color: var(--szary-ramka); color: var(--tekst-szary)">🗄️ Zarchiwizowani Uczniowie</h3>
                 <div id="archived-students-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-70 grayscale"></div>
@@ -400,7 +364,6 @@
                 <h2 class="text-3xl md:text-4xl font-extrabold mb-2">Raport Finansowy</h2>
                 <p class="text-sm md:text-base" style="color: var(--tekst-szary)">Przeanalizuj swoje przychody z podziałem na okresy, przedmioty i uczniów.</p>
             </div>
-
             <section class="space-y-4 md:space-y-6">
                 <h3 class="text-xl md:text-2xl font-extrabold border-b-2 pb-2" style="border-color: var(--szary-ramka)">1. Łączne zarobki (od początku)</h3>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
@@ -417,7 +380,6 @@
                     </div>
                 </div>
             </section>
-
             <section class="space-y-4 md:space-y-6">
                 <div class="flex flex-col sm:flex-row justify-between sm:items-end border-b-2 pb-2 gap-2" style="border-color: var(--szary-ramka)">
                     <h3 class="text-xl md:text-2xl font-extrabold">2. Zarobki w miesiącu</h3>
@@ -433,7 +395,6 @@
                     </div>
                 </div>
             </section>
-
             <section class="space-y-4 md:space-y-6">
                 <div class="flex flex-col sm:flex-row justify-between sm:items-end border-b-2 pb-2 gap-2" style="border-color: var(--szary-ramka)">
                     <h3 class="text-xl md:text-2xl font-extrabold">3. Zarobki w wybranym tygodniu</h3>
@@ -453,7 +414,6 @@
 
         <div id="view-ustawienia" class="max-w-3xl mx-auto hidden space-y-6 pb-12">
             <h2 class="text-2xl md:text-3xl font-extrabold mb-4 md:mb-6 border-b-2 pb-4" style="border-color: var(--szary-ramka)">Ustawienia TutoGrid</h2>
-            
             <div class="karta space-y-8">
                 <div>
                     <h3 class="font-bold text-lg mb-3">Wygląd (Motyw)</h3>
@@ -462,7 +422,6 @@
                         <button onclick="ustawMotyw('dark')" class="px-4 md:px-6 py-2 border-2 rounded-xl font-bold transition text-sm md:text-base flex-1 md:flex-none" style="border-color: var(--ciemny); background: #0f172a; color: #f8fafc">Ciemny 🌙</button>
                     </div>
                 </div>
-
                 <div>
                     <h3 class="font-bold text-lg mb-3">Kolor główny (Akcent)</h3>
                     <div class="flex flex-wrap gap-3 md:gap-4" id="lista-kolorow">
@@ -475,9 +434,7 @@
                         <div onclick="ustawAkcent('#ec4899')" class="kolor-kolo bg-[#ec4899]" title="Różowy"></div>
                     </div>
                 </div>
-
                 <hr style="border-color: var(--szary-ramka)">
-
                 <div>
                     <h3 class="font-bold text-lg mb-3">Opcje Kalendarza</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -496,18 +453,13 @@
                         </div>
                     </div>
                 </div>
-
                 <hr style="border-color: var(--szary-ramka)">
-                
                 <div>
                     <h3 class="font-bold text-lg mb-3">Mój stały grafik (Dostępność)</h3>
                     <p class="text-sm mb-4" style="color: var(--tekst-szary)">Ustaw, w jakich godzinach przyjmujesz uczniów. TutoGrid podświetli te okienka na zielono w wyszukiwarce terminów.</p>
-                    <div id="availability-container" class="space-y-2">
-                        </div>
+                    <div id="availability-container" class="space-y-2"></div>
                 </div>
-
                 <hr style="border-color: var(--szary-ramka)">
-
                 <div>
                     <h3 class="font-bold text-lg mb-3">Zarządzanie danymi (Baza)</h3>
                     <p class="text-sm mb-4" style="color: var(--tekst-szary)">Możesz pobrać swoją bazę na dysk lub wgrać ją z powrotem (np. na innym koncie).</p>
@@ -544,10 +496,19 @@
         <div class="modal-okno">
             <h3 class="text-xl font-bold mb-4">Uczeń</h3>
             <input type="text" id="student-name" placeholder="Imię i nazwisko" class="pole-tekstowe text-sm md:text-base">
-            <div class="mb-6">
+            
+            <div class="mb-4">
                 <label class="text-xs md:text-sm font-bold mb-2 block" style="color: var(--tekst-szary)">Czego uczysz tę osobę?</label>
                 <div id="student-subjects-container" class="space-y-2 max-h-40 overflow-y-auto p-3 rounded-xl border-2 text-sm md:text-base" style="background-color: var(--jasny); border-color: var(--szary-ramka)"></div>
             </div>
+
+            <div class="mb-6 pt-4 border-t-2" style="border-color: var(--szary-ramka)">
+                <label class="text-xs md:text-sm font-bold mb-1 block" style="color: var(--tekst-szary)">Cenniki Łączone / Pakiety (Opcjonalnie)</label>
+                <p class="text-[10px] md:text-xs mb-3 font-medium" style="color: var(--tekst-szary)">Jeśli uczysz kogoś więcej niż raz w tygodniu w obniżonej cenie, zdefiniuj tutaj sumę godzin i łączną cenę. System zautomatyzuje resztę.</p>
+                <div id="student-bundles-container" class="space-y-2 mb-3"></div>
+                <button type="button" onclick="addBundleToStudent()" class="font-bold text-xs md:text-sm hover:underline" style="color: var(--akcent)">+ Dodaj pakiet do tego ucznia</button>
+            </div>
+
             <div class="flex justify-end gap-2">
                 <button onclick="closeModals()" class="przycisk-anuluj text-sm md:text-base">Anuluj</button>
                 <button onclick="saveStudent()" class="przycisk-glowny text-sm md:text-base">Zapisz</button>
@@ -562,22 +523,33 @@
             <input type="hidden" id="lesson-id">
             
             <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Uczeń</label>
-            <select id="lesson-student" onchange="updateLessonSubjectDropdown()" class="pole-tekstowe text-sm md:text-base"></select>
+            <select id="lesson-student" onchange="updateLessonSubjectDropdown(); updateLessonBundleDropdown();" class="pole-tekstowe text-sm md:text-base"></select>
             
             <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Przedmiot</label>
             <select id="lesson-subject" class="pole-tekstowe text-sm md:text-base mb-2"></select>
-            
-            <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Temat / Notatka (Opcjonalnie)</label>
+
+            <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Temat (Opcjonalnie)</label>
             <input type="text" id="lesson-topic" placeholder="np. Ułamki, Sprawdzian..." class="pole-tekstowe text-sm md:text-base">
+            
+            <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Sposób rozliczenia</label>
+            <select id="lesson-bundle" onchange="handleBundleChange()" class="pole-tekstowe text-sm md:text-base mb-2">
+                <option value="">Standardowa cena (wpisz ręcznie)</option>
+            </select>
+
+            <div id="lesson-payment-date-div" class="hidden mb-3 p-3 rounded-xl border-2 shadow-sm" style="background-color: rgba(var(--akcent), 0.05); border-color: rgba(var(--akcent), 0.2)">
+                <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--akcent)">Kiedy uczeń płaci za ten pakiet?</label>
+                <p class="text-[9px] md:text-[10px] mb-2 font-medium" style="color: var(--tekst-szary)">Aby aplikacja połączyła lekcje w jedną wpłatę w "Zaległościach", ustaw przy nich identyczną datę płatności (np. piątek).</p>
+                <input type="text" id="lesson-payment-date" class="pole-tekstowe text-sm md:text-base mb-0 bg-white" placeholder="Wybierz datę rozliczenia pakietu">
+            </div>
             
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3 mb-1">
                 <div>
-                    <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Data (DD/MM/YYYY)</label>
+                    <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Data Lekcji</label>
                     <input type="text" id="lesson-date" class="pole-tekstowe text-sm md:text-base" placeholder="Wybierz datę">
                 </div>
                 <div>
-                    <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Cena (zł)</label>
-                    <input type="number" id="lesson-price" placeholder="np. 80" class="pole-tekstowe text-sm md:text-base">
+                    <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Cena za tę lekcję (zł)</label>
+                    <input type="number" id="lesson-price" placeholder="np. 80" class="pole-tekstowe text-sm md:text-base font-bold transition-all">
                 </div>
             </div>
             
@@ -588,7 +560,7 @@
                 </div>
                 <div class="w-1/2">
                     <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Do</label>
-                    <input type="text" id="lesson-time-end" class="pole-tekstowe text-sm md:text-base" placeholder="HH:MM">
+                    <input type="text" id="lesson-time-end" class="pole-tekstowe text-sm md:text-base" placeholder="HH:MM" onchange="handleBundleChange()">
                 </div>
             </div>
 
@@ -632,9 +604,7 @@
                 </div>
                 <button onclick="document.getElementById('modal-find-slot').classList.add('hidden')" class="font-bold text-rose-500 text-3xl hover:scale-110 transition ml-2">&times;</button>
             </div>
-            
             <p class="text-xs md:text-sm mb-3 shrink-0" style="color: var(--tekst-szary)">Kliknij na wybrane <span class="font-bold px-1.5 py-0.5 rounded border-2 shadow-[2px_2px_0_var(--ciemny)]" style="background-color: #bbf7d0; border-color: var(--ciemny); color: var(--ciemny);">ZIELONE</span> pole, aby idealnie wpasować tam lekcję. Zielone pola pokazują Twoje wolne terminy na podstawie Twojej dostępności w ustawieniach.</p>
-
             <div class="flex-1 overflow-hidden flex flex-col rounded-2xl border-2 shadow-[2px_2px_0_var(--ciemny)]" style="background-color: var(--karta-bg); border-color: var(--ciemny)">
                 <div class="overflow-x-auto flex-1 flex flex-col">
                     <div class="min-w-[600px] flex-1 flex flex-col relative">
@@ -683,15 +653,5 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="script.js"></script>
-    
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('Aplikacja PWA dziala!'))
-                    .catch(err => console.log('Blad PWA:', err));
-            });
-        }
-    </script>
 </body>
 </html>
