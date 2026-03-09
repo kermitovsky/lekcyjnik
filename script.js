@@ -645,6 +645,7 @@ function updateLessonBundleDropdown() {
 function handleBundleChange() {
     const bundleId = document.getElementById('lesson-bundle').value;
     const priceInput = document.getElementById('lesson-price');
+    const priceLabel = document.getElementById('lesson-price-label');
     const paymentDateDiv = document.getElementById('lesson-payment-date-div');
     
     if (bundleId) {
@@ -652,17 +653,7 @@ function handleBundleChange() {
         const student = students.find(s => s.id == stId);
         const bundle = student.bundles.find(b => b.id == bundleId);
         
-        let start = document.getElementById('lesson-time-start').value;
-        let end = document.getElementById('lesson-time-end').value;
-        if(start && end && bundle) {
-            let [sh, sm] = start.split(':').map(Number);
-            let [eh, em] = end.split(':').map(Number);
-            let durationHours = ((eh*60+em) - (sh*60+sm)) / 60;
-            let calculatedPrice = (durationHours / bundle.hours) * bundle.total;
-            priceInput.value = Math.round(calculatedPrice);
-        }
-        priceInput.readOnly = true;
-        priceInput.classList.add('bg-slate-100', 'text-slate-500');
+        priceLabel.innerText = 'Cena poza pakietem (zł)';
         paymentDateDiv.classList.remove('hidden');
         
         // ZAUTOMATYZOWANA DATA PŁATNOŚCI 
@@ -673,7 +664,6 @@ function handleBundleChange() {
             if (bundle.type === 'monthly') {
                 let targetDay = parseInt(bundle.payDay);
                 if(!isNaN(targetDay)) {
-                    // Pilnujemy żeby np. 31 luty zmienił się na 28 luty
                     let lastDayOfMonth = new Date(lDate.getFullYear(), lDate.getMonth() + 1, 0).getDate();
                     let finalDay = Math.min(targetDay, lastDayOfMonth);
                     let pDate = new Date(lDate.getFullYear(), lDate.getMonth(), finalDay);
@@ -689,8 +679,7 @@ function handleBundleChange() {
             }
         }
     } else {
-        priceInput.readOnly = false;
-        priceInput.classList.remove('bg-slate-100', 'text-slate-500');
+        priceLabel.innerText = 'Cena za tę lekcję (zł)';
         paymentDateDiv.classList.add('hidden');
     }
 }
@@ -809,6 +798,19 @@ async function saveLesson() {
         if (!proceed) return;
     }
 
+    // Obliczanie proporcjonalnej wartości w tle, niezależnie od tego co wpisał użytkownik
+    let bundleValue = null;
+    if (bundleId) {
+        const student = students.find(s => s.id == studentId);
+        const bundle = student ? (student.bundles || []).find(b => b.id == bundleId) : null;
+        if (bundle && bundle.hours > 0) {
+            let [sh, sm] = startTime.split(':').map(Number);
+            let [eh, em] = endTime.split(':').map(Number);
+            let durationHours = ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+            bundleValue = (durationHours / bundle.hours) * bundle.total;
+        }
+    }
+
     if (id) {
         let originalLesson = lessons.find(l => l.id == id);
         let oldDate = originalLesson.date;
@@ -843,6 +845,7 @@ async function saveLesson() {
                 futureLessons.forEach(fl => {
                     fl.studentId = studentId; fl.subjectId = subjectId; fl.bundleId = bundleId;
                     fl.startTime = startTime; fl.endTime = endTime; fl.price = price; fl.topic = topic; 
+                    fl.bundleValue = bundleValue;
                     
                     if (dateDiff !== 0) {
                         let fd = new Date(fl.date);
@@ -903,7 +906,7 @@ async function saveLesson() {
                     }
                 });
             } else if (choice === 'single') {
-                // Nic nie rób
+                // Nie dotykaj przyszłych
             } else { return; }
         }
 
@@ -912,6 +915,7 @@ async function saveLesson() {
         originalLesson.topic = topic; originalLesson.date = date;
         originalLesson.startTime = startTime; originalLesson.endTime = endTime;
         originalLesson.price = price; originalLesson.paid = paid; originalLesson.cancelled = cancelled;
+        originalLesson.bundleValue = bundleValue;
 
     } else {
         const repetitions = isRecurring ? 156 : 1; 
@@ -946,7 +950,9 @@ async function saveLesson() {
                 studentId, subjectId, bundleId, 
                 paymentDate: finalPayDateStr,
                 topic, date: lessonDate.toISOString().split('T')[0],
-                startTime, endTime, price, cancelled: false,
+                startTime, endTime, price, 
+                bundleValue: bundleValue,
+                cancelled: false,
                 paid: (paid && i === 0) ? true : false
             });
         }
@@ -1018,17 +1024,22 @@ function renderDashboard() {
     let earnings = 0, lessonsThisMonth = 0; let plannedEarnings = 0; 
     
     lessons.forEach(l => {
-        let lDate = new Date(l.date); let price = Number(l.price || 0);
+        let lDate = new Date(l.date); 
+        let effectivePrice = Number(l.price || 0);
+        if (l.bundleId && l.bundleValue !== null && l.bundleValue !== undefined) {
+            effectivePrice = Number(l.bundleValue);
+        }
+
         if(!l.cancelled) {
             if(lDate.getMonth() === currentMonth && lDate.getFullYear() === currentYear) {
                 lessonsThisMonth++;
-                if(l.paid) earnings += price; else plannedEarnings += price; 
+                if(l.paid) earnings += effectivePrice; else plannedEarnings += effectivePrice; 
             }
         }
     });
 
-    document.getElementById('dashboard-monthly-earnings').innerText = `${earnings} zł`;
-    document.getElementById('dashboard-planned-earnings').innerText = `(w planach: +${plannedEarnings} zł)`;
+    document.getElementById('dashboard-monthly-earnings').innerText = `${Math.round(earnings)} zł`;
+    document.getElementById('dashboard-planned-earnings').innerText = `(w planach: +${Math.round(plannedEarnings)} zł)`;
     document.getElementById('dashboard-monthly-lessons').innerText = `${lessonsThisMonth} lekcji`;
     document.getElementById('dashboard-active-students').innerText = students.filter(s => !s.archived).length;
 
@@ -1070,17 +1081,23 @@ function renderDashboard() {
     let bundledPayments = {}; let individualPayments = []; let unpaidTotal = 0; let unpaidCount = 0;
 
     unpaidLessonsRaw.forEach(l => {
-        unpaidTotal += Number(l.price || 0); unpaidCount++;
+        let effectivePrice = Number(l.price || 0);
+        if (l.bundleId && l.bundleValue !== null && l.bundleValue !== undefined) {
+            effectivePrice = Number(l.bundleValue);
+        }
+        
+        unpaidTotal += effectivePrice; unpaidCount++;
+        
         if (l.bundleId) {
             let payDate = l.paymentDate || l.date;
             let key = `${l.studentId}_${l.bundleId}_${payDate}`;
             if(!bundledPayments[key]) bundledPayments[key] = { lessons: [], total: 0, studentId: l.studentId, bundleId: l.bundleId, paymentDate: payDate };
             bundledPayments[key].lessons.push(l);
-            bundledPayments[key].total += Number(l.price || 0);
+            bundledPayments[key].total += effectivePrice;
         } else { individualPayments.push(l); }
     });
 
-    document.getElementById('dashboard-unpaid-sum').innerText = `${unpaidTotal} zł`;
+    document.getElementById('dashboard-unpaid-sum').innerText = `${Math.round(unpaidTotal)} zł`;
     document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} zaległych lekcji`;
 
     const unpaidContainer = document.getElementById('pulpit-unpaid-lessons'); unpaidContainer.innerHTML = '';
@@ -1150,6 +1167,7 @@ function renderDashboard() {
             let topicHtml = l.topic ? `<p class="text-[10px] md:text-xs font-medium truncate mt-0.5" style="color: var(--tekst-szary)">📝 ${l.topic}</p>` : '';
             let bundleBadge = l.bundleId ? `<span class="text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded ml-1 border bg-blue-50 text-blue-600 border-blue-200">📦 PAKIET</span>` : '';
 
+            // TUTAJ POKAZUJEMY NOMINALNĄ CENĘ (L.PRICE), A NIE TĘ Z PAKIETU, ŻEBY NIE BYŁO BRZYDKICH UŁAMKÓW
             weekContainer.innerHTML += `
                 <div class="flex items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 gap-2 md:gap-4" style="background-color: var(--karta-bg); border-color: var(--ciemny); ${cardOpacity}" onclick="editLesson('${l.id}')">
                     <div class="flex items-center gap-3 md:gap-4 truncate">
@@ -1404,22 +1422,30 @@ function processEarningsData(lessonsArray) {
 
     lessonsArray.forEach(l => {
         if(l.paid && !l.cancelled) {
-            let price = Number(l.price || 0); total += price;
+            // TUTAJ SYSTEM UŻYWA PAKIETOWEJ (PROPORCJONALNEJ) KWOTY DO ZAROBKÓW
+            let effectivePrice = Number(l.price || 0);
+            if (l.bundleId && l.bundleValue !== null && l.bundleValue !== undefined) {
+                effectivePrice = Number(l.bundleValue);
+            }
+            
+            total += effectivePrice;
+            
             let student = students.find(s => s.id == l.studentId);
             let studentName = student ? student.name : 'Nieznany uczeń';
-            byStudent[studentName] = (byStudent[studentName] || 0) + price;
+            byStudent[studentName] = (byStudent[studentName] || 0) + effectivePrice;
+            
             let subject = subjects.find(s => s.id == l.subjectId);
             let subjectName = subject ? subject.name : 'Inne';
             let subjectColor = subject ? subject.color : settings.accent;
 
             if(!bySubject[subjectName]) bySubject[subjectName] = {val: 0, color: subjectColor};
-            bySubject[subjectName].val += price;
+            bySubject[subjectName].val += effectivePrice;
         }
     });
 
-    let studentArr = Object.keys(byStudent).map(k => ({name: k, val: byStudent[k]})).sort((a,b) => b.val - a.val);
-    let subjectArr = Object.keys(bySubject).map(k => ({name: k, val: bySubject[k].val, color: bySubject[k].color})).sort((a,b) => b.val - a.val);
-    return { total, studentArr, subjectArr };
+    let studentArr = Object.keys(byStudent).map(k => ({name: k, val: Math.round(byStudent[k])})).sort((a,b) => b.val - a.val);
+    let subjectArr = Object.keys(bySubject).map(k => ({name: k, val: Math.round(bySubject[k].val), color: bySubject[k].color})).sort((a,b) => b.val - a.val);
+    return { total: Math.round(total), studentArr, subjectArr };
 }
 
 function renderChart(canvasId, type, dataArr) {
