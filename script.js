@@ -374,40 +374,80 @@ async function deleteSubject() {
     }
 }
 
-// --- ZAKŁADKA UCZNIOWIE (I PAKIETY) ---
+// --- ZAKŁADKA UCZNIOWIE (I ULEPSZONE PAKIETY) ---
+function toggleBundleType(radioElem) {
+    const row = radioElem.closest('.bundle-row');
+    const weeklyDiv = row.querySelector('.bundle-payday-weekly');
+    const monthlyDiv = row.querySelector('.bundle-payday-monthly');
+    if(radioElem.value === 'monthly') {
+        weeklyDiv.classList.add('hidden');
+        monthlyDiv.classList.remove('hidden');
+    } else {
+        weeklyDiv.classList.remove('hidden');
+        monthlyDiv.classList.add('hidden');
+    }
+}
+
 function renderStudentBundles() {
     const container = document.getElementById('student-bundles-container');
     container.innerHTML = '';
-    currentStudentBundles.forEach(b => {
+    currentStudentBundles.forEach((b, index) => {
+        let isMonthly = b.type === 'monthly';
         container.innerHTML += `
-            <div class="flex flex-col gap-2 items-start p-3 rounded-xl border-2 bg-white border-slate-200 bundle-row" data-id="${b.id}">
-                <div class="flex flex-col sm:flex-row gap-2 w-full">
-                    <input type="text" placeholder="Nazwa (np. Matma + Fizyka)" value="${b.name || ''}" class="bundle-name w-full sm:w-1/3 text-sm p-2 border-2 rounded-lg font-bold">
-                    <div class="flex gap-2 w-full sm:w-2/3">
-                        <input type="number" placeholder="Razem (zł)" value="${b.total || ''}" class="bundle-total w-1/2 text-sm p-2 border-2 rounded-lg font-bold text-akcent">
-                        <input type="number" step="0.5" placeholder="Suma godz. (np. 2.5)" value="${b.hours || ''}" class="bundle-hours w-1/2 text-sm p-2 border-2 rounded-lg font-bold">
+            <div class="flex flex-col gap-3 items-start p-4 rounded-xl border-2 bg-white border-slate-200 bundle-row shadow-sm" data-id="${b.id}">
+                
+                <div class="flex flex-col sm:flex-row gap-3 w-full">
+                    <input type="text" placeholder="Nazwa pakietu (np. Matma + Fizyka)" value="${b.name || ''}" class="bundle-name w-full sm:w-1/2 text-sm p-2 border-2 rounded-lg font-bold">
+                    <div class="flex gap-2 w-full sm:w-1/2">
+                        <input type="number" placeholder="Cena łączna (zł)" value="${b.total || ''}" class="bundle-total w-1/2 text-sm p-2 border-2 rounded-lg font-bold text-akcent">
+                        <input type="number" step="0.5" placeholder="Godz. (np. 2.5)" value="${b.hours || ''}" class="bundle-hours w-1/2 text-sm p-2 border-2 rounded-lg font-bold">
                     </div>
                 </div>
-                <div class="flex gap-2 items-center w-full mt-1 border-t-2 border-slate-100 pt-2">
-                    <label class="text-[10px] md:text-xs font-bold text-slate-500 whitespace-nowrap">Dzień wpłaty:</label>
-                    <select class="bundle-payday flex-1 text-xs md:text-sm p-1.5 border-2 rounded-lg font-bold text-slate-700 bg-slate-50 outline-none focus:border-akcent transition cursor-pointer">
-                        <option value="" ${b.payDay==='' ? 'selected' : ''}>Ustawiam ręcznie przy lekcji</option>
-                        <option value="1" ${b.payDay==='1' ? 'selected' : ''}>Zawsze w Poniedziałek</option>
-                        <option value="2" ${b.payDay==='2' ? 'selected' : ''}>Zawsze we Wtorek</option>
-                        <option value="3" ${b.payDay==='3' ? 'selected' : ''}>Zawsze w Środę</option>
-                        <option value="4" ${b.payDay==='4' ? 'selected' : ''}>Zawsze w Czwartek</option>
-                        <option value="5" ${b.payDay==='5' ? 'selected' : ''}>Zawsze w Piątek</option>
-                        <option value="6" ${b.payDay==='6' ? 'selected' : ''}>Zawsze w Sobotę</option>
-                        <option value="0" ${b.payDay==='0' ? 'selected' : ''}>Zawsze w Niedzielę</option>
-                    </select>
-                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-rose-500 font-extrabold px-3 py-1.5 bg-rose-50 rounded-lg hover:bg-rose-100 transition text-xs uppercase tracking-wider">Usuń</button>
+                
+                <div class="w-full bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <div class="font-bold text-xs text-slate-500 mb-2 uppercase tracking-wider">Częstotliwość rozliczania:</div>
+                    
+                    <div class="flex gap-6 mb-4">
+                        <label class="flex items-center gap-2 cursor-pointer font-bold text-sm">
+                            <input type="radio" name="b_type_${index}" value="weekly" class="bundle-type w-4 h-4" style="accent-color: var(--akcent)" onchange="toggleBundleType(this)" ${!isMonthly ? 'checked' : ''}>
+                            Co tydzień
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer font-bold text-sm">
+                            <input type="radio" name="b_type_${index}" value="monthly" class="bundle-type w-4 h-4" style="accent-color: var(--akcent)" onchange="toggleBundleType(this)" ${isMonthly ? 'checked' : ''}>
+                            Co miesiąc
+                        </label>
+                    </div>
+                    
+                    <div class="bundle-payday-weekly flex items-center gap-3 ${isMonthly ? 'hidden' : ''}">
+                        <span class="text-xs font-bold text-slate-600 whitespace-nowrap">Dzień wpłaty:</span>
+                        <select class="bundle-payday-weekly-select flex-1 text-xs md:text-sm p-2 border-2 rounded-lg font-bold outline-none cursor-pointer bg-white focus:border-akcent transition">
+                            <option value="" ${b.payDay==='' ? 'selected' : ''}>Wybieram ręcznie w kalendarzu</option>
+                            <option value="1" ${b.payDay==='1' ? 'selected' : ''}>Zawsze w Poniedziałek</option>
+                            <option value="2" ${b.payDay==='2' ? 'selected' : ''}>Zawsze we Wtorek</option>
+                            <option value="3" ${b.payDay==='3' ? 'selected' : ''}>Zawsze w Środę</option>
+                            <option value="4" ${b.payDay==='4' ? 'selected' : ''}>Zawsze w Czwartek</option>
+                            <option value="5" ${b.payDay==='5' ? 'selected' : ''}>Zawsze w Piątek</option>
+                            <option value="6" ${b.payDay==='6' ? 'selected' : ''}>Zawsze w Sobotę</option>
+                            <option value="0" ${b.payDay==='0' ? 'selected' : ''}>Zawsze w Niedzielę</option>
+                        </select>
+                    </div>
+
+                    <div class="bundle-payday-monthly flex items-center gap-3 ${!isMonthly ? 'hidden' : ''}">
+                        <span class="text-xs font-bold text-slate-600 whitespace-nowrap">Wpłata zawsze do:</span>
+                        <div class="flex items-center gap-2 flex-1">
+                            <input type="number" min="1" max="31" placeholder="np. 10" value="${isMonthly ? (b.payDay||'') : ''}" class="bundle-payday-monthly-input w-20 text-sm p-2 border-2 rounded-lg font-bold text-center outline-none bg-white focus:border-akcent transition">
+                            <span class="text-xs font-bold text-slate-500">dnia miesiąca</span>
+                        </div>
+                    </div>
                 </div>
+
+                <button type="button" onclick="this.closest('.bundle-row').remove()" class="text-rose-500 font-extrabold w-full text-center py-2 bg-rose-50 rounded-lg border border-rose-100 hover:bg-rose-100 transition text-xs uppercase tracking-wider mt-1">Usuń ten pakiet</button>
             </div>`;
     });
 }
 
 function addBundleToStudent() {
-    currentStudentBundles.push({ id: 'b_' + Date.now(), name: '', total: '', hours: '', payDay: '' });
+    currentStudentBundles.push({ id: 'b_' + Date.now(), name: '', total: '', hours: '', type: 'weekly', payDay: '' });
     renderStudentBundles();
 }
 
@@ -538,9 +578,19 @@ async function saveStudent() {
         let bName = row.querySelector('.bundle-name').value;
         let bTotal = parseFloat(row.querySelector('.bundle-total').value);
         let bHours = parseFloat(row.querySelector('.bundle-hours').value);
-        let bPayDay = row.querySelector('.bundle-payday').value; 
+        
+        let radioElem = row.querySelector('input[type="radio"].bundle-type:checked');
+        let bType = radioElem ? radioElem.value : 'weekly';
+        let bPayDay = '';
+        
+        if(bType === 'monthly') {
+            bPayDay = row.querySelector('.bundle-payday-monthly-input').value;
+        } else {
+            bPayDay = row.querySelector('.bundle-payday-weekly-select').value;
+        }
+
         if(bName && bTotal && bHours) {
-            finalBundles.push({ id: row.getAttribute('data-id'), name: bName, total: bTotal, hours: bHours, payDay: bPayDay });
+            finalBundles.push({ id: row.getAttribute('data-id'), name: bName, total: bTotal, hours: bHours, type: bType, payDay: bPayDay });
         }
     });
 
@@ -585,7 +635,8 @@ function updateLessonBundleDropdown() {
     
     if(student && student.bundles && student.bundles.length > 0) {
         student.bundles.forEach(b => {
-            bundleSelect.innerHTML += `<option value="${b.id}">Pakiet: ${b.name} (${b.total} zł / ${b.hours}h)</option>`;
+            let bTypeText = b.type === 'monthly' ? 'Miesięczny' : 'Tygodniowy';
+            bundleSelect.innerHTML += `<option value="${b.id}">Pakiet [${bTypeText}]: ${b.name} (${b.total} zł / ${b.hours}h)</option>`;
         });
     }
     handleBundleChange();
@@ -614,22 +665,28 @@ function handleBundleChange() {
         priceInput.classList.add('bg-slate-100', 'text-slate-500');
         paymentDateDiv.classList.remove('hidden');
         
+        // ZAUTOMATYZOWANA DATA PŁATNOŚCI 
         if (bundle && bundle.payDay !== undefined && bundle.payDay !== "") {
             let lDateStr = document.getElementById('lesson-date').value;
             let lDate = lDateStr ? new Date(lDateStr) : new Date();
-            let weekMonday = getMonday(lDate);
-            let offset = parseInt(bundle.payDay);
-            if (offset === 0) offset = 7; // Jeśli niedziela to dzień 7 dla formatu tygodnia PL (od poniedziałku)
-            else offset = offset - 1; // 1-Pon, 2-Wt, itd. -> offset względem poniedziałku
-            
-            // Logika PL: poniedziałek = 1 ... niedziela = 0
-            if (bundle.payDay === '0') {
-                weekMonday.setDate(weekMonday.getDate() + 6); // Niedziela tego samego tygodnia
+
+            if (bundle.type === 'monthly') {
+                let targetDay = parseInt(bundle.payDay);
+                if(!isNaN(targetDay)) {
+                    // Pilnujemy żeby np. 31 luty zmienił się na 28 luty
+                    let lastDayOfMonth = new Date(lDate.getFullYear(), lDate.getMonth() + 1, 0).getDate();
+                    let finalDay = Math.min(targetDay, lastDayOfMonth);
+                    let pDate = new Date(lDate.getFullYear(), lDate.getMonth(), finalDay);
+                    pDate.setHours(12,0,0,0);
+                    paymentDatePicker.setDate(pDate.toISOString().split('T')[0]);
+                }
             } else {
-                weekMonday.setDate(weekMonday.getDate() + (parseInt(bundle.payDay) - 1));
+                let weekMonday = getMonday(lDate);
+                let offset = parseInt(bundle.payDay);
+                if (offset === 0) { weekMonday.setDate(weekMonday.getDate() + 6); } 
+                else { weekMonday.setDate(weekMonday.getDate() + (offset - 1)); }
+                paymentDatePicker.setDate(weekMonday.toISOString().split('T')[0]);
             }
-            let payDateStr = weekMonday.toISOString().split('T')[0];
-            paymentDatePicker.setDate(payDateStr);
         }
     } else {
         priceInput.readOnly = false;
@@ -772,8 +829,6 @@ async function saveLesson() {
             futureLessons = lessons.filter(l => {
                 if (l.id == id || l.date < oldDate) return false;
                 if (originalLesson.groupId && l.groupId === originalLesson.groupId) return true;
-                
-                // MĄDRE SZUKANIE: Wystarczy ten sam uczeń, przedmiot i dzień tygodnia
                 if (!originalLesson.groupId && l.studentId == originalLesson.studentId && l.subjectId == originalLesson.subjectId) {
                     return new Date(l.date).getDay() === new Date(oldDate).getDay();
                 }
@@ -798,11 +853,23 @@ async function saveLesson() {
                             const st = students.find(s => s.id == studentId);
                             const bun = st ? st.bundles.find(b => b.id == bundleId) : null;
                             if(bun && bun.payDay !== undefined && bun.payDay !== "") {
-                                let wMon = getMonday(fl.date);
-                                let offset = parseInt(bun.payDay);
-                                if (offset === 0) { weekMonday.setDate(weekMonday.getDate() + 6); } 
-                                else { wMon.setDate(wMon.getDate() + (offset - 1)); }
-                                fl.paymentDate = wMon.toISOString().split('T')[0];
+                                let flDateObj = new Date(fl.date);
+                                if(bun.type === 'monthly') {
+                                    let targetDay = parseInt(bun.payDay);
+                                    if(!isNaN(targetDay)) {
+                                        let lastDayOfMonth = new Date(flDateObj.getFullYear(), flDateObj.getMonth() + 1, 0).getDate();
+                                        let finalDay = Math.min(targetDay, lastDayOfMonth);
+                                        let pDate = new Date(flDateObj.getFullYear(), flDateObj.getMonth(), finalDay);
+                                        pDate.setHours(12,0,0,0);
+                                        fl.paymentDate = pDate.toISOString().split('T')[0];
+                                    }
+                                } else {
+                                    let wMon = getMonday(fl.date);
+                                    let offset = parseInt(bun.payDay);
+                                    if (offset === 0) { wMon.setDate(wMon.getDate() + 6); } 
+                                    else { wMon.setDate(wMon.getDate() + (offset - 1)); }
+                                    fl.paymentDate = wMon.toISOString().split('T')[0];
+                                }
                             } else {
                                 let pd = new Date(fl.paymentDate || fl.date);
                                 pd.setDate(pd.getDate() + dateDiff);
@@ -814,17 +881,29 @@ async function saveLesson() {
                             const st = students.find(s => s.id == studentId);
                             const bun = st ? st.bundles.find(b => b.id == bundleId) : null;
                             if(bun && bun.payDay !== undefined && bun.payDay !== "") {
-                                let wMon = getMonday(fl.date);
-                                let offset = parseInt(bun.payDay);
-                                if (offset === 0) { wMon.setDate(wMon.getDate() + 6); } 
-                                else { wMon.setDate(wMon.getDate() + (offset - 1)); }
-                                fl.paymentDate = wMon.toISOString().split('T')[0];
+                                let flDateObj = new Date(fl.date);
+                                if(bun.type === 'monthly') {
+                                    let targetDay = parseInt(bun.payDay);
+                                    if(!isNaN(targetDay)) {
+                                        let lastDayOfMonth = new Date(flDateObj.getFullYear(), flDateObj.getMonth() + 1, 0).getDate();
+                                        let finalDay = Math.min(targetDay, lastDayOfMonth);
+                                        let pDate = new Date(flDateObj.getFullYear(), flDateObj.getMonth(), finalDay);
+                                        pDate.setHours(12,0,0,0);
+                                        fl.paymentDate = pDate.toISOString().split('T')[0];
+                                    }
+                                } else {
+                                    let wMon = getMonday(fl.date);
+                                    let offset = parseInt(bun.payDay);
+                                    if (offset === 0) { wMon.setDate(wMon.getDate() + 6); } 
+                                    else { wMon.setDate(wMon.getDate() + (offset - 1)); }
+                                    fl.paymentDate = wMon.toISOString().split('T')[0];
+                                }
                             }
                         }
                     }
                 });
             } else if (choice === 'single') {
-                // Do nothing to futures
+                // Nic nie rób
             } else { return; }
         }
 
@@ -844,11 +923,28 @@ async function saveLesson() {
             let lessonDate = new Date(baseDate); lessonDate.setDate(baseDate.getDate() + (i * 7));
             let pDate = new Date(basePayDate); pDate.setDate(basePayDate.getDate() + (i * 7));
             
+            const stId = document.getElementById('lesson-student').value;
+            const student = students.find(s => s.id == stId);
+            const bundle = student ? (student.bundles || []).find(b => b.id == bundleId) : null;
+            
+            let finalPayDateStr = bundleId ? pDate.toISOString().split('T')[0] : lessonDate.toISOString().split('T')[0];
+            
+            if (bundle && bundle.type === 'monthly' && bundle.payDay !== undefined && bundle.payDay !== "") {
+                let targetDay = parseInt(bundle.payDay);
+                if(!isNaN(targetDay)) {
+                    let lastDayOfMonth = new Date(lessonDate.getFullYear(), lessonDate.getMonth() + 1, 0).getDate();
+                    let finalDay = Math.min(targetDay, lastDayOfMonth);
+                    let correctPayDate = new Date(lessonDate.getFullYear(), lessonDate.getMonth(), finalDay);
+                    correctPayDate.setHours(12,0,0,0);
+                    finalPayDateStr = correctPayDate.toISOString().split('T')[0];
+                }
+            }
+
             lessons.push({
                 id: Date.now().toString() + Math.floor(Math.random() * 1000) + i,
                 groupId: isRecurring ? newGroupId : null,
                 studentId, subjectId, bundleId, 
-                paymentDate: bundleId ? pDate.toISOString().split('T')[0] : lessonDate.toISOString().split('T')[0],
+                paymentDate: finalPayDateStr,
                 topic, date: lessonDate.toISOString().split('T')[0],
                 startTime, endTime, price, cancelled: false,
                 paid: (paid && i === 0) ? true : false
@@ -909,14 +1005,171 @@ function markBundleAsPaid(studentId, bundleId, paymentDate, event) {
     if(!document.getElementById('view-kalendarz').classList.contains('hidden')) renderCalendar();
 }
 
-// --- WIDOK KALENDARZA ---
-function changeWeek(offset) {
-    currentDate = new Date(currentDate.getTime() + offset * 7 * 24 * 60 * 60 * 1000);
-    renderCalendar();
+// --- WIDOK PULPITU ---
+function renderDashboard() {
+    const now = new Date(); const currentMonth = now.getMonth(); const currentYear = now.getFullYear();
+    const todayString = now.toISOString().split('T')[0];
+    const nowTime = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    const monthNames = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+    const monthsGenitive = ["stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca", "lipca", "sierpnia", "września", "października", "listopada", "grudnia"];
+    
+    document.getElementById('pulpit-month-title').innerText = `Zarobki - ${monthNames[currentMonth]}`;
+
+    let earnings = 0, lessonsThisMonth = 0; let plannedEarnings = 0; 
+    
+    lessons.forEach(l => {
+        let lDate = new Date(l.date); let price = Number(l.price || 0);
+        if(!l.cancelled) {
+            if(lDate.getMonth() === currentMonth && lDate.getFullYear() === currentYear) {
+                lessonsThisMonth++;
+                if(l.paid) earnings += price; else plannedEarnings += price; 
+            }
+        }
+    });
+
+    document.getElementById('dashboard-monthly-earnings').innerText = `${earnings} zł`;
+    document.getElementById('dashboard-planned-earnings').innerText = `(w planach: +${plannedEarnings} zł)`;
+    document.getElementById('dashboard-monthly-lessons').innerText = `${lessonsThisMonth} lekcji`;
+    document.getElementById('dashboard-active-students').innerText = students.filter(s => !s.archived).length;
+
+    let upcomingLessons = lessons.filter(l => !l.cancelled && (l.date > todayString || (l.date === todayString && l.endTime >= nowTime)));
+    upcomingLessons.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
+    
+    const upcomingContainer = document.getElementById('pulpit-upcoming-lessons'); upcomingContainer.innerHTML = '';
+    
+    if(upcomingLessons.length === 0) {
+        upcomingContainer.innerHTML = '<p class="text-sm md:text-base" style="color: var(--tekst-szary)">Brak zaplanowanych lekcji.</p>';
+    } else {
+        upcomingLessons.slice(0, 5).forEach(l => {
+            let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
+            let subject = subjects.find(s => s.id == l.subjectId);
+            let lDate = new Date(l.date); let dayNames = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
+            let dateDisplay = l.date === todayString ? 'Dzisiaj' : `${dayNames[lDate.getDay()]}, ${lDate.getDate()} ${monthsGenitive[lDate.getMonth()]}`;
+            let badge = subject ? `<span class="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded border" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${subject.color}; border-color: ${subject.color}">${subject.name.toUpperCase()}</span>` : '';
+
+            upcomingContainer.innerHTML += `
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-sm hover:shadow-md gap-2 sm:gap-0" style="background-color: var(--karta-bg); border-color: var(--szary-ramka)" onclick="editLesson('${l.id}')">
+                    <div class="flex items-center gap-3 md:gap-4">
+                        <div class="w-8 h-8 md:w-10 h-10 rounded-full flex items-center justify-center font-bold border text-sm md:text-base" style="background-color: var(--jasny); border-color: var(--szary-ramka); color: var(--tekst-szary)">🕒</div>
+                        <div>
+                            <div class="font-extrabold text-sm md:text-base">${student.name}</div>
+                            <div class="text-xs md:text-sm font-medium" style="color: var(--tekst-szary)">${dateDisplay}, ${l.startTime}</div>
+                        </div>
+                    </div>
+                    <div>${badge}</div>
+                </div>`;
+        });
+    }
+
+    let unpaidLessonsRaw = lessons.filter(l => {
+        if(l.cancelled || l.paid) return false;
+        let payDate = l.paymentDate || l.date;
+        return (payDate < todayString || (payDate === todayString && l.endTime < nowTime));
+    });
+    
+    let bundledPayments = {}; let individualPayments = []; let unpaidTotal = 0; let unpaidCount = 0;
+
+    unpaidLessonsRaw.forEach(l => {
+        unpaidTotal += Number(l.price || 0); unpaidCount++;
+        if (l.bundleId) {
+            let payDate = l.paymentDate || l.date;
+            let key = `${l.studentId}_${l.bundleId}_${payDate}`;
+            if(!bundledPayments[key]) bundledPayments[key] = { lessons: [], total: 0, studentId: l.studentId, bundleId: l.bundleId, paymentDate: payDate };
+            bundledPayments[key].lessons.push(l);
+            bundledPayments[key].total += Number(l.price || 0);
+        } else { individualPayments.push(l); }
+    });
+
+    document.getElementById('dashboard-unpaid-sum').innerText = `${unpaidTotal} zł`;
+    document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} zaległych lekcji`;
+
+    const unpaidContainer = document.getElementById('pulpit-unpaid-lessons'); unpaidContainer.innerHTML = '';
+
+    if(unpaidCount === 0) {
+        unpaidContainer.innerHTML = `<div class="border-2 p-4 md:p-6 rounded-xl text-center" style="background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3)"><div class="text-2xl md:text-3xl mb-1 md:mb-2">🎉</div><p class="text-emerald-500 font-bold text-sm md:text-base">Uczniowie nie mają zaległości.</p></div>`;
+    } else {
+        Object.values(bundledPayments).forEach(group => {
+            let student = students.find(s => s.id == group.studentId) || {name: 'Nieznany uczeń'};
+            let bundle = student.bundles ? student.bundles.find(b => b.id == group.bundleId) : null;
+            let bundleName = bundle ? bundle.name : 'Usunięty pakiet';
+            
+            unpaidContainer.innerHTML += `
+                <div class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2 bg-rose-50 border-rose-300">
+                    <div>
+                        <div class="font-bold text-sm md:text-base">${student.name}</div>
+                        <div class="text-[10px] md:text-xs font-bold text-rose-500">📦 PAKIET: ${bundleName}</div>
+                        <div class="text-[9px] md:text-[10px] text-rose-400 mt-0.5">Termin wpłaty: ${group.paymentDate}</div>
+                    </div>
+                    <div class="flex flex-col items-end gap-2">
+                        <div class="font-extrabold text-rose-600 text-sm md:text-base">${Math.round(group.total)} zł</div>
+                        <button onclick="markBundleAsPaid('${group.studentId}', '${group.bundleId}', '${group.paymentDate}', event)" class="px-3 py-1.5 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-200 transition whitespace-nowrap">Opłać pakiet</button>
+                    </div>
+                </div>`;
+        });
+
+        individualPayments.sort((a,b) => (b.date + b.startTime).localeCompare(a.date + a.startTime)).slice(0, 5).forEach(l => {
+            let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
+            unpaidContainer.innerHTML += `
+                <div class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2" style="background-color: rgba(244, 63, 94, 0.05); border-color: rgba(244, 63, 94, 0.2)" onclick="editLesson('${l.id}')">
+                    <div>
+                        <div class="font-bold text-sm md:text-base">${student.name}</div>
+                        <div class="text-[10px] md:text-xs font-medium text-rose-500">${l.date} | ${l.startTime}</div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="font-extrabold text-rose-500 text-sm md:text-base">${l.price || 0} zł</div>
+                        <button onclick="markAsPaid('${l.id}', event)" class="px-2 py-1 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-200 transition whitespace-nowrap">Zapłacone</button>
+                    </div>
+                </div>`;
+        });
+    }
+
+    const weekContainer = document.getElementById('pulpit-week-view'); weekContainer.innerHTML = '';
+    const mondayString = getMonday(now).toISOString().split('T')[0];
+    let sundayDate = new Date(getMonday(now)); sundayDate.setDate(sundayDate.getDate() + 6);
+    const sundayString = sundayDate.toISOString().split('T')[0];
+
+    let thisWeekLessons = lessons.filter(l => l.date >= mondayString && l.date <= sundayString);
+    thisWeekLessons.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
+
+    if(thisWeekLessons.length === 0) weekContainer.innerHTML = '<p class="text-sm md:text-base" style="color: var(--tekst-szary)">Pusty grafik na ten tydzień.</p>';
+    else {
+        const daysNamesPL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota']; let lastDay = '';
+        thisWeekLessons.forEach(l => {
+            let lDate = new Date(l.date);
+            let dayDisplay = l.date === todayString ? `<span style="color: var(--akcent)">Dzisiaj</span>` : daysNamesPL[lDate.getDay()];
+            if(l.date !== lastDay) {
+                weekContainer.innerHTML += `<div class="text-xs md:text-sm font-extrabold uppercase tracking-wider mt-4 md:mt-6 mb-2 border-b-2 pb-1" style="border-color: var(--szary-ramka)">${dayDisplay} <span class="font-medium text-[10px] md:text-xs normal-case" style="color: var(--tekst-szary)">(${l.date})</span></div>`;
+                lastDay = l.date;
+            }
+
+            let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
+            let subject = subjects.find(s => s.id == l.subjectId) || {name: 'Brak', color: '#cbd5e1'};
+            let statusIcon = l.cancelled ? '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm" style="background-color: var(--jasny); color: var(--tekst-szary); border-color: var(--szary-ramka)">Odwołana ❌</span>' : (l.paid ? '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm text-emerald-600 bg-emerald-50 border-emerald-200">Opłacone</span>' : '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm text-rose-500 bg-rose-50 border-rose-200">Brak</span>');
+            let cardOpacity = l.cancelled ? 'opacity: 0.5; filter: grayscale(100%)' : '';
+            let lineThrough = l.cancelled ? 'text-decoration: line-through' : '';
+            let topicHtml = l.topic ? `<p class="text-[10px] md:text-xs font-medium truncate mt-0.5" style="color: var(--tekst-szary)">📝 ${l.topic}</p>` : '';
+            let bundleBadge = l.bundleId ? `<span class="text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded ml-1 border bg-blue-50 text-blue-600 border-blue-200">📦 PAKIET</span>` : '';
+
+            weekContainer.innerHTML += `
+                <div class="flex items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 gap-2 md:gap-4" style="background-color: var(--karta-bg); border-color: var(--ciemny); ${cardOpacity}" onclick="editLesson('${l.id}')">
+                    <div class="flex items-center gap-3 md:gap-4 truncate">
+                        <div class="w-1.5 h-10 md:h-12 rounded-full shrink-0" style="background-color: ${subject.color}"></div>
+                        <div class="truncate">
+                            <p class="font-extrabold text-sm md:text-base" style="${lineThrough}">${l.startTime} - ${l.endTime}</p>
+                            <p class="text-xs md:text-sm font-medium truncate" style="color: var(--tekst-szary)">${student.name} <span class="text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 border hidden sm:inline-block" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${subject.color}; border-color: ${subject.color}">${subject.name.toUpperCase()}</span>${bundleBadge}</p>
+                            ${topicHtml}
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1 md:gap-2 shrink-0">
+                        <span class="font-extrabold text-sm md:text-base" style="${lineThrough}">${l.price || 0} zł</span>
+                        ${statusIcon}
+                    </div>
+                </div>`;
+        });
+    }
 }
 
-function goToToday() { currentDate = new Date(); renderCalendar(); }
-
+// --- WIDOK KALENDARZA ---
 function renderCalendar() {
     let monday = getMonday(currentDate); let sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
     const monthNames = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
@@ -1143,170 +1396,6 @@ function handleSlotClick(e, dateStr) {
     document.getElementById('lesson-time-start').value = startStr;
     if(timeStartPicker) timeStartPicker.setDate(startStr);
     autoUzupelnijCzas(); 
-}
-
-// --- WIDOK PULPITU ---
-function renderDashboard() {
-    const now = new Date(); const currentMonth = now.getMonth(); const currentYear = now.getFullYear();
-    const todayString = now.toISOString().split('T')[0];
-    const nowTime = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-    const monthNames = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
-    const monthsGenitive = ["stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca", "lipca", "sierpnia", "września", "października", "listopada", "grudnia"];
-    
-    document.getElementById('pulpit-month-title').innerText = `Zarobki - ${monthNames[currentMonth]}`;
-
-    let earnings = 0, lessonsThisMonth = 0; let plannedEarnings = 0; 
-    
-    lessons.forEach(l => {
-        let lDate = new Date(l.date); let price = Number(l.price || 0);
-        if(!l.cancelled) {
-            if(lDate.getMonth() === currentMonth && lDate.getFullYear() === currentYear) {
-                lessonsThisMonth++;
-                if(l.paid) earnings += price; else plannedEarnings += price; 
-            }
-        }
-    });
-
-    document.getElementById('dashboard-monthly-earnings').innerText = `${earnings} zł`;
-    document.getElementById('dashboard-planned-earnings').innerText = `(w planach: +${plannedEarnings} zł)`;
-    document.getElementById('dashboard-monthly-lessons').innerText = `${lessonsThisMonth} lekcji`;
-    document.getElementById('dashboard-active-students').innerText = students.filter(s => !s.archived).length;
-
-    let upcomingLessons = lessons.filter(l => !l.cancelled && (l.date > todayString || (l.date === todayString && l.endTime >= nowTime)));
-    upcomingLessons.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
-    
-    const upcomingContainer = document.getElementById('pulpit-upcoming-lessons'); upcomingContainer.innerHTML = '';
-    
-    if(upcomingLessons.length === 0) {
-        upcomingContainer.innerHTML = '<p class="text-sm md:text-base" style="color: var(--tekst-szary)">Brak zaplanowanych lekcji.</p>';
-    } else {
-        upcomingLessons.slice(0, 5).forEach(l => {
-            let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
-            let subject = subjects.find(s => s.id == l.subjectId);
-            let lDate = new Date(l.date); let dayNames = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
-            let dateDisplay = l.date === todayString ? 'Dzisiaj' : `${dayNames[lDate.getDay()]}, ${lDate.getDate()} ${monthsGenitive[lDate.getMonth()]}`;
-            let badge = subject ? `<span class="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded border" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${subject.color}; border-color: ${subject.color}">${subject.name.toUpperCase()}</span>` : '';
-
-            upcomingContainer.innerHTML += `
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-sm hover:shadow-md gap-2 sm:gap-0" style="background-color: var(--karta-bg); border-color: var(--szary-ramka)" onclick="editLesson('${l.id}')">
-                    <div class="flex items-center gap-3 md:gap-4">
-                        <div class="w-8 h-8 md:w-10 h-10 rounded-full flex items-center justify-center font-bold border text-sm md:text-base" style="background-color: var(--jasny); border-color: var(--szary-ramka); color: var(--tekst-szary)">🕒</div>
-                        <div>
-                            <div class="font-extrabold text-sm md:text-base">${student.name}</div>
-                            <div class="text-xs md:text-sm font-medium" style="color: var(--tekst-szary)">${dateDisplay}, ${l.startTime}</div>
-                        </div>
-                    </div>
-                    <div>${badge}</div>
-                </div>`;
-        });
-    }
-
-    let unpaidLessonsRaw = lessons.filter(l => {
-        if(l.cancelled || l.paid) return false;
-        let payDate = l.paymentDate || l.date;
-        return (payDate < todayString || (payDate === todayString && l.endTime < nowTime));
-    });
-    
-    let bundledPayments = {}; let individualPayments = []; let unpaidTotal = 0; let unpaidCount = 0;
-
-    unpaidLessonsRaw.forEach(l => {
-        unpaidTotal += Number(l.price || 0); unpaidCount++;
-        if (l.bundleId) {
-            let payDate = l.paymentDate || l.date;
-            let key = `${l.studentId}_${l.bundleId}_${payDate}`;
-            if(!bundledPayments[key]) bundledPayments[key] = { lessons: [], total: 0, studentId: l.studentId, bundleId: l.bundleId, paymentDate: payDate };
-            bundledPayments[key].lessons.push(l);
-            bundledPayments[key].total += Number(l.price || 0);
-        } else { individualPayments.push(l); }
-    });
-
-    document.getElementById('dashboard-unpaid-sum').innerText = `${unpaidTotal} zł`;
-    document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} zaległych lekcji`;
-
-    const unpaidContainer = document.getElementById('pulpit-unpaid-lessons'); unpaidContainer.innerHTML = '';
-
-    if(unpaidCount === 0) {
-        unpaidContainer.innerHTML = `<div class="border-2 p-4 md:p-6 rounded-xl text-center" style="background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3)"><div class="text-2xl md:text-3xl mb-1 md:mb-2">🎉</div><p class="text-emerald-500 font-bold text-sm md:text-base">Uczniowie nie mają zaległości.</p></div>`;
-    } else {
-        Object.values(bundledPayments).forEach(group => {
-            let student = students.find(s => s.id == group.studentId) || {name: 'Nieznany uczeń'};
-            let bundle = student.bundles ? student.bundles.find(b => b.id == group.bundleId) : null;
-            let bundleName = bundle ? bundle.name : 'Usunięty pakiet';
-            
-            unpaidContainer.innerHTML += `
-                <div class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2 bg-rose-50 border-rose-300">
-                    <div>
-                        <div class="font-bold text-sm md:text-base">${student.name}</div>
-                        <div class="text-[10px] md:text-xs font-bold text-rose-500">📦 PAKIET: ${bundleName} (Data zapłaty: ${group.paymentDate})</div>
-                        <div class="text-[9px] md:text-[10px] text-rose-400 mt-0.5">Połączone lekcje w tym tyg.: ${group.lessons.length}</div>
-                    </div>
-                    <div class="flex flex-col items-end gap-2">
-                        <div class="font-extrabold text-rose-600 text-sm md:text-base">${Math.round(group.total)} zł</div>
-                        <button onclick="markBundleAsPaid('${group.studentId}', '${group.bundleId}', '${group.paymentDate}', event)" class="px-3 py-1.5 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-200 transition whitespace-nowrap">Opłać pakiet</button>
-                    </div>
-                </div>`;
-        });
-
-        individualPayments.sort((a,b) => (b.date + b.startTime).localeCompare(a.date + a.startTime)).slice(0, 5).forEach(l => {
-            let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
-            unpaidContainer.innerHTML += `
-                <div class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2" style="background-color: rgba(244, 63, 94, 0.05); border-color: rgba(244, 63, 94, 0.2)" onclick="editLesson('${l.id}')">
-                    <div>
-                        <div class="font-bold text-sm md:text-base">${student.name}</div>
-                        <div class="text-[10px] md:text-xs font-medium text-rose-500">${l.date} | ${l.startTime}</div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="font-extrabold text-rose-500 text-sm md:text-base">${l.price || 0} zł</div>
-                        <button onclick="markAsPaid('${l.id}', event)" class="px-2 py-1 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-200 transition whitespace-nowrap">Zapłacone</button>
-                    </div>
-                </div>`;
-        });
-    }
-
-    const weekContainer = document.getElementById('pulpit-week-view'); weekContainer.innerHTML = '';
-    const mondayString = getMonday(now).toISOString().split('T')[0];
-    let sundayDate = new Date(getMonday(now)); sundayDate.setDate(sundayDate.getDate() + 6);
-    const sundayString = sundayDate.toISOString().split('T')[0];
-
-    let thisWeekLessons = lessons.filter(l => l.date >= mondayString && l.date <= sundayString);
-    thisWeekLessons.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
-
-    if(thisWeekLessons.length === 0) weekContainer.innerHTML = '<p class="text-sm md:text-base" style="color: var(--tekst-szary)">Pusty grafik na ten tydzień.</p>';
-    else {
-        const daysNamesPL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota']; let lastDay = '';
-        thisWeekLessons.forEach(l => {
-            let lDate = new Date(l.date);
-            let dayDisplay = l.date === todayString ? `<span style="color: var(--akcent)">Dzisiaj</span>` : daysNamesPL[lDate.getDay()];
-            if(l.date !== lastDay) {
-                weekContainer.innerHTML += `<div class="text-xs md:text-sm font-extrabold uppercase tracking-wider mt-4 md:mt-6 mb-2 border-b-2 pb-1" style="border-color: var(--szary-ramka)">${dayDisplay} <span class="font-medium text-[10px] md:text-xs normal-case" style="color: var(--tekst-szary)">(${l.date})</span></div>`;
-                lastDay = l.date;
-            }
-
-            let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
-            let subject = subjects.find(s => s.id == l.subjectId) || {name: 'Brak', color: '#cbd5e1'};
-            let statusIcon = l.cancelled ? '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm" style="background-color: var(--jasny); color: var(--tekst-szary); border-color: var(--szary-ramka)">Odwołana ❌</span>' : (l.paid ? '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm text-emerald-600 bg-emerald-50 border-emerald-200">Opłacone</span>' : '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm text-rose-500 bg-rose-50 border-rose-200">Brak</span>');
-            let cardOpacity = l.cancelled ? 'opacity: 0.5; filter: grayscale(100%)' : '';
-            let lineThrough = l.cancelled ? 'text-decoration: line-through' : '';
-            let topicHtml = l.topic ? `<p class="text-[10px] md:text-xs font-medium truncate mt-0.5" style="color: var(--tekst-szary)">📝 ${l.topic}</p>` : '';
-            let bundleBadge = l.bundleId ? `<span class="text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded ml-1 border bg-blue-50 text-blue-600 border-blue-200">📦 PAKIET</span>` : '';
-
-            weekContainer.innerHTML += `
-                <div class="flex items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 gap-2 md:gap-4" style="background-color: var(--karta-bg); border-color: var(--ciemny); ${cardOpacity}" onclick="editLesson('${l.id}')">
-                    <div class="flex items-center gap-3 md:gap-4 truncate">
-                        <div class="w-1.5 h-10 md:h-12 rounded-full shrink-0" style="background-color: ${subject.color}"></div>
-                        <div class="truncate">
-                            <p class="font-extrabold text-sm md:text-base" style="${lineThrough}">${l.startTime} - ${l.endTime}</p>
-                            <p class="text-xs md:text-sm font-medium truncate" style="color: var(--tekst-szary)">${student.name} <span class="text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 border hidden sm:inline-block" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${subject.color}; border-color: ${subject.color}">${subject.name.toUpperCase()}</span>${bundleBadge}</p>
-                            ${topicHtml}
-                        </div>
-                    </div>
-                    <div class="flex flex-col items-end gap-1 md:gap-2 shrink-0">
-                        <span class="font-extrabold text-sm md:text-base" style="${lineThrough}">${l.price || 0} zł</span>
-                        ${statusIcon}
-                    </div>
-                </div>`;
-        });
-    }
 }
 
 // --- WIDOK ZAROBKÓW ---
