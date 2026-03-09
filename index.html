@@ -288,8 +288,10 @@
         <div id="view-kalendarz" class="max-w-6xl mx-auto h-full flex flex-col hidden">
             <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-4 md:mb-6 gap-3 w-full">
                 <h2 id="month-year-display" class="text-xl md:text-3xl font-extrabold w-full text-center xl:text-left"></h2>
+                
                 <div class="flex flex-wrap items-center justify-between xl:justify-end gap-2 md:gap-4 w-full xl:w-auto relative">
                     <button onclick="goToToday()" class="border-2 font-bold py-2 px-3 md:px-4 rounded-xl text-xs md:text-sm hover:opacity-70 transition shadow-[2px_2px_0px_var(--ciemny)]" style="background-color: var(--karta-bg); border-color: var(--ciemny)">Dzisiaj</button>
+                    
                     <div class="flex rounded-xl border-2 items-center shadow-[2px_2px_0px_var(--ciemny)] flex-1 sm:flex-none justify-between" style="background-color: var(--karta-bg); border-color: var(--ciemny)">
                         <button onclick="changeWeek(-1)" class="px-3 py-2 font-bold border-r-2 hover:opacity-60 transition flex items-center justify-center" style="border-color: var(--ciemny); color: var(--tekst-glowny)">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -300,14 +302,17 @@
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                         </button>
                     </div>
+
                     <div class="flex gap-2 w-full sm:w-auto mt-1 sm:mt-0">
+                        <button onclick="toggleCalendarView()" id="btn-toggle-view" class="border-2 font-bold py-2 px-3 md:px-4 rounded-xl text-xs md:text-sm hover:opacity-70 transition shadow-[2px_2px_0px_var(--ciemny)]" style="background-color: var(--jasny); border-color: var(--ciemny)">Widok Listy 📋</button>
                         <button onclick="openFindSlotModal()" class="przycisk-anuluj border-2 text-xs md:text-sm w-1/2 sm:w-auto shadow-[2px_2px_0px_var(--ciemny)] hover:translate-y-0" style="border-color: var(--ciemny); background-color: var(--jasny); color: var(--tekst-glowny)">🔍 Znajdź termin</button>
                         <button onclick="openLessonModal()" class="przycisk-glowny text-xs md:text-sm w-1/2 sm:w-auto">+ Dodaj lekcję</button>
                     </div>
                 </div>
             </div>
+
             <div class="rounded-2xl shadow-[4px_4px_0px_var(--ciemny)] border-2 flex-1 flex flex-col overflow-hidden" style="background-color: var(--karta-bg); border-color: var(--ciemny)">
-                <div class="overflow-x-auto flex-1 flex flex-col">
+                <div id="calendar-grid-container" class="overflow-x-auto flex-1 flex flex-col">
                     <div class="min-w-[700px] flex-1 flex flex-col">
                         <div id="calendar-header" class="grid grid-cols-8 border-b-2 sticky top-0 z-20" style="background-color: var(--karta-bg); border-color: var(--ciemny)"></div>
                         <div class="relative flex-1 overflow-y-auto" id="calendar-body-scroll">
@@ -318,6 +323,9 @@
                         </div>
                     </div>
                 </div>
+
+                <div id="calendar-agenda-container" class="hidden flex-1 overflow-y-auto p-4 md:p-8" style="background-color: var(--jasny);">
+                    </div>
             </div>
         </div>
 
@@ -467,6 +475,13 @@
                 <label class="text-xs md:text-sm font-bold mb-2 block" style="color: var(--tekst-szary)">Kolor przedmiotu:</label>
                 <input type="color" id="subject-color" value="#ef4444" class="w-full h-12 rounded-xl cursor-pointer border-2 p-1" style="background-color: var(--karta-bg); border-color: var(--szary-ramka)">
             </div>
+            
+            <div class="mb-6">
+                <label class="text-xs md:text-sm font-bold mb-1 block" style="color: var(--tekst-szary)">Przydatne linki (Opcjonalnie):</label>
+                <p class="text-[9px] md:text-[10px] mb-2 font-medium" style="color: var(--tekst-szary)">Wklej linki do dysku, podręczników itp. (każdy w nowej linii). Pojawią się na liście lekcji.</p>
+                <textarea id="subject-links" placeholder="np. https://meet.google.com/..." class="pole-tekstowe text-sm md:text-base min-h-[80px] resize-y mb-0"></textarea>
+            </div>
+
             <div class="flex justify-between items-center">
                 <button id="btn-delete-subject" onclick="deleteSubject()" class="text-rose-500 font-bold hover:underline hidden text-sm">Usuń</button>
                 <div class="flex gap-2 ml-auto">
