@@ -69,6 +69,15 @@ function debounce(func, wait) {
 }
 const debouncedRenderStudents = debounce(renderStudents, 150);
 
+// --- BEZPIECZNA DATA LOKALNA (NAPRAWA PROBLEMU STREF CZASOWYCH) ---
+function getLocalISODate(dateObj) {
+    const d = new Date(dateObj);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 // --- ANIMACJA LICZNIKÓW ---
 function animateValue(id, start, end, duration, suffix = "") {
     let obj = document.getElementById(id);
@@ -120,7 +129,7 @@ function initNotifications() {
 function checkNotifications() {
     if (!currentUser) return;
     const now = new Date();
-    const todayString = now.toISOString().split('T')[0];
+    const todayString = getLocalISODate(now);
     const currentTime = now.getHours() * 60 + now.getMinutes();
 
     lessons.forEach(l => {
@@ -251,14 +260,15 @@ function hexToRgba(hex, alpha) {
 }
 
 function getMonday(d) {
-    d = new Date(d);
-    let day = d.getDay(), diff = d.getDate() - day + (day === 0 ? -6 : 1); 
-    return new Date(d.setDate(diff));
+    let date = new Date(d);
+    date.setHours(12, 0, 0, 0); // Bezpieczeństwo stref czasowych
+    let day = date.getDay(), diff = date.getDate() - day + (day === 0 ? -6 : 1); 
+    return new Date(date.setDate(diff));
 }
 
 function getWeekString(dateObj) {
     let d = new Date(dateObj);
-    d.setHours(0,0,0,0);
+    d.setHours(12,0,0,0);
     d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
     let week1 = new Date(d.getFullYear(), 0, 4);
     let weekNum = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
@@ -376,7 +386,7 @@ function eksportujDane() {
     const blob = new Blob([dataStr], {type: "application/json"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `TutoGrid_Kopia_${new Date().toISOString().split('T')[0]}.json`;
+    a.href = url; a.download = `TutoGrid_Kopia_${getLocalISODate(new Date())}.json`;
     a.click();
 }
 
@@ -706,7 +716,7 @@ async function toggleArchiveStudent(id) {
         let action = student.archived ? "przywrócić ucznia do aktywnych" : "przenieść ucznia do archiwum";
         if(await showConfirm('Archiwum', `Czy na pewno chcesz ${action}? Jego lekcje w historii pozostaną nienaruszone.`)) {
             student.archived = !student.archived; saveStudentsToCloud(); renderStudents(); renderDashboard(); 
-            showToast('Uczeń przeniesiony');
+            showToast('Uczeń zarchiwizowany/przywrócony');
         }
     }
 }
@@ -848,7 +858,8 @@ function handleBundleChange() {
         
         if (bundle && bundle.payDay !== undefined && bundle.payDay !== "") {
             let lDateStr = document.getElementById('lesson-date').value;
-            let lDate = lDateStr ? new Date(lDateStr) : new Date();
+            let lDate = lDateStr ? new Date(lDateStr + "T12:00:00") : new Date();
+            lDate.setHours(12,0,0,0); // Wymuszenie południa
 
             if (bundle.type === 'monthly') {
                 let targetDay = parseInt(bundle.payDay);
@@ -857,14 +868,14 @@ function handleBundleChange() {
                     let finalDay = Math.min(targetDay, lastDayOfMonth);
                     let pDate = new Date(lDate.getFullYear(), lDate.getMonth(), finalDay);
                     pDate.setHours(12,0,0,0);
-                    paymentDatePicker.setDate(pDate.toISOString().split('T')[0]);
+                    paymentDatePicker.setDate(getLocalISODate(pDate));
                 }
             } else {
                 let weekMonday = getMonday(lDate);
                 let offset = parseInt(bundle.payDay);
                 if (offset === 0) { weekMonday.setDate(weekMonday.getDate() + 6); } 
                 else { weekMonday.setDate(weekMonday.getDate() + (offset - 1)); }
-                paymentDatePicker.setDate(weekMonday.toISOString().split('T')[0]);
+                paymentDatePicker.setDate(getLocalISODate(weekMonday));
             }
         }
     } else {
@@ -894,7 +905,7 @@ function openLessonModal() {
     document.getElementById('lesson-id').value = '';
     document.getElementById('lesson-topic').value = ''; 
     
-    let defaultDate = new Date().toISOString().split('T')[0];
+    let defaultDate = getLocalISODate(new Date());
     if(datePicker) datePicker.setDate(defaultDate);
     if(paymentDatePicker) paymentDatePicker.setDate('');
     
@@ -1021,7 +1032,7 @@ async function saveLesson() {
                 if (l.id == id || l.date < oldDate) return false;
                 if (originalLesson.groupId && l.groupId === originalLesson.groupId) return true;
                 if (!originalLesson.groupId && l.studentId == originalLesson.studentId && l.subjectId == originalLesson.subjectId) {
-                    return new Date(l.date).getDay() === new Date(oldDate).getDay();
+                    return new Date(l.date + "T12:00:00").getDay() === new Date(oldDate + "T12:00:00").getDay();
                 }
                 return false;
             });
@@ -1030,22 +1041,22 @@ async function saveLesson() {
         if (futureLessons.length > 0) {
             let choice = await showSeriesChoice('Aktualizacja cyklu', 'Zmieniłeś szczegóły lekcji. Co chcesz zaktualizować?');
             if (choice === 'future') {
-                let dateDiff = Math.round((new Date(date) - new Date(oldDate)) / (1000 * 60 * 60 * 24));
+                let dateDiff = Math.round((new Date(date + "T12:00:00") - new Date(oldDate + "T12:00:00")) / (1000 * 60 * 60 * 24));
                 futureLessons.forEach(fl => {
                     fl.studentId = studentId; fl.subjectId = subjectId; fl.bundleId = bundleId;
                     fl.startTime = startTime; fl.endTime = endTime; fl.price = price; fl.topic = topic; 
                     fl.bundleValue = bundleValue;
                     
                     if (dateDiff !== 0) {
-                        let fd = new Date(fl.date);
+                        let fd = new Date(fl.date + "T12:00:00");
                         fd.setDate(fd.getDate() + dateDiff);
-                        fl.date = fd.toISOString().split('T')[0];
+                        fl.date = getLocalISODate(fd);
                         
                         if(bundleId) {
                             const st = students.find(s => s.id == studentId);
                             const bun = st ? st.bundles.find(b => b.id == bundleId) : null;
                             if(bun && bun.payDay !== undefined && bun.payDay !== "") {
-                                let flDateObj = new Date(fl.date);
+                                let flDateObj = new Date(fl.date + "T12:00:00");
                                 if(bun.type === 'monthly') {
                                     let targetDay = parseInt(bun.payDay);
                                     if(!isNaN(targetDay)) {
@@ -1053,19 +1064,19 @@ async function saveLesson() {
                                         let finalDay = Math.min(targetDay, lastDayOfMonth);
                                         let pDate = new Date(flDateObj.getFullYear(), flDateObj.getMonth(), finalDay);
                                         pDate.setHours(12,0,0,0);
-                                        fl.paymentDate = pDate.toISOString().split('T')[0];
+                                        fl.paymentDate = getLocalISODate(pDate);
                                     }
                                 } else {
-                                    let wMon = getMonday(fl.date);
+                                    let wMon = getMonday(fl.date + "T12:00:00");
                                     let offset = parseInt(bun.payDay);
                                     if (offset === 0) { wMon.setDate(wMon.getDate() + 6); } 
                                     else { wMon.setDate(wMon.getDate() + (offset - 1)); }
-                                    fl.paymentDate = wMon.toISOString().split('T')[0];
+                                    fl.paymentDate = getLocalISODate(wMon);
                                 }
                             } else {
-                                let pd = new Date(fl.paymentDate || fl.date);
+                                let pd = new Date((fl.paymentDate || fl.date) + "T12:00:00");
                                 pd.setDate(pd.getDate() + dateDiff);
-                                fl.paymentDate = pd.toISOString().split('T')[0];
+                                fl.paymentDate = getLocalISODate(pd);
                             }
                         } else { fl.paymentDate = fl.date; }
                     } else {
@@ -1073,7 +1084,7 @@ async function saveLesson() {
                             const st = students.find(s => s.id == studentId);
                             const bun = st ? st.bundles.find(b => b.id == bundleId) : null;
                             if(bun && bun.payDay !== undefined && bun.payDay !== "") {
-                                let flDateObj = new Date(fl.date);
+                                let flDateObj = new Date(fl.date + "T12:00:00");
                                 if(bun.type === 'monthly') {
                                     let targetDay = parseInt(bun.payDay);
                                     if(!isNaN(targetDay)) {
@@ -1081,14 +1092,14 @@ async function saveLesson() {
                                         let finalDay = Math.min(targetDay, lastDayOfMonth);
                                         let pDate = new Date(flDateObj.getFullYear(), flDateObj.getMonth(), finalDay);
                                         pDate.setHours(12,0,0,0);
-                                        fl.paymentDate = pDate.toISOString().split('T')[0];
+                                        fl.paymentDate = getLocalISODate(pDate);
                                     }
                                 } else {
-                                    let wMon = getMonday(fl.date);
+                                    let wMon = getMonday(fl.date + "T12:00:00");
                                     let offset = parseInt(bun.payDay);
                                     if (offset === 0) { wMon.setDate(wMon.getDate() + 6); } 
                                     else { wMon.setDate(wMon.getDate() + (offset - 1)); }
-                                    fl.paymentDate = wMon.toISOString().split('T')[0];
+                                    fl.paymentDate = getLocalISODate(wMon);
                                 }
                             }
                         }
@@ -1107,8 +1118,8 @@ async function saveLesson() {
 
     } else {
         const repetitions = isRecurring ? 156 : 1; 
-        let baseDate = new Date(date);
-        let basePayDate = new Date(paymentDate);
+        let baseDate = new Date(date + "T12:00:00");
+        let basePayDate = new Date(paymentDate + "T12:00:00");
         let newGroupId = "grp_" + Date.now().toString() + Math.floor(Math.random() * 1000); 
 
         for(let i=0; i<repetitions; i++) {
@@ -1119,7 +1130,7 @@ async function saveLesson() {
             const student = students.find(s => s.id == stId);
             const bundle = student ? (student.bundles || []).find(b => b.id == bundleId) : null;
             
-            let finalPayDateStr = bundleId ? pDate.toISOString().split('T')[0] : lessonDate.toISOString().split('T')[0];
+            let finalPayDateStr = bundleId ? getLocalISODate(pDate) : getLocalISODate(lessonDate);
             
             if (bundle && bundle.type === 'monthly' && bundle.payDay !== undefined && bundle.payDay !== "") {
                 let targetDay = parseInt(bundle.payDay);
@@ -1128,7 +1139,7 @@ async function saveLesson() {
                     let finalDay = Math.min(targetDay, lastDayOfMonth);
                     let correctPayDate = new Date(lessonDate.getFullYear(), lessonDate.getMonth(), finalDay);
                     correctPayDate.setHours(12,0,0,0);
-                    finalPayDateStr = correctPayDate.toISOString().split('T')[0];
+                    finalPayDateStr = getLocalISODate(correctPayDate);
                 }
             }
 
@@ -1137,7 +1148,7 @@ async function saveLesson() {
                 groupId: isRecurring ? newGroupId : null,
                 studentId, subjectId, bundleId, 
                 paymentDate: finalPayDateStr,
-                topic, date: lessonDate.toISOString().split('T')[0],
+                topic, date: getLocalISODate(lessonDate),
                 startTime, endTime, price, 
                 bundleValue: bundleValue,
                 cancelled: false,
@@ -1158,7 +1169,7 @@ async function deleteLesson() {
         if (l.id == id || l.date < originalLesson.date) return false;
         if (originalLesson.groupId && l.groupId === originalLesson.groupId) return true;
         if (!originalLesson.groupId && l.studentId == originalLesson.studentId && l.subjectId == originalLesson.subjectId) {
-            return new Date(l.date).getDay() === new Date(originalLesson.date).getDay();
+            return new Date(l.date + "T12:00:00").getDay() === new Date(originalLesson.date + "T12:00:00").getDay();
         }
         return false;
     });
@@ -1206,7 +1217,7 @@ function markBundleAsPaid(studentId, bundleId, paymentDate, event) {
 // --- WIDOK PULPITU ---
 function renderDashboard() {
     const now = new Date(); const currentMonth = now.getMonth(); const currentYear = now.getFullYear();
-    const todayString = now.toISOString().split('T')[0];
+    const todayString = getLocalISODate(now);
     const nowTime = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
     const monthNames = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
     const monthsGenitive = ["stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca", "lipca", "sierpnia", "września", "października", "listopada", "grudnia"];
@@ -1220,7 +1231,7 @@ function renderDashboard() {
     let prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
     lessons.forEach(l => {
-        let lDate = new Date(l.date); 
+        let lDate = new Date(l.date + "T12:00:00"); 
         let effectivePrice = Number(l.price || 0);
         if (l.bundleId && l.bundleValue !== null && l.bundleValue !== undefined) {
             effectivePrice = Number(l.bundleValue);
@@ -1277,7 +1288,7 @@ function renderDashboard() {
         upcomingLessons.slice(0, 5).forEach(l => {
             let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
             let subject = subjects.find(s => s.id == l.subjectId);
-            let lDate = new Date(l.date); let dayNames = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
+            let lDate = new Date(l.date + "T12:00:00"); let dayNames = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
             let dateDisplay = l.date === todayString ? 'Dzisiaj' : `${dayNames[lDate.getDay()]}, ${lDate.getDate()} ${monthsGenitive[lDate.getMonth()]}`;
             let badge = subject ? `<span class="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded border" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${esc(subject.color)}; border-color: ${esc(subject.color)}">${esc(subject.name).toUpperCase()}</span>` : '';
 
@@ -1364,9 +1375,9 @@ function renderDashboard() {
     }
 
     const weekContainer = document.getElementById('pulpit-week-view'); weekContainer.innerHTML = '';
-    const mondayString = getMonday(now).toISOString().split('T')[0];
+    const mondayString = getLocalISODate(getMonday(now));
     let sundayDate = new Date(getMonday(now)); sundayDate.setDate(sundayDate.getDate() + 6);
-    const sundayString = sundayDate.toISOString().split('T')[0];
+    const sundayString = getLocalISODate(sundayDate);
 
     let thisWeekLessons = lessons.filter(l => l.date >= mondayString && l.date <= sundayString);
     thisWeekLessons.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
@@ -1375,7 +1386,7 @@ function renderDashboard() {
     else {
         const daysNamesPL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota']; let lastDay = '';
         thisWeekLessons.forEach(l => {
-            let lDate = new Date(l.date);
+            let lDate = new Date(l.date + "T12:00:00");
             let dayDisplay = l.date === todayString ? `<span style="color: var(--akcent)">Dzisiaj</span>` : daysNamesPL[lDate.getDay()];
             if(l.date !== lastDay) {
                 weekContainer.innerHTML += `<div class="text-xs md:text-sm font-extrabold uppercase tracking-wider mt-4 md:mt-6 mb-2 border-b-2 pb-1" style="border-color: var(--szary-ramka)">${dayDisplay} <span class="font-medium text-[10px] md:text-xs normal-case" style="color: var(--tekst-szary)">(${l.date})</span></div>`;
@@ -1450,7 +1461,7 @@ function renderCalendar() {
     
     for(let i=0; i<7; i++) {
         let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
-        let isToday = dayDate.toDateString() === new Date().toDateString();
+        let isToday = getLocalISODate(dayDate) === getLocalISODate(new Date());
         let circleStyle = isToday ? `background-color: var(--akcent); color: #fff; border: 2px solid var(--ciemny); box-shadow: 2px 2px 0 var(--ciemny)` : `color: var(--tekst-glowny)`;
         let textStyle = isToday ? `color: var(--akcent)` : `color: var(--tekst-szary)`;
         
@@ -1472,7 +1483,7 @@ function renderCalendar() {
 
     for(let i=0; i<7; i++) {
         let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
-        let dateString = dayDate.toISOString().split('T')[0];
+        let dateString = getLocalISODate(dayDate);
         let isWeekend = (i === 5 || i === 6) ? `background-color: rgba(120, 120, 120, 0.03);` : '';
 
         gridHtml += `<div class="relative day-col flex-1 border-r-2 last:border-r-0" style="border-color: var(--szary-ramka); ${isWeekend}" data-date="${dateString}">`;
@@ -1513,9 +1524,9 @@ function renderCalendar() {
     document.getElementById('calendar-grid').innerHTML = gridHtml;
     updateCurrentTimeLine();
 
-    // AUTO-SCROLL DO PIERWSZEJ LEKCJI W TYGODNIU (ZMIANA)
-    let weekStringStart = monday.toISOString().split('T')[0];
-    let weekStringEnd = sunday.toISOString().split('T')[0];
+    // AUTO-SCROLL DO PIERWSZEJ LEKCJI W TYGODNIU
+    let weekStringStart = getLocalISODate(monday);
+    let weekStringEnd = getLocalISODate(sunday);
     let weekLessons = lessons.filter(l => l.date >= weekStringStart && l.date <= weekStringEnd && !l.cancelled);
 
     let earliestHour = settings.endHour;
@@ -1551,8 +1562,8 @@ function renderAgendaView(monday, sunday) {
     const container = document.getElementById('calendar-agenda-container');
     container.innerHTML = '';
     
-    let weekStringStart = monday.toISOString().split('T')[0];
-    let weekStringEnd = sunday.toISOString().split('T')[0];
+    let weekStringStart = getLocalISODate(monday);
+    let weekStringEnd = getLocalISODate(sunday);
 
     let weekLessons = lessons.filter(l => l.date >= weekStringStart && l.date <= weekStringEnd);
     weekLessons.sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
@@ -1567,9 +1578,9 @@ function renderAgendaView(monday, sunday) {
 
     weekLessons.forEach(l => {
         if (l.date !== lastDate) {
-            let d = new Date(l.date);
+            let d = new Date(l.date + "T12:00:00");
             let dayName = daysNamesPL[d.getDay()];
-            let todayStr = new Date().toISOString().split('T')[0];
+            let todayStr = getLocalISODate(new Date());
             let isToday = l.date === todayStr;
             let dayHeaderColor = isToday ? 'color: var(--akcent)' : 'color: var(--tekst-glowny)';
             
@@ -1666,7 +1677,7 @@ function renderSlotCalendar() {
     
     for(let i=0; i<7; i++) {
         let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
-        let isToday = dayDate.toDateString() === new Date().toDateString();
+        let isToday = getLocalISODate(dayDate) === getLocalISODate(new Date());
         let circleStyle = isToday ? `background-color: var(--akcent); color: #fff; border: 2px solid var(--ciemny);` : `color: var(--tekst-glowny)`;
         let textStyle = isToday ? `color: var(--akcent)` : `color: var(--tekst-szary)`;
         
@@ -1690,7 +1701,7 @@ function renderSlotCalendar() {
 
     for(let i=0; i<7; i++) {
         let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
-        let dateString = dayDate.toISOString().split('T')[0];
+        let dateString = getLocalISODate(dayDate);
         let dayOfWeek = dayDate.getDay();
 
         let colBg = `background-color: rgba(244, 63, 94, 0.05);`;
@@ -1753,7 +1764,6 @@ function renderSlotCalendar() {
     }
     document.getElementById('slot-calendar-grid').innerHTML = gridHtml;
 
-    // AUTO-SCROLL DLA WYSZUKIWARKI TERMINÓW
     let slotScrollContainer = document.querySelector('#slot-calendar-grid').parentElement;
     if (slotScrollContainer && earliestAvailableHour < settings.endHour) {
         let scrollTargetHour = earliestAvailableHour - 1;
