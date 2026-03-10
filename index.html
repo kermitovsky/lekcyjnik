@@ -528,7 +528,7 @@
             <div class="mb-6 pt-4 border-t-2" style="border-color: var(--szary-ramka)">
                 <label class="text-xs md:text-sm font-bold mb-1 block" style="color: var(--tekst-szary)">Cenniki Łączone / Pakiety (Opcjonalnie)</label>
                 <p class="text-[10px] md:text-xs mb-3 font-medium" style="color: var(--tekst-szary)">Zdefiniuj pakiet (tygodniowy lub miesięczny) i wskaż dzień wpłaty.</p>
-                <div id="student-bundles-container" class="space-y-2 mb-3"></div>
+                <div id="student-bundles-container" class="space-y-2 mb-3 w-full"></div>
                 <button type="button" onclick="addBundleToStudent()" class="font-bold text-xs md:text-sm hover:underline" style="color: var(--akcent)">+ Dodaj pakiet do tego ucznia</button>
             </div>
 
@@ -546,44 +546,44 @@
             <input type="hidden" id="lesson-id">
             
             <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Uczeń</label>
-            <select id="lesson-student" onchange="updateLessonSubjectDropdown(); updateLessonBundleDropdown();" class="pole-tekstowe text-sm md:text-base"></select>
+            <select id="lesson-student" onchange="updateLessonSubjectDropdown(); updateLessonBundleDropdown();" class="pole-tekstowe text-sm md:text-base w-full max-w-full overflow-hidden text-ellipsis"></select>
             
             <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Przedmiot</label>
-            <select id="lesson-subject" class="pole-tekstowe text-sm md:text-base mb-2"></select>
+            <select id="lesson-subject" class="pole-tekstowe text-sm md:text-base mb-2 w-full max-w-full overflow-hidden text-ellipsis"></select>
 
             <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Temat (Opcjonalnie)</label>
-            <input type="text" id="lesson-topic" placeholder="np. Ułamki, Sprawdzian..." class="pole-tekstowe text-sm md:text-base">
+            <input type="text" id="lesson-topic" placeholder="np. Ułamki, Sprawdzian..." class="pole-tekstowe text-sm md:text-base w-full">
             
             <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Sposób rozliczenia</label>
-            <select id="lesson-bundle" onchange="handleBundleChange()" class="pole-tekstowe text-sm md:text-base mb-2">
+            <select id="lesson-bundle" onchange="handleBundleChange()" class="pole-tekstowe text-sm md:text-base mb-2 w-full max-w-full overflow-hidden text-ellipsis">
                 <option value="">Standardowa cena (wpisz ręcznie)</option>
             </select>
 
-            <div id="lesson-payment-date-div" class="hidden mb-3 p-3 rounded-xl border-2 shadow-sm" style="background-color: rgba(var(--akcent), 0.05); border-color: rgba(var(--akcent), 0.2)">
-                <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--akcent)">Kiedy uczeń płaci za ten pakiet?</label>
-                <p class="text-[9px] md:text-[10px] mb-2 font-medium" style="color: var(--tekst-szary)">(Jeśli przypisałeś dzień wpłaty w profilu ucznia, ta data uzupełni się automatycznie)</p>
-                <input type="text" id="lesson-payment-date" class="pole-tekstowe text-sm md:text-base mb-0 bg-white cursor-pointer" placeholder="Wybierz datę rozliczenia pakietu">
+            <div id="lesson-payment-date-div" class="hidden mb-3 p-3 rounded-xl border-2 shadow-sm w-full box-border" style="background-color: rgba(var(--akcent), 0.05); border-color: rgba(var(--akcent), 0.2)">
+                <label class="text-[10px] md:text-xs font-bold uppercase block w-full truncate" style="color: var(--akcent)">Kiedy uczeń płaci za ten pakiet?</label>
+                <p class="text-[9px] md:text-[10px] mb-2 font-medium leading-tight" style="color: var(--tekst-szary)">(Jeśli przypisałeś dzień wpłaty w profilu ucznia, ta data uzupełni się automatycznie)</p>
+                <input type="text" id="lesson-payment-date" class="pole-tekstowe text-sm md:text-base mb-0 bg-white cursor-pointer w-full box-border" placeholder="Wybierz datę rozliczenia pakietu">
             </div>
             
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3 mb-1">
                 <div>
                     <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Data Lekcji</label>
-                    <input type="text" id="lesson-date" class="pole-tekstowe text-sm md:text-base cursor-pointer" placeholder="Wybierz datę">
+                    <input type="text" id="lesson-date" class="pole-tekstowe text-sm md:text-base cursor-pointer w-full" placeholder="Wybierz datę">
                 </div>
                 <div>
                     <label id="lesson-price-label" class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Cena za tę lekcję (zł)</label>
-                    <input type="number" id="lesson-price" placeholder="np. 80" class="pole-tekstowe text-sm md:text-base font-bold transition-all">
+                    <input type="number" id="lesson-price" placeholder="np. 80" class="pole-tekstowe text-sm md:text-base font-bold transition-all w-full">
                 </div>
             </div>
             
             <div class="flex gap-2 mb-1">
                 <div class="w-1/2">
                     <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Od</label>
-                    <input type="text" id="lesson-time-start" class="pole-tekstowe text-sm md:text-base cursor-pointer" placeholder="HH:MM" onchange="autoUzupelnijCzas()">
+                    <input type="text" id="lesson-time-start" class="pole-tekstowe text-sm md:text-base cursor-pointer w-full" placeholder="HH:MM" onchange="autoUzupelnijCzas()">
                 </div>
                 <div class="w-1/2">
                     <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Do</label>
-                    <input type="text" id="lesson-time-end" class="pole-tekstowe text-sm md:text-base cursor-pointer" placeholder="HH:MM" onchange="handleBundleChange()">
+                    <input type="text" id="lesson-time-end" class="pole-tekstowe text-sm md:text-base cursor-pointer w-full" placeholder="HH:MM" onchange="handleBundleChange()">
                 </div>
             </div>
 
