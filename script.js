@@ -11,7 +11,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// PRAWIDZIWY TRYB OFFLINE (PUNKT 2)
 db.enablePersistence().catch(function(err) {
     if (err.code == 'failed-precondition') {
         console.warn('Masz otwartych kilka kart TutoGrid. Tryb offline działa tylko w jednej karcie na raz.');
@@ -49,7 +48,7 @@ let currentCalendarView = 'grid';
 Chart.defaults.font.family = "'Inter', 'sans-serif'";
 Chart.defaults.color = '#64748b';
 
-// --- SYSTEM BEZPIECZEŃSTWA XSS (PUNKT 1) ---
+// --- SYSTEM BEZPIECZEŃSTWA XSS ---
 function esc(str) {
     if (!str) return '';
     return String(str)
@@ -60,7 +59,7 @@ function esc(str) {
         .replace(/'/g, '&#039;');
 }
 
-// --- OPTYMALIZACJA WYSZUKIWARKI (DEBOUNCE) ---
+// --- OPTYMALIZACJA WYSZUKIWARKI ---
 function debounce(func, wait) {
     let timeout;
     return function(...args) {
@@ -69,6 +68,50 @@ function debounce(func, wait) {
     };
 }
 const debouncedRenderStudents = debounce(renderStudents, 150);
+
+// --- POWIADOMIENIA PUSH (PUNKT 4) ---
+let notifiedLessons = new Set();
+
+function initNotifications() {
+    if ('Notification' in window && Notification.permission !== 'granted') {
+        Notification.requestPermission();
+    }
+}
+
+function checkNotifications() {
+    if (!currentUser) return;
+    const now = new Date();
+    const todayString = now.toISOString().split('T')[0];
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+
+    lessons.forEach(l => {
+        if (l.date === todayString && !l.cancelled) {
+            let [h, m] = l.startTime.split(':').map(Number);
+            let lessonTime = h * 60 + m;
+            let diff = lessonTime - currentTime;
+
+            // Jeśli do lekcji zostało 15 minut lub mniej i jeszcze nie wysłano powiadomienia
+            if (diff > 0 && diff <= 15 && !notifiedLessons.has(l.id)) {
+                notifiedLessons.add(l.id);
+                
+                let student = students.find(s => s.id == l.studentId) || {name: 'Uczniem'};
+                let subject = subjects.find(s => s.id == l.subjectId) || {name: ''};
+                
+                let msg = `Za ${diff} min masz lekcję: ${subject.name} z ${student.name}`;
+                
+                if ("vibrate" in navigator) navigator.vibrate([200, 100, 200, 100, 200]);
+
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification("Nadchodząca lekcja!", {
+                        body: msg,
+                        icon: "ikona.png"
+                    });
+                }
+            }
+        }
+    });
+}
+setInterval(checkNotifications, 60000);
 
 // --- CUSTOMOWE OKIENKA ---
 function customAlert(title, message) {
@@ -143,7 +186,6 @@ function closeModals() {
     document.getElementById('modal-find-slot').classList.add('hidden');
 }
 
-// --- FUNKCJE POMOCNICZE ---
 function hexToRgba(hex, alpha) {
     if(!hex) return `rgba(120, 120, 120, ${alpha})`;
     let r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
@@ -190,7 +232,7 @@ function switchTab(tabName) {
     }
 }
 
-// --- LOGOWANIE I MĄDRY ZAPIS DO CHMURY ---
+// --- LOGOWANIE I CHMURA ---
 firebase.auth().onAuthStateChanged((user) => {
     if (user) {
         currentUser = user;
@@ -226,6 +268,10 @@ function pobierzDaneZChmury() {
             subjects = []; students = []; lessons = [];
         }
         applyVisualSettings();
+        
+        initNotifications();
+        checkNotifications();
+
         switchTab('pulpit');
     }).catch((error) => {
         console.error("Błąd połączenia z bazą:", error);
@@ -459,7 +505,6 @@ function renderStudentBundles() {
     container.innerHTML = '';
     currentStudentBundles.forEach((b, index) => {
         let isMonthly = b.type === 'monthly';
-        // POPRAWA NA TELEFONY: flex-col, w-full, wyrzucenie wymuszonego flex-row
         container.innerHTML += `
             <div class="flex flex-col gap-3 items-start p-3 md:p-4 rounded-xl border-2 bg-white border-slate-200 bundle-row shadow-sm w-full box-border" data-id="${b.id}">
                 <div class="flex flex-col w-full gap-2">
@@ -717,7 +762,7 @@ function handleBundleChange() {
     if (bundleId) {
         if(priceLabel) priceLabel.innerText = 'Cena poza pakietem (zł)';
         paymentDateDiv.classList.remove('hidden');
-        priceInput.readOnly = false; // ZGODNIE Z PROŚBĄ ODBLOKOWANE!
+        priceInput.readOnly = false;
         
         const stId = document.getElementById('lesson-student').value;
         const student = students.find(s => s.id == stId);
@@ -1087,7 +1132,11 @@ function renderDashboard() {
     document.getElementById('pulpit-month-title').innerText = `Zarobki - ${monthNames[currentMonth]}`;
 
     let earnings = 0, lessonsThisMonth = 0; let plannedEarnings = 0; 
+    let prevMonthEarnings = 0;
     
+    let prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    let prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
     lessons.forEach(l => {
         let lDate = new Date(l.date); 
         let effectivePrice = Number(l.price || 0);
@@ -1095,10 +1144,19 @@ function renderDashboard() {
             effectivePrice = Number(l.bundleValue);
         }
 
-        if(!l.cancelled) {
+        if(!l.cancelled && l.paid) {
             if(lDate.getMonth() === currentMonth && lDate.getFullYear() === currentYear) {
+                earnings += effectivePrice; 
                 lessonsThisMonth++;
-                if(l.paid) earnings += effectivePrice; else plannedEarnings += effectivePrice; 
+            } else if (lDate.getMonth() === prevMonth && lDate.getFullYear() === prevYear) {
+                prevMonthEarnings += effectivePrice;
+            }
+        }
+        
+        if(!l.cancelled && !l.paid) {
+            if(lDate.getMonth() === currentMonth && lDate.getFullYear() === currentYear) {
+                plannedEarnings += effectivePrice; 
+                lessonsThisMonth++;
             }
         }
     });
@@ -1107,6 +1165,24 @@ function renderDashboard() {
     document.getElementById('dashboard-planned-earnings').innerText = `(w planach: +${Math.round(plannedEarnings)} zł)`;
     document.getElementById('dashboard-monthly-lessons').innerText = `${lessonsThisMonth} lekcji`;
     document.getElementById('dashboard-active-students').innerText = students.filter(s => !s.archived).length;
+
+    // NOWOŚĆ: PORÓWNANIE Z ZESZŁYM MIESIĄCEM
+    let momEl = document.getElementById('dashboard-mom-comparison');
+    if (momEl) {
+        if (prevMonthEarnings === 0) {
+            momEl.innerHTML = `<span style="color: var(--tekst-szary)">Pierwszy miesiąc z TutoGrid 🚀</span>`;
+        } else {
+            let diff = earnings - prevMonthEarnings;
+            let percent = Math.round((diff / prevMonthEarnings) * 100);
+            if (percent > 0) {
+                momEl.innerHTML = `<span class="text-emerald-500">📈 +${percent}% (${Math.round(earnings)} zł vs ${Math.round(prevMonthEarnings)} zł)</span>`;
+            } else if (percent < 0) {
+                momEl.innerHTML = `<span class="text-rose-500">📉 ${percent}% (${Math.round(earnings)} zł vs ${Math.round(prevMonthEarnings)} zł)</span>`;
+            } else {
+                momEl.innerHTML = `<span style="color: var(--tekst-szary)">Zarobki na tym samym poziomie (0%)</span>`;
+            }
+        }
+    }
 
     let upcomingLessons = lessons.filter(l => !l.cancelled && (l.date > todayString || (l.date === todayString && l.endTime >= nowTime)));
     upcomingLessons.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
