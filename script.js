@@ -60,7 +60,7 @@ function esc(str) {
         .replace(/'/g, '&#039;');
 }
 
-// --- OPTYMALIZACJA WYSZUKIWARKI (DEBOUNCE - PUNKT 1 z Twojej prośby) ---
+// --- OPTYMALIZACJA WYSZUKIWARKI (DEBOUNCE) ---
 function debounce(func, wait) {
     let timeout;
     return function(...args) {
@@ -68,7 +68,6 @@ function debounce(func, wait) {
         timeout = setTimeout(() => func.apply(this, args), wait);
     };
 }
-// Funkcja czeka 150ms po wpisaniu ostatniej litery, zanim narysuje listę uczniów
 const debouncedRenderStudents = debounce(renderStudents, 150);
 
 // --- CUSTOMOWE OKIENKA ---
@@ -191,7 +190,7 @@ function switchTab(tabName) {
     }
 }
 
-// --- LOGOWANIE I MĄDRY ZAPIS DO CHMURY (PUNKT 4) ---
+// --- LOGOWANIE I MĄDRY ZAPIS DO CHMURY ---
 firebase.auth().onAuthStateChanged((user) => {
     if (user) {
         currentUser = user;
@@ -199,9 +198,7 @@ firebase.auth().onAuthStateChanged((user) => {
         document.getElementById('app-nav').classList.remove('hidden');
         document.getElementById('main-content').classList.remove('hidden');
         
-        // Pokaż szkielet na czas pobierania
         switchTab('skeleton'); 
-        
         pobierzDaneZChmury(); 
     } else {
         currentUser = null;
@@ -236,7 +233,6 @@ function pobierzDaneZChmury() {
     });
 }
 
-// Zoptymalizowane funkcje zapisu wysyłają tylko to co trzeba (PUNKT 4)
 function saveSubjectsToCloud() {
     if(!currentUser) return; 
     db.collection("planer_korepetytora").doc(currentUser.uid).set({ subjects: subjects }, { merge: true });
@@ -282,7 +278,6 @@ async function importujDane(event) {
                 subjects = data.subjects; students = data.students; lessons = data.lessons;
                 if(data.settings) settings = data.settings;
                 
-                // Zapisujemy wszystko przy imporcie
                 saveSubjectsToCloud(); saveStudentsToCloud(); saveLessonsToCloud(); saveSettingsToCloud();
                 
                 applyVisualSettings(); switchTab('pulpit');
@@ -464,30 +459,34 @@ function renderStudentBundles() {
     container.innerHTML = '';
     currentStudentBundles.forEach((b, index) => {
         let isMonthly = b.type === 'monthly';
+        // POPRAWA NA TELEFONY: flex-col, w-full, wyrzucenie wymuszonego flex-row
         container.innerHTML += `
-            <div class="flex flex-col gap-3 items-start p-4 rounded-xl border-2 bg-white border-slate-200 bundle-row shadow-sm" data-id="${b.id}">
-                <div class="flex flex-col sm:flex-row gap-3 w-full">
-                    <input type="text" placeholder="Nazwa pakietu (np. Matma + Fizyka)" value="${esc(b.name || '')}" class="bundle-name w-full sm:w-1/2 text-sm p-2 border-2 rounded-lg font-bold">
-                    <div class="flex gap-2 w-full sm:w-1/2">
-                        <input type="number" placeholder="Cena łączna (zł)" value="${b.total || ''}" class="bundle-total w-1/2 text-sm p-2 border-2 rounded-lg font-bold text-akcent">
-                        <input type="number" step="0.5" placeholder="Godz. (np. 2.5)" value="${b.hours || ''}" class="bundle-hours w-1/2 text-sm p-2 border-2 rounded-lg font-bold">
+            <div class="flex flex-col gap-3 items-start p-3 md:p-4 rounded-xl border-2 bg-white border-slate-200 bundle-row shadow-sm w-full box-border" data-id="${b.id}">
+                <div class="flex flex-col w-full gap-2">
+                    <input type="text" placeholder="Nazwa pakietu (np. Matma + Fizyka)" value="${esc(b.name || '')}" class="bundle-name w-full text-sm p-2 border-2 rounded-lg font-bold outline-none focus:border-akcent transition">
+                    <div class="flex gap-2 w-full">
+                        <input type="number" placeholder="Cena (zł)" value="${b.total || ''}" class="bundle-total w-1/2 text-sm p-2 border-2 rounded-lg font-bold text-akcent outline-none focus:border-akcent transition">
+                        <input type="number" step="0.5" placeholder="Godz. (np. 2.5)" value="${b.hours || ''}" class="bundle-hours w-1/2 text-sm p-2 border-2 rounded-lg font-bold outline-none focus:border-akcent transition">
                     </div>
                 </div>
-                <div class="w-full bg-slate-50 p-3 rounded-lg border border-slate-200">
-                    <div class="font-bold text-xs text-slate-500 mb-2 uppercase tracking-wider">Częstotliwość rozliczania:</div>
-                    <div class="flex gap-6 mb-4">
-                        <label class="flex items-center gap-2 cursor-pointer font-bold text-sm">
+                
+                <div class="w-full bg-slate-50 p-3 rounded-lg border border-slate-200 box-border">
+                    <div class="font-bold text-[10px] md:text-xs text-slate-500 mb-2 uppercase tracking-wider">Częstotliwość rozliczania:</div>
+                    
+                    <div class="flex flex-wrap gap-4 mb-3">
+                        <label class="flex items-center gap-2 cursor-pointer font-bold text-xs md:text-sm">
                             <input type="radio" name="b_type_${index}" value="weekly" class="bundle-type w-4 h-4" style="accent-color: var(--akcent)" onchange="toggleBundleType(this)" ${!isMonthly ? 'checked' : ''}>
                             Co tydzień
                         </label>
-                        <label class="flex items-center gap-2 cursor-pointer font-bold text-sm">
+                        <label class="flex items-center gap-2 cursor-pointer font-bold text-xs md:text-sm">
                             <input type="radio" name="b_type_${index}" value="monthly" class="bundle-type w-4 h-4" style="accent-color: var(--akcent)" onchange="toggleBundleType(this)" ${isMonthly ? 'checked' : ''}>
                             Co miesiąc
                         </label>
                     </div>
-                    <div class="bundle-payday-weekly flex items-center gap-3 ${isMonthly ? 'hidden' : ''}">
-                        <span class="text-xs font-bold text-slate-600 whitespace-nowrap">Dzień wpłaty:</span>
-                        <select class="bundle-payday-weekly-select flex-1 text-xs md:text-sm p-2 border-2 rounded-lg font-bold outline-none cursor-pointer bg-white focus:border-akcent transition">
+                    
+                    <div class="bundle-payday-weekly flex flex-col gap-1 w-full ${isMonthly ? 'hidden' : ''}">
+                        <span class="text-[10px] md:text-xs font-bold text-slate-600">Dzień wpłaty:</span>
+                        <select class="bundle-payday-weekly-select w-full text-xs md:text-sm p-2 border-2 rounded-lg font-bold outline-none cursor-pointer bg-white focus:border-akcent transition max-w-full text-ellipsis overflow-hidden">
                             <option value="" ${b.payDay==='' ? 'selected' : ''}>Wybieram ręcznie w kalendarzu</option>
                             <option value="1" ${b.payDay==='1' ? 'selected' : ''}>Zawsze w Poniedziałek</option>
                             <option value="2" ${b.payDay==='2' ? 'selected' : ''}>Zawsze we Wtorek</option>
@@ -498,15 +497,17 @@ function renderStudentBundles() {
                             <option value="0" ${b.payDay==='0' ? 'selected' : ''}>Zawsze w Niedzielę</option>
                         </select>
                     </div>
-                    <div class="bundle-payday-monthly flex items-center gap-3 ${!isMonthly ? 'hidden' : ''}">
-                        <span class="text-xs font-bold text-slate-600 whitespace-nowrap">Wpłata zawsze do:</span>
-                        <div class="flex items-center gap-2 flex-1">
-                            <input type="number" min="1" max="31" placeholder="np. 10" value="${isMonthly ? (esc(b.payDay)||'') : ''}" class="bundle-payday-monthly-input w-20 text-sm p-2 border-2 rounded-lg font-bold text-center outline-none bg-white focus:border-akcent transition">
-                            <span class="text-xs font-bold text-slate-500">dnia miesiąca</span>
+
+                    <div class="bundle-payday-monthly flex flex-col gap-1 w-full ${!isMonthly ? 'hidden' : ''}">
+                        <span class="text-[10px] md:text-xs font-bold text-slate-600">Wpłata zawsze do:</span>
+                        <div class="flex items-center gap-2 w-full">
+                            <input type="number" min="1" max="31" placeholder="np. 10" value="${isMonthly ? (esc(b.payDay)||'') : ''}" class="bundle-payday-monthly-input flex-1 text-sm p-2 border-2 rounded-lg font-bold text-center outline-none bg-white focus:border-akcent transition w-full">
+                            <span class="text-[10px] md:text-xs font-bold text-slate-500 whitespace-nowrap">dnia miesiąca</span>
                         </div>
                     </div>
                 </div>
-                <button type="button" onclick="this.closest('.bundle-row').remove()" class="text-rose-500 font-extrabold w-full text-center py-2 bg-rose-50 rounded-lg border border-rose-100 hover:bg-rose-100 transition text-xs uppercase tracking-wider mt-1">Usuń ten pakiet</button>
+
+                <button type="button" onclick="this.closest('.bundle-row').remove()" class="text-rose-500 font-extrabold w-full text-center py-2 bg-rose-50 rounded-lg border border-rose-100 hover:bg-rose-100 transition text-[10px] md:text-xs uppercase tracking-wider mt-1">Usuń ten pakiet</button>
             </div>`;
     });
 }
@@ -716,7 +717,7 @@ function handleBundleChange() {
     if (bundleId) {
         if(priceLabel) priceLabel.innerText = 'Cena poza pakietem (zł)';
         paymentDateDiv.classList.remove('hidden');
-        priceInput.readOnly = false;
+        priceInput.readOnly = false; // ZGODNIE Z PROŚBĄ ODBLOKOWANE!
         
         const stId = document.getElementById('lesson-student').value;
         const student = students.find(s => s.id == stId);
@@ -1233,9 +1234,9 @@ function renderDashboard() {
 
             weekContainer.innerHTML += `
                 <div class="flex items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 gap-2 md:gap-4" style="background-color: var(--karta-bg); border-color: var(--ciemny); ${cardOpacity}" onclick="editLesson('${l.id}')">
-                    <div class="flex items-center gap-3 md:gap-4 truncate">
+                    <div class="flex items-center gap-3 md:gap-4 w-full truncate">
                         <div class="w-1.5 h-10 md:h-12 rounded-full shrink-0" style="background-color: ${esc(subject.color)}"></div>
-                        <div class="truncate">
+                        <div class="truncate flex-1">
                             <p class="font-extrabold text-sm md:text-base" style="${lineThrough}">${l.startTime} - ${l.endTime}</p>
                             <p class="text-xs md:text-sm font-medium truncate" style="color: var(--tekst-szary)">${esc(student.name)} <span class="text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 border hidden sm:inline-block" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${esc(subject.color)}; border-color: ${esc(subject.color)}">${esc(subject.name).toUpperCase()}</span>${bundleBadge}</p>
                             ${topicHtml}
@@ -1414,10 +1415,10 @@ function renderAgendaView(monday, sunday) {
                  onclick="editLesson('${l.id}')">
                  
                 <div class="flex justify-between items-start gap-4">
-                    <div class="flex-1">
+                    <div class="flex-1 min-w-0">
                         <div class="font-black text-lg md:text-xl" style="${lineThrough}">${l.startTime} - ${l.endTime}</div>
-                        <div class="font-extrabold text-base md:text-lg mt-1">${esc(student.name)}</div>
-                        <div class="inline-block px-2 py-0.5 mt-2 rounded border-2 text-[10px] md:text-xs font-bold uppercase tracking-wider" style="background-color: ${hexToRgba(subject.color, 0.15)}; border-color: ${esc(subject.color)}; color: ${esc(subject.color)}">${esc(subject.name)}</div>
+                        <div class="font-extrabold text-base md:text-lg mt-1 truncate w-full">${esc(student.name)}</div>
+                        <div class="inline-block px-2 py-0.5 mt-2 rounded border-2 text-[10px] md:text-xs font-bold uppercase tracking-wider truncate max-w-full" style="background-color: ${hexToRgba(subject.color, 0.15)}; border-color: ${esc(subject.color)}; color: ${esc(subject.color)}">${esc(subject.name)}</div>
                         ${topicHtml}
                     </div>
                     
