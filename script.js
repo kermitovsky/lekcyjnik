@@ -69,7 +69,7 @@ function debounce(func, wait) {
 }
 const debouncedRenderStudents = debounce(renderStudents, 150);
 
-// --- BEZPIECZNA DATA LOKALNA (NAPRAWA PROBLEMU STREF CZASOWYCH) ---
+// --- BEZPIECZNA DATA LOKALNA ---
 function getLocalISODate(dateObj) {
     const d = new Date(dateObj);
     const year = d.getFullYear();
@@ -261,7 +261,7 @@ function hexToRgba(hex, alpha) {
 
 function getMonday(d) {
     let date = new Date(d);
-    date.setHours(12, 0, 0, 0); // Bezpieczeństwo stref czasowych
+    date.setHours(12, 0, 0, 0);
     let day = date.getDay(), diff = date.getDate() - day + (day === 0 ? -6 : 1); 
     return new Date(date.setDate(diff));
 }
@@ -1524,7 +1524,7 @@ function renderCalendar() {
     document.getElementById('calendar-grid').innerHTML = gridHtml;
     updateCurrentTimeLine();
 
-    // AUTO-SCROLL DO PIERWSZEJ LEKCJI W TYGODNIU
+    // AUTO-SCROLL (CZEKA NA ZAKOŃCZENIE ANIMACJI KARTY)
     let weekStringStart = getLocalISODate(monday);
     let weekStringEnd = getLocalISODate(sunday);
     let weekLessons = lessons.filter(l => l.date >= weekStringStart && l.date <= weekStringEnd && !l.cancelled);
@@ -1540,22 +1540,20 @@ function renderCalendar() {
         }
     });
 
-    let scrollContainer = document.getElementById('calendar-body-scroll');
-    if (scrollContainer && hasLessons) {
-        let scrollTargetHour = earliestHour - 1;
-        if(scrollTargetHour < settings.startHour) scrollTargetHour = settings.startHour;
-        
-        setTimeout(() => {
+    setTimeout(() => {
+        let scrollContainer = document.getElementById('calendar-body-scroll');
+        if (scrollContainer && hasLessons) {
+            let scrollTargetHour = earliestHour - 1;
+            if(scrollTargetHour < settings.startHour) scrollTargetHour = settings.startHour;
+            
             scrollContainer.scrollTo({
                 top: (scrollTargetHour - settings.startHour) * 96,
                 behavior: 'smooth'
             });
-        }, 50);
-    } else if (scrollContainer && !hasLessons) {
-        setTimeout(() => {
+        } else if (scrollContainer && !hasLessons) {
             scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 50);
-    }
+        }
+    }, 400); // <-- Magiczna wartość (400ms), która czeka aż widok na pewno się odkryje!
 }
 
 function renderAgendaView(monday, sunday) {
@@ -1764,18 +1762,18 @@ function renderSlotCalendar() {
     }
     document.getElementById('slot-calendar-grid').innerHTML = gridHtml;
 
-    let slotScrollContainer = document.querySelector('#slot-calendar-grid').parentElement;
-    if (slotScrollContainer && earliestAvailableHour < settings.endHour) {
-        let scrollTargetHour = earliestAvailableHour - 1;
-        if(scrollTargetHour < settings.startHour) scrollTargetHour = settings.startHour;
-        
-        setTimeout(() => {
+    setTimeout(() => {
+        let slotScrollContainer = document.querySelector('#slot-calendar-grid').parentElement;
+        if (slotScrollContainer && earliestAvailableHour < settings.endHour) {
+            let scrollTargetHour = earliestAvailableHour - 1;
+            if(scrollTargetHour < settings.startHour) scrollTargetHour = settings.startHour;
+            
             slotScrollContainer.scrollTo({
                 top: (scrollTargetHour - settings.startHour) * 96,
                 behavior: 'smooth'
             });
-        }, 50);
-    }
+        }
+    }, 400); // Opóźnienie również dla wyszukiwarki terminów
 }
 
 function handleSlotClick(e, dateStr) {
