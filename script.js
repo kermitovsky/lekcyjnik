@@ -69,6 +69,47 @@ function debounce(func, wait) {
 }
 const debouncedRenderStudents = debounce(renderStudents, 150);
 
+// --- ANIMACJA LICZNIKÓW (PUNKT 1) ---
+function animateValue(id, start, end, duration, suffix = "") {
+    let obj = document.getElementById(id);
+    if (!obj) return;
+    if (start === end) { obj.innerText = end + suffix; return; }
+    let startTimestamp = null;
+    const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        // easeOutQuart - płynne zwalnianie na końcu
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        obj.innerText = Math.floor(easeOutQuart * (end - start) + start) + suffix;
+        if (progress < 1) window.requestAnimationFrame(step);
+        else obj.innerText = end + suffix;
+    };
+    window.requestAnimationFrame(step);
+}
+
+// --- DYMKI POWIADOMIEŃ (TOAST - PUNKT 2) ---
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    
+    const toast = document.createElement('div');
+    const bgColor = type === 'success' ? 'bg-emerald-500' : 'bg-rose-500';
+    const icon = type === 'success' ? '✅' : '❌';
+    
+    toast.className = `${bgColor} text-white px-4 py-3 rounded-xl shadow-[4px_4px_0_var(--ciemny)] border-2 border-black font-extrabold text-xs md:text-sm transform transition-all duration-300 translate-y-10 opacity-0 flex items-center gap-3`;
+    toast.innerHTML = `<span>${icon}</span> <span>${esc(message)}</span>`;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => { toast.classList.remove('translate-y-10', 'opacity-0'); }, 10);
+    
+    setTimeout(() => {
+        toast.classList.add('translate-y-10', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+
 // --- POWIADOMIENIA PUSH ---
 let notifiedLessons = new Set();
 
@@ -156,7 +197,7 @@ function showSeriesChoice(title, message, isDanger = false) {
     });
 }
 
-// --- INICJALIZACJA PLUGinÓW I GŁÓWNEGO NASŁUCHIWACZA (PUNKTY 1 i 2) ---
+// --- INICJALIZACJA PLUGinÓW I GŁÓWNEGO NASŁUCHIWACZA ---
 document.addEventListener("DOMContentLoaded", () => {
     datePicker = flatpickr("#lesson-date", { 
         locale: "pl", dateFormat: "Y-m-d", altInput: true, altFormat: "d/m/Y", allowInput: true,
@@ -175,7 +216,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // PWA SMART UPDATE CHECK
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').then(reg => {
             reg.onupdatefound = () => {
@@ -189,10 +229,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }).catch(err => console.log('SW reg. skipped/failed', err));
     }
 
-    // EVENT DELEGATION - Zamiast setek funkcji onclick, jeden radar na całą stronę!
     document.addEventListener('click', function(e) {
         let lessonBlock = e.target.closest('.lesson-block');
-        // Ignorujemy, jeśli kliknięto w link (a) lub przycisk wewnątrz kafelka
         if (lessonBlock && !e.target.closest('a') && !e.target.closest('button')) {
             editLesson(lessonBlock.getAttribute('data-id'));
         }
@@ -229,15 +267,28 @@ function getWeekString(dateObj) {
     return d.getFullYear() + '-W' + weekNum.toString().padStart(2, '0');
 }
 
+// ANIMACJE ZAKŁADEK (PUNKT 3)
 function switchTab(tabName) {
+    // 1. Zwiń wszystkie
     ['skeleton', 'pulpit', 'kalendarz', 'uczniowie', 'przedmioty', 'zarobki', 'ustawienia'].forEach(id => {
         let el = document.getElementById(`view-${id}`);
-        if(el) el.classList.add('hidden');
+        if(el) {
+            el.classList.add('hidden');
+            el.classList.remove('opacity-100', 'translate-y-0');
+            el.classList.add('opacity-0', 'translate-y-4');
+        }
     });
     document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('aktywna'));
 
+    // 2. Pokaż nową i dodaj płynny wjazd
     let viewEl = document.getElementById(`view-${tabName}`);
-    if(viewEl) viewEl.classList.remove('hidden');
+    if(viewEl) {
+        viewEl.classList.remove('hidden');
+        // Magiczna sztuczka - wymuszamy odświeżenie klatki zanim dodamy klasy animacji
+        void viewEl.offsetWidth; 
+        viewEl.classList.remove('opacity-0', 'translate-y-4');
+        viewEl.classList.add('opacity-100', 'translate-y-0');
+    }
     
     let tabEl = document.getElementById(`tab-${tabName}`);
     if(tabEl) tabEl.classList.add('aktywna');
@@ -248,8 +299,12 @@ function switchTab(tabName) {
     if(tabName === 'przedmioty') renderSubjects();
     if(tabName === 'zarobki') {
         const now = new Date();
-        document.getElementById('earnings-month-picker').value = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}`;
-        document.getElementById('earnings-week-picker').value = getWeekString(now); 
+        if(!document.getElementById('earnings-month-picker').value) {
+            document.getElementById('earnings-month-picker').value = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}`;
+        }
+        if(!document.getElementById('earnings-week-picker').value) {
+            document.getElementById('earnings-week-picker').value = getWeekString(now); 
+        }
         renderZarobki();
     }
 }
@@ -349,7 +404,7 @@ async function importujDane(event) {
                 saveSubjectsToCloud(); saveStudentsToCloud(); saveLessonsToCloud(); saveSettingsToCloud();
                 
                 applyVisualSettings(); switchTab('pulpit');
-                await customAlert('Sukces', 'Baza danych została poprawnie wgrana!');
+                showToast('Wgrano kopię zapasową!');
             } else { await customAlert('Błąd pliku', 'Ten plik jest uszkodzony.'); }
         } catch (error) { await customAlert('Błąd', 'Nie udało się poprawnie odczytać pliku.'); }
         event.target.value = '';
@@ -429,6 +484,7 @@ function renderAvailabilitySettings() {
 function toggleDay(dayId, isChecked) {
     settings.availability[dayId].active = isChecked;
     saveSettingsToCloud(); renderAvailabilitySettings();
+    showToast('Zaktualizowano grafik');
 }
 
 function updateDayTime(dayId, type, value) {
@@ -442,6 +498,7 @@ function zapiszOpcje() {
     settings.endHour = parseInt(document.getElementById('ust-end').value) || 22;
     settings.duration = parseInt(document.getElementById('ust-czas').value) || 60;
     saveSettingsToCloud(); renderCalendar();
+    showToast('Zapisano ustawienia!');
 }
 
 // --- PRZEDMIOTY ---
@@ -499,12 +556,14 @@ async function saveSubject() {
         subjects.push({ id: Date.now().toString(), name, color, links }); 
     }
     saveSubjectsToCloud(); closeModals(); renderSubjects();
+    showToast('Zapisano przedmiot!');
 }
 
 async function deleteSubject() {
     const id = document.getElementById('subject-id').value;
     if(await showConfirm('Usuwanie', 'Czy na pewno usunąć ten przedmiot?', true)) {
         subjects = subjects.filter(s => s.id != id); saveSubjectsToCloud(); closeModals(); renderSubjects();
+        showToast('Usunięto przedmiot');
     }
 }
 
@@ -653,6 +712,7 @@ async function toggleArchiveStudent(id) {
         let action = student.archived ? "przywrócić ucznia do aktywnych" : "przenieść ucznia do archiwum";
         if(await showConfirm('Archiwum', `Czy na pewno chcesz ${action}? Jego lekcje w historii pozostaną nienaruszone.`)) {
             student.archived = !student.archived; saveStudentsToCloud(); renderStudents(); renderDashboard(); 
+            showToast('Uczeń przeniesiony');
         }
     }
 }
@@ -734,6 +794,7 @@ async function saveStudent() {
         students.push({ id: Date.now().toString(), name, subjectIds: selectedSubjects, archived: false, bundles: finalBundles });
     }
     saveStudentsToCloud(); closeModals(); renderStudents();
+    showToast('Zapisano ucznia!');
 }
 
 async function deleteStudent(id) {
@@ -741,6 +802,7 @@ async function deleteStudent(id) {
         students = students.filter(s => s.id != id);
         lessons = lessons.filter(l => l.studentId != id);
         saveStudentsToCloud(); saveLessonsToCloud(); renderStudents(); renderDashboard();
+        showToast('Usunięto ucznia i jego lekcje');
     }
 }
 
@@ -1091,6 +1153,7 @@ async function saveLesson() {
     }
     saveLessonsToCloud(); closeModals(); renderCalendar();
     if(!document.getElementById('view-pulpit').classList.contains('hidden')) renderDashboard();
+    showToast('Zapisano lekcję!');
 }
 
 async function deleteLesson() {
@@ -1120,6 +1183,7 @@ async function deleteLesson() {
     
     saveLessonsToCloud(); closeModals(); renderCalendar();
     if(!document.getElementById('view-pulpit').classList.contains('hidden')) renderDashboard();
+    showToast('Lekcja usunięta', 'success');
 }
 
 function markAsPaid(id, event) {
@@ -1128,6 +1192,7 @@ function markAsPaid(id, event) {
     if(lesson) {
         lesson.paid = true; saveLessonsToCloud(); renderDashboard();
         if(!document.getElementById('view-kalendarz').classList.contains('hidden')) renderCalendar();
+        showToast('Oznaczono jako opłacone!');
     }
 }
 
@@ -1141,6 +1206,7 @@ function markBundleAsPaid(studentId, bundleId, paymentDate, event) {
     });
     saveLessonsToCloud(); renderDashboard();
     if(!document.getElementById('view-kalendarz').classList.contains('hidden')) renderCalendar();
+    showToast('Pakiet opłacony!');
 }
 
 // --- WIDOK PULPITU ---
@@ -1183,12 +1249,13 @@ function renderDashboard() {
         }
     });
 
-    document.getElementById('dashboard-monthly-earnings').innerText = `${Math.round(earnings)} zł`;
-    document.getElementById('dashboard-planned-earnings').innerText = `(w planach: +${Math.round(plannedEarnings)} zł)`;
+    // Użycie animacji!
+    animateValue('dashboard-monthly-earnings', 0, Math.round(earnings), 800, ' zł');
+    animateValue('dashboard-planned-earnings', 0, Math.round(plannedEarnings), 800, ' zł');
+
     document.getElementById('dashboard-monthly-lessons').innerText = `${lessonsThisMonth} lekcji`;
     document.getElementById('dashboard-active-students').innerText = students.filter(s => !s.archived).length;
 
-    // NOWOŚĆ: PORÓWNANIE Z ZESZŁYM MIESIĄCEM (PUNKT 3)
     let momEl = document.getElementById('dashboard-mom-comparison');
     if (momEl) {
         if (prevMonthEarnings === 0) {
@@ -1260,7 +1327,8 @@ function renderDashboard() {
         } else { individualPayments.push(l); }
     });
 
-    document.getElementById('dashboard-unpaid-sum').innerText = `${Math.round(unpaidTotal)} zł`;
+    // Animacja sumy zaległości
+    animateValue('dashboard-unpaid-sum', 0, Math.round(unpaidTotal), 800, ' zł');
     document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} zaległych lekcji`;
 
     const unpaidContainer = document.getElementById('pulpit-unpaid-lessons'); unpaidContainer.innerHTML = '';
@@ -1435,7 +1503,6 @@ function renderCalendar() {
             let opacityAndStrike = lesson.cancelled ? 'opacity: 0.5; filter: grayscale(100%); text-decoration: line-through;' : '';
             let topicHtml = lesson.topic ? `<div class="truncate text-[8px] md:text-[10px] font-medium mt-0.5" style="color: var(--tekst-glowny)">📝 ${esc(lesson.topic)}</div>` : '';
 
-            // KLASA LESSON-BLOCK + DATA-ID ZAMIAST ONCLICK
             gridHtml += `
                 <div class="absolute w-[94%] left-[3%] rounded-lg md:rounded-xl p-1 md:p-1.5 overflow-hidden shadow-sm hover:shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 transition cursor-pointer flex flex-col border-l-2 md:border-l-4 border lesson-block" 
                      style="top: ${topPosition}px; height: ${height}px; background-color: ${bgColor}; border-left-color: ${esc(subject.color)}; border-color: ${esc(subject.color)}; ${opacityAndStrike}"
@@ -1502,7 +1569,7 @@ function renderAgendaView(monday, sunday) {
                 linksHtml += '<div class="flex flex-wrap gap-2 mt-3 pt-3 border-t-2" style="border-color: rgba(0,0,0,0.05)">';
                 linksArr.forEach((link, idx) => {
                     let url = link.startsWith('http') ? link : 'https://' + link;
-                    linksHtml += `<a href="${esc(url)}" target="_blank" class="px-3 py-1.5 bg-white border-2 rounded-lg text-[10px] md:text-xs font-bold hover:-translate-y-0.5 transition shadow-[2px_2px_0_var(--ciemny)]" style="border-color: var(--ciemny); color: var(--ciemny)">🔗 Materiał ${idx+1}</a>`;
+                    linksHtml += `<a href="${esc(url)}" target="_blank" onclick="event.stopPropagation()" class="px-3 py-1.5 bg-white border-2 rounded-lg text-[10px] md:text-xs font-bold hover:-translate-y-0.5 transition shadow-[2px_2px_0_var(--ciemny)]" style="border-color: var(--ciemny); color: var(--ciemny)">🔗 Materiał ${idx+1}</a>`;
                 });
                 linksHtml += '</div>';
             }
@@ -1755,20 +1822,21 @@ function renderZarobki() {
     const weekPicker = document.getElementById('earnings-week-picker').value;
 
     const allData = processEarningsData(lessons);
-    document.getElementById('total-all-earnings').innerText = `${allData.total} zł`;
+    // Użycie animacji!
+    animateValue('total-all-earnings', 0, allData.total, 800, ' zł');
     renderChart('chart-all-subject', 'doughnut', allData.subjectArr);
     renderStudentList('list-all-student', allData.studentArr, allData.total);
 
     if(monthPicker) {
         const monthLessons = lessons.filter(l => l.date.substring(0,7) === monthPicker);
         const monthData = processEarningsData(monthLessons);
-        document.getElementById('total-month-earnings').innerText = `${monthData.total} zł`;
+        animateValue('total-month-earnings', 0, monthData.total, 800, ' zł');
         renderChart('chart-month-subject', 'bar', monthData.subjectArr);
     }
     if(weekPicker) {
         const weekLessons = lessons.filter(l => getWeekString(l.date) === weekPicker);
         const weekData = processEarningsData(weekLessons);
-        document.getElementById('total-week-earnings').innerText = `${weekData.total} zł`;
+        animateValue('total-week-earnings', 0, weekData.total, 800, ' zł');
         renderChart('chart-week-subject', 'bar', weekData.subjectArr);
     }
 }
