@@ -69,7 +69,7 @@ function debounce(func, wait) {
 }
 const debouncedRenderStudents = debounce(renderStudents, 150);
 
-// --- POWIADOMIENIA PUSH (PUNKT 4) ---
+// --- POWIADOMIENIA PUSH ---
 let notifiedLessons = new Set();
 
 function initNotifications() {
@@ -90,7 +90,6 @@ function checkNotifications() {
             let lessonTime = h * 60 + m;
             let diff = lessonTime - currentTime;
 
-            // Jeśli do lekcji zostało 15 minut lub mniej i jeszcze nie wysłano powiadomienia
             if (diff > 0 && diff <= 15 && !notifiedLessons.has(l.id)) {
                 notifiedLessons.add(l.id);
                 
@@ -157,7 +156,7 @@ function showSeriesChoice(title, message, isDanger = false) {
     });
 }
 
-// --- INICJALIZACJA PLUGinÓW ---
+// --- INICJALIZACJA PLUGinÓW I GŁÓWNEGO NASŁUCHIWACZA (PUNKTY 1 i 2) ---
 document.addEventListener("DOMContentLoaded", () => {
     datePicker = flatpickr("#lesson-date", { 
         locale: "pl", dateFormat: "Y-m-d", altInput: true, altFormat: "d/m/Y", allowInput: true,
@@ -173,6 +172,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 currentDate = selectedDates[0];
                 renderCalendar();
             }
+        }
+    });
+
+    // PWA SMART UPDATE CHECK
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+            reg.onupdatefound = () => {
+                const installingWorker = reg.installing;
+                installingWorker.onstatechange = () => {
+                    if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        document.getElementById('pwa-update-toast').classList.remove('hidden');
+                    }
+                };
+            };
+        }).catch(err => console.log('SW reg. skipped/failed', err));
+    }
+
+    // EVENT DELEGATION - Zamiast setek funkcji onclick, jeden radar na całą stronę!
+    document.addEventListener('click', function(e) {
+        let lessonBlock = e.target.closest('.lesson-block');
+        // Ignorujemy, jeśli kliknięto w link (a) lub przycisk wewnątrz kafelka
+        if (lessonBlock && !e.target.closest('a') && !e.target.closest('button')) {
+            editLesson(lessonBlock.getAttribute('data-id'));
         }
     });
 });
@@ -762,7 +784,7 @@ function handleBundleChange() {
     if (bundleId) {
         if(priceLabel) priceLabel.innerText = 'Cena poza pakietem (zł)';
         paymentDateDiv.classList.remove('hidden');
-        priceInput.readOnly = false;
+        priceInput.readOnly = false; 
         
         const stId = document.getElementById('lesson-student').value;
         const student = students.find(s => s.id == stId);
@@ -1166,7 +1188,7 @@ function renderDashboard() {
     document.getElementById('dashboard-monthly-lessons').innerText = `${lessonsThisMonth} lekcji`;
     document.getElementById('dashboard-active-students').innerText = students.filter(s => !s.archived).length;
 
-    // NOWOŚĆ: PORÓWNANIE Z ZESZŁYM MIESIĄCEM
+    // NOWOŚĆ: PORÓWNANIE Z ZESZŁYM MIESIĄCEM (PUNKT 3)
     let momEl = document.getElementById('dashboard-mom-comparison');
     if (momEl) {
         if (prevMonthEarnings === 0) {
@@ -1200,7 +1222,7 @@ function renderDashboard() {
             let badge = subject ? `<span class="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded border" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${esc(subject.color)}; border-color: ${esc(subject.color)}">${esc(subject.name).toUpperCase()}</span>` : '';
 
             upcomingContainer.innerHTML += `
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-sm hover:shadow-md gap-2 sm:gap-0" style="background-color: var(--karta-bg); border-color: var(--szary-ramka)" onclick="editLesson('${l.id}')">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-sm hover:shadow-md gap-2 sm:gap-0 lesson-block" style="background-color: var(--karta-bg); border-color: var(--szary-ramka)" data-id="${l.id}">
                     <div class="flex items-center gap-3 md:gap-4">
                         <div class="w-8 h-8 md:w-10 h-10 rounded-full flex items-center justify-center font-bold border text-sm md:text-base" style="background-color: var(--jasny); border-color: var(--szary-ramka); color: var(--tekst-szary)">🕒</div>
                         <div>
@@ -1268,7 +1290,7 @@ function renderDashboard() {
         individualPayments.sort((a,b) => (b.date + b.startTime).localeCompare(a.date + a.startTime)).slice(0, 5).forEach(l => {
             let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
             unpaidContainer.innerHTML += `
-                <div class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2" style="background-color: rgba(244, 63, 94, 0.05); border-color: rgba(244, 63, 94, 0.2)" onclick="editLesson('${l.id}')">
+                <div class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2 lesson-block" style="background-color: rgba(244, 63, 94, 0.05); border-color: rgba(244, 63, 94, 0.2)" data-id="${l.id}">
                     <div>
                         <div class="font-bold text-sm md:text-base">${esc(student.name)}</div>
                         <div class="text-[10px] md:text-xs font-medium text-rose-500">${l.date} | ${l.startTime}</div>
@@ -1309,7 +1331,7 @@ function renderDashboard() {
             let bundleBadge = l.bundleId ? `<span class="text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded ml-1 border bg-blue-50 text-blue-600 border-blue-200">📦 PAKIET</span>` : '';
 
             weekContainer.innerHTML += `
-                <div class="flex items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 gap-2 md:gap-4" style="background-color: var(--karta-bg); border-color: var(--ciemny); ${cardOpacity}" onclick="editLesson('${l.id}')">
+                <div class="flex items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 gap-2 md:gap-4 lesson-block" style="background-color: var(--karta-bg); border-color: var(--ciemny); ${cardOpacity}" data-id="${l.id}">
                     <div class="flex items-center gap-3 md:gap-4 w-full truncate">
                         <div class="w-1.5 h-10 md:h-12 rounded-full shrink-0" style="background-color: ${esc(subject.color)}"></div>
                         <div class="truncate flex-1">
@@ -1413,10 +1435,11 @@ function renderCalendar() {
             let opacityAndStrike = lesson.cancelled ? 'opacity: 0.5; filter: grayscale(100%); text-decoration: line-through;' : '';
             let topicHtml = lesson.topic ? `<div class="truncate text-[8px] md:text-[10px] font-medium mt-0.5" style="color: var(--tekst-glowny)">📝 ${esc(lesson.topic)}</div>` : '';
 
+            // KLASA LESSON-BLOCK + DATA-ID ZAMIAST ONCLICK
             gridHtml += `
-                <div class="absolute w-[94%] left-[3%] rounded-lg md:rounded-xl p-1 md:p-1.5 overflow-hidden shadow-sm hover:shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 transition cursor-pointer flex flex-col border-l-2 md:border-l-4 border" 
+                <div class="absolute w-[94%] left-[3%] rounded-lg md:rounded-xl p-1 md:p-1.5 overflow-hidden shadow-sm hover:shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 transition cursor-pointer flex flex-col border-l-2 md:border-l-4 border lesson-block" 
                      style="top: ${topPosition}px; height: ${height}px; background-color: ${bgColor}; border-left-color: ${esc(subject.color)}; border-color: ${esc(subject.color)}; ${opacityAndStrike}"
-                     onclick="editLesson('${lesson.id}')">
+                     data-id="${lesson.id}">
                     <div class="font-bold flex justify-between text-[9px] md:text-xs mb-0.5" style="color: ${esc(subject.color)}">
                         <span class="whitespace-nowrap tracking-tighter md:tracking-normal">${lesson.startTime}-${lesson.endTime}</span>
                         <span title="Status" class="hidden md:inline">${icon}</span>
@@ -1479,16 +1502,16 @@ function renderAgendaView(monday, sunday) {
                 linksHtml += '<div class="flex flex-wrap gap-2 mt-3 pt-3 border-t-2" style="border-color: rgba(0,0,0,0.05)">';
                 linksArr.forEach((link, idx) => {
                     let url = link.startsWith('http') ? link : 'https://' + link;
-                    linksHtml += `<a href="${esc(url)}" target="_blank" onclick="event.stopPropagation()" class="px-3 py-1.5 bg-white border-2 rounded-lg text-[10px] md:text-xs font-bold hover:-translate-y-0.5 transition shadow-[2px_2px_0_var(--ciemny)]" style="border-color: var(--ciemny); color: var(--ciemny)">🔗 Materiał ${idx+1}</a>`;
+                    linksHtml += `<a href="${esc(url)}" target="_blank" class="px-3 py-1.5 bg-white border-2 rounded-lg text-[10px] md:text-xs font-bold hover:-translate-y-0.5 transition shadow-[2px_2px_0_var(--ciemny)]" style="border-color: var(--ciemny); color: var(--ciemny)">🔗 Materiał ${idx+1}</a>`;
                 });
                 linksHtml += '</div>';
             }
         }
 
         container.innerHTML += `
-            <div class="karta cursor-pointer transition hover:-translate-y-1 hover:shadow-[6px_6px_0_var(--ciemny)] border-4 p-4 md:p-5 mb-4 flex flex-col bg-white" 
+            <div class="karta cursor-pointer transition hover:-translate-y-1 hover:shadow-[6px_6px_0_var(--ciemny)] border-4 p-4 md:p-5 mb-4 flex flex-col bg-white lesson-block" 
                  style="border-color: var(--ciemny); border-left-width: 8px; border-left-color: ${esc(subject.color)}; ${opacityAndStrike}" 
-                 onclick="editLesson('${l.id}')">
+                 data-id="${l.id}">
                  
                 <div class="flex justify-between items-start gap-4">
                     <div class="flex-1 min-w-0">
