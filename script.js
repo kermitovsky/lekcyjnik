@@ -69,7 +69,7 @@ function debounce(func, wait) {
 }
 const debouncedRenderStudents = debounce(renderStudents, 150);
 
-// --- ANIMACJA LICZNIKÓW (PUNKT 1) ---
+// --- ANIMACJA LICZNIKÓW ---
 function animateValue(id, start, end, duration, suffix = "") {
     let obj = document.getElementById(id);
     if (!obj) return;
@@ -78,7 +78,6 @@ function animateValue(id, start, end, duration, suffix = "") {
     const step = (timestamp) => {
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        // easeOutQuart - płynne zwalnianie na końcu
         const easeOutQuart = 1 - Math.pow(1 - progress, 4);
         obj.innerText = Math.floor(easeOutQuart * (end - start) + start) + suffix;
         if (progress < 1) window.requestAnimationFrame(step);
@@ -87,7 +86,7 @@ function animateValue(id, start, end, duration, suffix = "") {
     window.requestAnimationFrame(step);
 }
 
-// --- DYMKI POWIADOMIEŃ (TOAST - PUNKT 2) ---
+// --- DYMKI POWIADOMIEŃ ---
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -108,7 +107,6 @@ function showToast(message, type = 'success') {
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
-
 
 // --- POWIADOMIENIA PUSH ---
 let notifiedLessons = new Set();
@@ -267,9 +265,7 @@ function getWeekString(dateObj) {
     return d.getFullYear() + '-W' + weekNum.toString().padStart(2, '0');
 }
 
-// ANIMACJE ZAKŁADEK (PUNKT 3)
 function switchTab(tabName) {
-    // 1. Zwiń wszystkie
     ['skeleton', 'pulpit', 'kalendarz', 'uczniowie', 'przedmioty', 'zarobki', 'ustawienia'].forEach(id => {
         let el = document.getElementById(`view-${id}`);
         if(el) {
@@ -280,11 +276,9 @@ function switchTab(tabName) {
     });
     document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('aktywna'));
 
-    // 2. Pokaż nową i dodaj płynny wjazd
     let viewEl = document.getElementById(`view-${tabName}`);
     if(viewEl) {
         viewEl.classList.remove('hidden');
-        // Magiczna sztuczka - wymuszamy odświeżenie klatki zanim dodamy klasy animacji
         void viewEl.offsetWidth; 
         viewEl.classList.remove('opacity-0', 'translate-y-4');
         viewEl.classList.add('opacity-100', 'translate-y-0');
@@ -1249,7 +1243,6 @@ function renderDashboard() {
         }
     });
 
-    // Użycie animacji!
     animateValue('dashboard-monthly-earnings', 0, Math.round(earnings), 800, ' zł');
     animateValue('dashboard-planned-earnings', 0, Math.round(plannedEarnings), 800, ' zł');
 
@@ -1327,7 +1320,6 @@ function renderDashboard() {
         } else { individualPayments.push(l); }
     });
 
-    // Animacja sumy zaległości
     animateValue('dashboard-unpaid-sum', 0, Math.round(unpaidTotal), 800, ' zł');
     document.getElementById('dashboard-unpaid-count').innerText = `${unpaidCount} zaległych lekcji`;
 
@@ -1417,7 +1409,7 @@ function renderDashboard() {
     }
 }
 
-// --- WIDOK KALENDARZA (Z PRZEŁĄCZANIEM NA AGENDĘ) ---
+// --- WIDOK KALENDARZA ---
 function toggleCalendarView() {
     currentCalendarView = currentCalendarView === 'grid' ? 'agenda' : 'grid';
     const btn = document.getElementById('btn-toggle-view');
@@ -1520,6 +1512,39 @@ function renderCalendar() {
     }
     document.getElementById('calendar-grid').innerHTML = gridHtml;
     updateCurrentTimeLine();
+
+    // AUTO-SCROLL DO PIERWSZEJ LEKCJI W TYGODNIU (ZMIANA)
+    let weekStringStart = monday.toISOString().split('T')[0];
+    let weekStringEnd = sunday.toISOString().split('T')[0];
+    let weekLessons = lessons.filter(l => l.date >= weekStringStart && l.date <= weekStringEnd && !l.cancelled);
+
+    let earliestHour = settings.endHour;
+    let hasLessons = false;
+    
+    weekLessons.forEach(l => {
+        let h = parseInt(l.startTime.split(':')[0]);
+        if(h < earliestHour) {
+            earliestHour = h;
+            hasLessons = true;
+        }
+    });
+
+    let scrollContainer = document.getElementById('calendar-body-scroll');
+    if (scrollContainer && hasLessons) {
+        let scrollTargetHour = earliestHour - 1;
+        if(scrollTargetHour < settings.startHour) scrollTargetHour = settings.startHour;
+        
+        setTimeout(() => {
+            scrollContainer.scrollTo({
+                top: (scrollTargetHour - settings.startHour) * 96,
+                behavior: 'smooth'
+            });
+        }, 50);
+    } else if (scrollContainer && !hasLessons) {
+        setTimeout(() => {
+            scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 50);
+    }
 }
 
 function renderAgendaView(monday, sunday) {
@@ -1661,6 +1686,8 @@ function renderSlotCalendar() {
     }
     gridHtml += `</div>`;
 
+    let earliestAvailableHour = settings.endHour;
+
     for(let i=0; i<7; i++) {
         let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
         let dateString = dayDate.toISOString().split('T')[0];
@@ -1679,6 +1706,8 @@ function renderSlotCalendar() {
             let [sH, sM] = avail.start.split(':').map(Number);
             let [eH, eM] = avail.end.split(':').map(Number);
             
+            if(sH < earliestAvailableHour) earliestAvailableHour = sH;
+
             let startPos = ((sH - settings.startHour) * 96) + (sM / 60 * 96);
             let height = (((eH - sH) * 96) + ((eM - sM) / 60 * 96));
             let maxPos = (settings.endHour - settings.startHour) * 96 + 96;
@@ -1723,6 +1752,20 @@ function renderSlotCalendar() {
         gridHtml += `</div>`;
     }
     document.getElementById('slot-calendar-grid').innerHTML = gridHtml;
+
+    // AUTO-SCROLL DLA WYSZUKIWARKI TERMINÓW
+    let slotScrollContainer = document.querySelector('#slot-calendar-grid').parentElement;
+    if (slotScrollContainer && earliestAvailableHour < settings.endHour) {
+        let scrollTargetHour = earliestAvailableHour - 1;
+        if(scrollTargetHour < settings.startHour) scrollTargetHour = settings.startHour;
+        
+        setTimeout(() => {
+            slotScrollContainer.scrollTo({
+                top: (scrollTargetHour - settings.startHour) * 96,
+                behavior: 'smooth'
+            });
+        }, 50);
+    }
 }
 
 function handleSlotClick(e, dateStr) {
@@ -1822,7 +1865,6 @@ function renderZarobki() {
     const weekPicker = document.getElementById('earnings-week-picker').value;
 
     const allData = processEarningsData(lessons);
-    // Użycie animacji!
     animateValue('total-all-earnings', 0, allData.total, 800, ' zł');
     renderChart('chart-all-subject', 'doughnut', allData.subjectArr);
     renderStudentList('list-all-student', allData.studentArr, allData.total);
