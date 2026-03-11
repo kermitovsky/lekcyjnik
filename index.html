@@ -69,14 +69,16 @@
 
     <div id="view-login" class="absolute inset-0 z-50 overflow-y-auto no-scrollbar hidden transition-opacity duration-500">
         
-        <nav class="w-full flex justify-between items-center px-4 py-4 md:px-10 md:py-6 bg-white border-b-4 border-black sticky top-0 z-50">
-            <div class="flex items-center gap-8">
-                <h1 class="font-black tracking-tighter uppercase flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
-                    <span class="flex items-center gap-3 md:gap-5">
-                        <img src="logo.png" alt="Logo TutoGrid" class="h-20 md:h-28 w-auto object-contain hover:scale-105 transition-transform" onerror="this.style.display='none'">
-                        <span class="text-4xl md:text-6xl text-black">TutoGrid<span class="text-[#4f46e5]">.</span></span>
+        <nav class="w-full flex justify-between items-center px-4 py-3 md:px-10 md:py-6 bg-white border-b-4 border-black sticky top-0 z-50">
+            <div class="flex items-center gap-4 md:gap-8">
+                <h1 class="font-black tracking-tighter uppercase flex flex-col sm:flex-row sm:items-center gap-0 sm:gap-4">
+                    <span class="flex items-center gap-2 md:gap-5">
+                        <img src="logo.png" alt="Logo TutoGrid" class="h-10 sm:h-16 md:h-24 lg:h-36 w-auto object-contain shrink-0 hover:scale-105 transition-transform" onerror="this.style.display='none'">
+                        <span class="text-2xl sm:text-4xl md:text-6xl lg:text-7xl text-black leading-none flex items-baseline">
+                            TutoGrid<span class="text-[#4f46e5]">.</span>
+                        </span>
                     </span>
-                    <span class="text-lg md:text-2xl font-black tracking-tight hidden sm:inline-block tekst-glowny normal-case mt-1 sm:mt-0">Twój Planer Korepetytora</span>
+                    <span class="text-[10px] sm:text-base md:text-xl lg:text-2xl font-black tracking-tight hidden sm:inline-block tekst-glowny normal-case mt-1 sm:mt-0">Twój Planer Korepetytora</span>
                 </h1>
                 
                 <div class="hidden xl:flex items-center gap-6 font-extrabold text-sm uppercase tracking-wider text-black ml-8">
@@ -84,8 +86,8 @@
                 </div>
             </div>
 
-            <button onclick="zalogujPrzezGoogle()" class="font-extrabold text-sm md:text-xl border-4 border-black px-6 py-3 md:px-8 md:py-4 bg-[#4f46e5] text-white shadow-[4px_4px_0_black] hover:translate-x-1 hover:translate-y-1 hover:shadow-[0px_0px_0_black] transition-all flex items-center gap-3">
-                <svg class="w-6 h-6 bg-white rounded-full p-0.5 hidden sm:block" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/><path fill="none" d="M1 1h22v22H1z"/></svg>
+            <button onclick="zalogujPrzezGoogle()" class="font-extrabold text-xs sm:text-sm md:text-xl border-4 border-black px-4 py-2 sm:px-6 sm:py-3 md:px-8 md:py-4 bg-[#4f46e5] text-white shadow-[4px_4px_0_black] hover:translate-x-1 hover:translate-y-1 hover:shadow-[0px_0px_0_black] transition-all flex items-center gap-2 shrink-0">
+                <svg class="w-4 h-4 md:w-6 md:h-6 bg-white rounded-full p-0.5 hidden sm:block" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/><path fill="none" d="M1 1h22v22H1z"/></svg>
                 Zaloguj się
             </button>
         </nav>
@@ -107,9 +109,9 @@
             <div class="relative z-10">
                 <div class="inline-block px-4 py-1 border-4 border-black font-black text-sm md:text-base bg-[#ffc900] shadow-[4px_4px_0_black] mb-8 uppercase tracking-widest text-black">Jedno narzędzie. Wszystkie możliwości.</div>
                 
-                <h2 class="text-6xl md:text-8xl font-black leading-[1.05] tracking-tighter text-black mb-8 flex flex-col items-center">
+                <h2 class="text-5xl md:text-8xl font-black leading-[1.05] tracking-tighter text-black mb-8 flex flex-col items-center">
                     Zarządzaj swoim planem <br>
-                    <span class="bg-[#4f46e5] text-white px-6 py-2 border-4 border-black shadow-[8px_8px_0_black] inline-block transform -rotate-2 mt-4 md:mt-6">jak profesjonalista.</span>
+                    <span class="bg-[#4f46e5] text-white px-4 md:px-6 py-2 border-4 border-black shadow-[8px_8px_0_black] inline-block transform -rotate-2 mt-4 md:mt-6">jak profesjonalista.</span>
                 </h2>
                 
                 <p class="text-lg md:text-2xl font-bold text-gray-800 max-w-4xl mx-auto mb-10 bg-white p-4 md:p-6 border-4 border-black shadow-[6px_6px_0_black] rounded-xl transform rotate-1 leading-snug">
@@ -117,7 +119,7 @@
                 </p>
                 
                 <div class="flex justify-center mb-16">
-                    <button onclick="zalogujPrzezGoogle()" class="text-xl md:text-3xl font-black border-4 border-black px-12 py-6 bg-[#ffc900] text-black shadow-[8px_8px_0_black] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all flex items-center justify-center gap-4">
+                    <button onclick="zalogujPrzezGoogle()" class="text-xl md:text-3xl font-black border-4 border-black px-8 md:px-12 py-4 md:py-6 bg-[#ffc900] text-black shadow-[8px_8px_0_black] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all flex items-center justify-center gap-4">
                         Wejdź do akcji! &rarr;
                     </button>
                 </div>
@@ -133,108 +135,108 @@
         </div>
 
         <section id="funkcje" class="max-w-7xl mx-auto px-4 py-24 relative z-10">
-            <h3 class="text-5xl md:text-6xl font-black text-center mb-16 text-black tracking-tighter">Oto co dostajesz.</h3>
+            <h3 class="text-4xl md:text-6xl font-black text-center mb-12 md:mb-16 text-black tracking-tighter">Oto co dostajesz.</h3>
             
-            <div class="flex flex-wrap justify-center gap-3 md:gap-6 mb-16">
-                <button id="btn-landing-1" onclick="switchLandingTab(1)" class="landing-tab-btn font-extrabold text-sm md:text-xl px-6 py-3 border-4 border-black shadow-[4px_4px_0_black] bg-[#4f46e5] text-white hover:-translate-y-1 transition-transform">📅 Kalendarz</button>
-                <button id="btn-landing-2" onclick="switchLandingTab(2)" class="landing-tab-btn font-extrabold text-sm md:text-xl px-6 py-3 border-4 border-black shadow-[4px_4px_0_black] bg-white text-black hover:-translate-y-1 transition-transform">💸 Finanse</button>
-                <button id="btn-landing-3" onclick="switchLandingTab(3)" class="landing-tab-btn font-extrabold text-sm md:text-xl px-6 py-3 border-4 border-black shadow-[4px_4px_0_black] bg-white text-black hover:-translate-y-1 transition-transform">👥 Uczniowie</button>
-                <button id="btn-landing-4" onclick="switchLandingTab(4)" class="landing-tab-btn font-extrabold text-sm md:text-xl px-6 py-3 border-4 border-black shadow-[4px_4px_0_black] bg-white text-black hover:-translate-y-1 transition-transform">🎨 Przedmioty</button>
+            <div class="flex flex-wrap justify-center gap-2 md:gap-6 mb-16">
+                <button id="btn-landing-1" onclick="switchLandingTab(1)" class="landing-tab-btn font-extrabold text-sm md:text-xl px-4 md:px-6 py-2 md:py-3 border-4 border-black shadow-[4px_4px_0_black] bg-[#4f46e5] text-white hover:-translate-y-1 transition-transform">📅 Kalendarz</button>
+                <button id="btn-landing-2" onclick="switchLandingTab(2)" class="landing-tab-btn font-extrabold text-sm md:text-xl px-4 md:px-6 py-2 md:py-3 border-4 border-black shadow-[4px_4px_0_black] bg-white text-black hover:-translate-y-1 transition-transform">💸 Finanse</button>
+                <button id="btn-landing-3" onclick="switchLandingTab(3)" class="landing-tab-btn font-extrabold text-sm md:text-xl px-4 md:px-6 py-2 md:py-3 border-4 border-black shadow-[4px_4px_0_black] bg-white text-black hover:-translate-y-1 transition-transform">👥 Uczniowie</button>
+                <button id="btn-landing-4" onclick="switchLandingTab(4)" class="landing-tab-btn font-extrabold text-sm md:text-xl px-4 md:px-6 py-2 md:py-3 border-4 border-black shadow-[4px_4px_0_black] bg-white text-black hover:-translate-y-1 transition-transform">🎨 Przedmioty</button>
             </div>
 
-            <div id="landing-tab-1" class="landing-tab-content bg-[#14b8a6] border-4 border-black shadow-[16px_16px_0_black] rounded-3xl p-8 md:p-16 flex flex-col md:flex-row items-center gap-12 text-black">
+            <div id="landing-tab-1" class="landing-tab-content bg-[#14b8a6] border-4 border-black shadow-[12px_12px_0_black] md:shadow-[16px_16px_0_black] rounded-3xl p-6 md:p-16 flex flex-col md:flex-row items-center gap-12 text-black">
                 <div class="flex-1 space-y-6">
-                    <div class="inline-block px-4 py-1.5 bg-white border-2 border-black font-black text-sm uppercase tracking-widest">Funkcja 1</div>
-                    <h4 class="text-4xl md:text-5xl font-black leading-tight">Twój nowy, kuloodporny terminarz.</h4>
-                    <p class="text-xl font-bold">Wpisz dostępność i zapomnij o przeglądaniu grafiku. System sam znajdzie idealne okienko na lekcję, upewniając się, że nie nałożysz dwóch spotkań na raz.</p>
-                    <ul class="space-y-4 font-bold text-xl pt-4">
-                        <li class="flex items-center gap-4"><span class="w-8 h-8 rounded-full bg-white border-2 border-black flex items-center justify-center text-sm font-black">✓</span> Szybkie dodawanie cykli (np. lekcje na 3 miesiące z góry)</li>
-                        <li class="flex items-center gap-4"><span class="w-8 h-8 rounded-full bg-white border-2 border-black flex items-center justify-center text-sm font-black">✓</span> Inteligentne omijanie konfliktów godzinowych</li>
-                        <li class="flex items-center gap-4"><span class="w-8 h-8 rounded-full bg-white border-2 border-black flex items-center justify-center text-sm font-black">✓</span> Powiadomienia w przeglądarce o startujących zajęciach</li>
+                    <div class="inline-block px-4 py-1.5 bg-white border-2 border-black font-black text-xs md:text-sm uppercase tracking-widest">Funkcja 1</div>
+                    <h4 class="text-3xl md:text-5xl font-black leading-tight">Twój nowy, kuloodporny terminarz.</h4>
+                    <p class="text-base md:text-xl font-bold">Wpisz dostępność i zapomnij o przeglądaniu grafiku. System sam znajdzie idealne okienko na lekcję, upewniając się, że nie nałożysz dwóch spotkań na raz.</p>
+                    <ul class="space-y-4 font-bold text-base md:text-xl pt-4">
+                        <li class="flex items-center gap-4"><span class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white border-2 border-black flex items-center justify-center text-xs md:text-sm font-black shrink-0">✓</span> Szybkie dodawanie cykli (np. lekcje na 3 miesiące z góry)</li>
+                        <li class="flex items-center gap-4"><span class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white border-2 border-black flex items-center justify-center text-xs md:text-sm font-black shrink-0">✓</span> Inteligentne omijanie konfliktów godzinowych</li>
+                        <li class="flex items-center gap-4"><span class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white border-2 border-black flex items-center justify-center text-xs md:text-sm font-black shrink-0">✓</span> Powiadomienia w przeglądarce o startujących zajęciach</li>
                     </ul>
                 </div>
                 <div class="flex-1 w-full flex justify-center transform rotate-3">
-                    <div class="bg-white border-4 border-black p-8 rounded-2xl shadow-[12px_12px_0_black] text-center w-full max-w-sm hover:scale-105 transition-transform duration-300">
-                        <div class="text-8xl mb-6">🗓️</div>
-                        <div class="h-6 bg-gray-200 rounded w-3/4 mx-auto mb-3 border-2 border-black"></div>
-                        <div class="h-6 bg-[#14b8a6] rounded w-1/2 mx-auto border-2 border-black"></div>
+                    <div class="bg-white border-4 border-black p-6 md:p-8 rounded-2xl shadow-[8px_8px_0_black] md:shadow-[12px_12px_0_black] text-center w-full max-w-sm hover:scale-105 transition-transform duration-300">
+                        <div class="text-6xl md:text-8xl mb-6">🗓️</div>
+                        <div class="h-4 md:h-6 bg-gray-200 rounded w-3/4 mx-auto mb-3 border-2 border-black"></div>
+                        <div class="h-4 md:h-6 bg-[#14b8a6] rounded w-1/2 mx-auto border-2 border-black"></div>
                     </div>
                 </div>
             </div>
 
-            <div id="landing-tab-2" class="landing-tab-content hidden bg-[#ec4899] border-4 border-black shadow-[16px_16px_0_black] rounded-3xl p-8 md:p-16 flex flex-col md:flex-row items-center gap-12 text-white">
+            <div id="landing-tab-2" class="landing-tab-content hidden bg-[#ec4899] border-4 border-black shadow-[12px_12px_0_black] md:shadow-[16px_16px_0_black] rounded-3xl p-6 md:p-16 flex flex-col md:flex-row items-center gap-12 text-white">
                 <div class="flex-1 space-y-6">
-                    <div class="inline-block px-4 py-1.5 bg-white text-black border-2 border-black font-black text-sm uppercase tracking-widest">Funkcja 2</div>
-                    <h4 class="text-4xl md:text-5xl font-black leading-tight">Każda złotówka pod kontrolą.</h4>
-                    <p class="text-xl font-bold">Wiesz dokładnie, kto zapłacił, kto zalega i jaki przychód przyniesie ten tydzień. Rozliczaj pojedyncze lekcje, pakiety miesięczne i abonamenty.</p>
-                    <ul class="space-y-4 font-bold text-xl pt-4">
-                        <li class="flex items-center gap-4"><span class="w-8 h-8 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-sm font-black">✓</span> Precyzyjne raporty i kolorowe wykresy kołowe</li>
-                        <li class="flex items-center gap-4"><span class="w-8 h-8 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-sm font-black">✓</span> Automatyczna tablica dłużników na pulpicie</li>
-                        <li class="flex items-center gap-4"><span class="w-8 h-8 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-sm font-black">✓</span> Oznaczanie całych pakietów opłaconych jednym klikiem</li>
+                    <div class="inline-block px-4 py-1.5 bg-white text-black border-2 border-black font-black text-xs md:text-sm uppercase tracking-widest">Funkcja 2</div>
+                    <h4 class="text-3xl md:text-5xl font-black leading-tight">Każda złotówka pod kontrolą.</h4>
+                    <p class="text-base md:text-xl font-bold">Wiesz dokładnie, kto zapłacił, kto zalega i jaki przychód przyniesie ten tydzień. Rozliczaj pojedyncze lekcje, pakiety miesięczne i abonamenty.</p>
+                    <ul class="space-y-4 font-bold text-base md:text-xl pt-4">
+                        <li class="flex items-center gap-4"><span class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-xs md:text-sm font-black shrink-0">✓</span> Precyzyjne raporty i kolorowe wykresy kołowe</li>
+                        <li class="flex items-center gap-4"><span class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-xs md:text-sm font-black shrink-0">✓</span> Automatyczna tablica dłużników na pulpicie</li>
+                        <li class="flex items-center gap-4"><span class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-xs md:text-sm font-black shrink-0">✓</span> Oznaczanie całych pakietów opłaconych jednym klikiem</li>
                     </ul>
                 </div>
                 <div class="flex-1 w-full flex justify-center transform -rotate-3">
-                    <div class="bg-white border-4 border-black p-8 rounded-2xl shadow-[12px_12px_0_black] text-center w-full max-w-sm text-black hover:scale-105 transition-transform duration-300">
-                        <div class="text-8xl mb-6">💸</div>
-                        <div class="text-4xl font-black text-[#ec4899]">Zarobki: 3500 zł</div>
+                    <div class="bg-white border-4 border-black p-6 md:p-8 rounded-2xl shadow-[8px_8px_0_black] md:shadow-[12px_12px_0_black] text-center w-full max-w-sm text-black hover:scale-105 transition-transform duration-300">
+                        <div class="text-6xl md:text-8xl mb-6">💸</div>
+                        <div class="text-3xl md:text-4xl font-black text-[#ec4899]">Zarobki: 3500 zł</div>
                     </div>
                 </div>
             </div>
 
-            <div id="landing-tab-3" class="landing-tab-content hidden bg-[#ffc900] border-4 border-black shadow-[16px_16px_0_black] rounded-3xl p-8 md:p-16 flex flex-col md:flex-row items-center gap-12 text-black">
+            <div id="landing-tab-3" class="landing-tab-content hidden bg-[#ffc900] border-4 border-black shadow-[12px_12px_0_black] md:shadow-[16px_16px_0_black] rounded-3xl p-6 md:p-16 flex flex-col md:flex-row items-center gap-12 text-black">
                 <div class="flex-1 space-y-6">
-                    <div class="inline-block px-4 py-1.5 bg-white border-2 border-black font-black text-sm uppercase tracking-widest">Funkcja 3</div>
-                    <h4 class="text-4xl md:text-5xl font-black leading-tight">Twoja elita w jednym miejscu.</h4>
-                    <p class="text-xl font-bold">Osobny profil dla każdego ucznia. Przypisuj im przedmioty, łączone pakiety godzinowe i miej natychmiastowy dostęp do historii ich edukacji.</p>
-                    <ul class="space-y-4 font-bold text-xl pt-4">
-                        <li class="flex items-center gap-4"><span class="w-8 h-8 rounded-full bg-white border-2 border-black flex items-center justify-center text-sm font-black">✓</span> Elastyczne pakiety rozliczeniowe (np. Matma + Fizyka)</li>
-                        <li class="flex items-center gap-4"><span class="w-8 h-8 rounded-full bg-white border-2 border-black flex items-center justify-center text-sm font-black">✓</span> Live search – znajdź każdego w ułamku sekundy</li>
-                        <li class="flex items-center gap-4"><span class="w-8 h-8 rounded-full bg-white border-2 border-black flex items-center justify-center text-sm font-black">✓</span> Bezpieczne Archiwum na stare kontakty</li>
+                    <div class="inline-block px-4 py-1.5 bg-white border-2 border-black font-black text-xs md:text-sm uppercase tracking-widest">Funkcja 3</div>
+                    <h4 class="text-3xl md:text-5xl font-black leading-tight">Twoja elita w jednym miejscu.</h4>
+                    <p class="text-base md:text-xl font-bold">Osobny profil dla każdego ucznia. Przypisuj im przedmioty, łączone pakiety godzinowe i miej natychmiastowy dostęp do historii ich edukacji.</p>
+                    <ul class="space-y-4 font-bold text-base md:text-xl pt-4">
+                        <li class="flex items-center gap-4"><span class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white border-2 border-black flex items-center justify-center text-xs md:text-sm font-black shrink-0">✓</span> Elastyczne pakiety rozliczeniowe (np. Matma + Fizyka)</li>
+                        <li class="flex items-center gap-4"><span class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white border-2 border-black flex items-center justify-center text-xs md:text-sm font-black shrink-0">✓</span> Live search – znajdź każdego w ułamku sekundy</li>
+                        <li class="flex items-center gap-4"><span class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white border-2 border-black flex items-center justify-center text-xs md:text-sm font-black shrink-0">✓</span> Bezpieczne Archiwum na stare kontakty</li>
                     </ul>
                 </div>
                 <div class="flex-1 w-full flex justify-center transform rotate-2">
-                    <div class="bg-white border-4 border-black p-8 rounded-2xl shadow-[12px_12px_0_black] text-center w-full max-w-sm hover:scale-105 transition-transform duration-300">
-                        <div class="text-8xl mb-6">👥</div>
-                        <div class="h-6 bg-gray-200 rounded w-full mx-auto mb-3 border-2 border-black"></div>
-                        <div class="h-6 bg-[#ffc900] rounded w-3/4 mx-auto border-2 border-black"></div>
+                    <div class="bg-white border-4 border-black p-6 md:p-8 rounded-2xl shadow-[8px_8px_0_black] md:shadow-[12px_12px_0_black] text-center w-full max-w-sm hover:scale-105 transition-transform duration-300">
+                        <div class="text-6xl md:text-8xl mb-6">👥</div>
+                        <div class="h-4 md:h-6 bg-gray-200 rounded w-full mx-auto mb-3 border-2 border-black"></div>
+                        <div class="h-4 md:h-6 bg-[#ffc900] rounded w-3/4 mx-auto border-2 border-black"></div>
                     </div>
                 </div>
             </div>
 
-            <div id="landing-tab-4" class="landing-tab-content hidden bg-[#8b5cf6] border-4 border-black shadow-[16px_16px_0_black] rounded-3xl p-8 md:p-16 flex flex-col md:flex-row items-center gap-12 text-white">
+            <div id="landing-tab-4" class="landing-tab-content hidden bg-[#8b5cf6] border-4 border-black shadow-[12px_12px_0_black] md:shadow-[16px_16px_0_black] rounded-3xl p-6 md:p-16 flex flex-col md:flex-row items-center gap-12 text-white">
                 <div class="flex-1 space-y-6">
-                    <div class="inline-block px-4 py-1.5 bg-white text-black border-2 border-black font-black text-sm uppercase tracking-widest">Funkcja 4</div>
-                    <h4 class="text-4xl md:text-5xl font-black leading-tight">Baza wiedzy pod ręką.</h4>
-                    <p class="text-xl font-bold">Skonfiguruj każdy przedmiot pod swoje preferencje. Dodawaj własne nazwy, rzucające się w oczy kolory oraz materiały pomocnicze, do których masz dostęp z poziomu kalendarza.</p>
-                    <ul class="space-y-4 font-bold text-xl pt-4">
-                        <li class="flex items-center gap-4"><span class="w-8 h-8 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-sm font-black">✓</span> Kodowanie kolorami (Twój własny odcień)</li>
-                        <li class="flex items-center gap-4"><span class="w-8 h-8 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-sm font-black">✓</span> Automatyczne podpinanie linków (Zoom, pliki Google Drive)</li>
-                        <li class="flex items-center gap-4"><span class="w-8 h-8 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-sm font-black">✓</span> Pełna swoboda - Ty decydujesz czego uczysz</li>
+                    <div class="inline-block px-4 py-1.5 bg-white text-black border-2 border-black font-black text-xs md:text-sm uppercase tracking-widest">Funkcja 4</div>
+                    <h4 class="text-3xl md:text-5xl font-black leading-tight">Baza wiedzy pod ręką.</h4>
+                    <p class="text-base md:text-xl font-bold">Skonfiguruj każdy przedmiot pod swoje preferencje. Dodawaj własne nazwy, rzucające się w oczy kolory oraz materiały pomocnicze, do których masz dostęp z poziomu kalendarza.</p>
+                    <ul class="space-y-4 font-bold text-base md:text-xl pt-4">
+                        <li class="flex items-center gap-4"><span class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-xs md:text-sm font-black shrink-0">✓</span> Kodowanie kolorami (Twój własny odcień)</li>
+                        <li class="flex items-center gap-4"><span class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-xs md:text-sm font-black shrink-0">✓</span> Automatyczne podpinanie linków (Zoom, pliki Google Drive)</li>
+                        <li class="flex items-center gap-4"><span class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-xs md:text-sm font-black shrink-0">✓</span> Pełna swoboda - Ty decydujesz czego uczysz</li>
                     </ul>
                 </div>
                 <div class="flex-1 w-full flex justify-center transform -rotate-2">
-                    <div class="bg-white border-4 border-black p-8 rounded-2xl shadow-[12px_12px_0_black] text-center w-full max-w-sm hover:scale-105 transition-transform duration-300">
-                        <div class="text-8xl mb-6">🎨</div>
+                    <div class="bg-white border-4 border-black p-6 md:p-8 rounded-2xl shadow-[8px_8px_0_black] md:shadow-[12px_12px_0_black] text-center w-full max-w-sm hover:scale-105 transition-transform duration-300">
+                        <div class="text-6xl md:text-8xl mb-6">🎨</div>
                         <div class="flex justify-center gap-4 mt-6">
-                            <div class="w-12 h-12 rounded-full bg-red-500 border-4 border-black"></div>
-                            <div class="w-12 h-12 rounded-full bg-green-500 border-4 border-black"></div>
-                            <div class="w-12 h-12 rounded-full bg-[#8b5cf6] border-4 border-black"></div>
+                            <div class="w-8 h-8 md:w-12 md:h-12 rounded-full bg-red-500 border-4 border-black"></div>
+                            <div class="w-8 h-8 md:w-12 md:h-12 rounded-full bg-green-500 border-4 border-black"></div>
+                            <div class="w-8 h-8 md:w-12 md:h-12 rounded-full bg-[#8b5cf6] border-4 border-black"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <footer class="bg-black text-white py-32 text-center px-4 border-t-4 border-black">
+        <footer class="bg-black text-white py-20 md:py-32 text-center px-4 border-t-4 border-black">
             <div class="max-w-5xl mx-auto">
-                <h2 class="text-5xl md:text-7xl lg:text-8xl font-black mb-8 leading-tight tracking-tighter">
+                <h2 class="text-4xl md:text-7xl lg:text-8xl font-black mb-8 leading-tight tracking-tighter">
                     Koniec ze zwykłymi kalendarzami.<br>
                     <span class="text-[#ffc900]">Korzystaj z TutoGrid.</span>
                 </h2>
-                <p class="text-xl md:text-2xl font-bold mb-16 text-gray-300 max-w-3xl mx-auto">Zaloguj się teraz bez żadnych opłat, ustaw swoje przedmioty w 2 minuty i odzyskaj pełną kontrolę.</p>
+                <p class="text-lg md:text-2xl font-bold mb-12 md:mb-16 text-gray-300 max-w-3xl mx-auto">Zaloguj się teraz bez żadnych opłat, ustaw swoje przedmioty w 2 minuty i odzyskaj pełną kontrolę.</p>
                 <div class="flex justify-center">
-                    <button onclick="zalogujPrzezGoogle()" class="text-2xl md:text-4xl font-black border-4 border-white px-16 py-8 bg-[#4f46e5] text-white shadow-[12px_12px_0_white] hover:translate-x-2 hover:translate-y-2 hover:shadow-none transition-all flex items-center gap-6">
-                        <svg class="w-10 h-10 bg-white rounded-full p-1" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/><path fill="none" d="M1 1h22v22H1z"/></svg>
+                    <button onclick="zalogujPrzezGoogle()" class="text-xl md:text-4xl font-black border-4 border-white px-8 md:px-16 py-6 md:py-8 bg-[#4f46e5] text-white shadow-[8px_8px_0_white] md:shadow-[12px_12px_0_white] hover:translate-x-2 hover:translate-y-2 hover:shadow-none transition-all flex items-center gap-4 md:gap-6">
+                        <svg class="w-8 h-8 md:w-10 md:h-10 bg-white rounded-full p-1" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/><path fill="none" d="M1 1h22v22H1z"/></svg>
                         Loguję się w 5 sekund
                     </button>
                 </div>
@@ -245,15 +247,15 @@
     <nav id="app-nav" class="backdrop-blur border-b px-3 py-3 md:px-6 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 z-30 relative shadow-sm hidden" style="background-color: rgba(var(--karta-bg), 0.9); border-color: var(--szary-ramka)">
         <div class="flex items-center justify-between w-full md:w-auto gap-4">
             
-            <div class="flex items-center gap-3 md:gap-5">
-                <img src="logo.png" alt="Logo TutoGrid" class="h-16 md:h-20 w-auto object-contain" onerror="this.style.display='none'">
-                <div class="flex items-baseline gap-2 md:gap-3">
-                    <h1 class="font-black text-3xl md:text-4xl tracking-tight" style="color: var(--akcent)">TutoGrid.</h1>
-                    <span class="text-sm md:text-base font-bold uppercase tracking-widest hidden sm:inline-block" style="color: var(--tekst-glowny)">Twój Planer Korepetytora</span>
+            <div class="flex items-center gap-2 md:gap-4">
+                <img src="logo.png" alt="Logo TutoGrid" class="h-8 sm:h-12 md:h-16 lg:h-24 w-auto object-contain shrink-0" onerror="this.style.display='none'">
+                <div class="flex items-baseline gap-1 md:gap-2">
+                    <h1 class="font-black text-xl sm:text-2xl md:text-4xl tracking-tight leading-none" style="color: var(--akcent)">TutoGrid.</h1>
+                    <span class="text-[9px] md:text-xs lg:text-sm font-bold uppercase tracking-widest hidden sm:inline-block truncate" style="color: var(--tekst-glowny)">Twój Planer Korepetytora</span>
                 </div>
             </div>
 
-            <div class="flex items-center gap-1 md:gap-2 md:hidden">
+            <div class="flex items-center gap-1 md:gap-2 md:hidden shrink-0">
                 <button onclick="switchTab('ustawienia')" class="nav-tab px-2 text-xl" title="Ustawienia">⚙️</button>
                 <button onclick="wyloguj()" class="text-rose-500 font-bold px-2 py-1.5 rounded-lg border-2 border-transparent text-sm">Wyloguj</button>
             </div>
@@ -267,7 +269,7 @@
             <button onclick="switchTab('zarobki')" id="tab-zarobki" class="nav-tab text-sm md:text-base">Zarobki</button>
         </div>
 
-        <div class="hidden md:flex items-center gap-2">
+        <div class="hidden md:flex items-center gap-2 shrink-0">
             <button onclick="switchTab('ustawienia')" class="nav-tab px-3 text-xl" title="Ustawienia">⚙️</button>
             <button onclick="wyloguj()" class="text-rose-500 font-bold px-3 py-1.5 rounded-lg transition whitespace-nowrap border-2 border-transparent hover:border-rose-500 text-sm">Wyloguj</button>
         </div>
