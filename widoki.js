@@ -100,34 +100,78 @@ function renderDashboard() {
         }
     }
 
-    let unpaidLessonsRaw = lessons.filter(l => {
-        if(l.cancelled || l.paid) return false;
-        let payDate = l.paymentDate || l.date;
-        return (payDate < todayString || (payDate === todayString && l.endTime < nowTime));
-    });
+    // ========================================================
+    // NOWA LOGIKA ZALEGŁOŚCI (W TYM PAKIETY Z POSTĘPEM)
+    // ========================================================
     
-    let bundledPayments = {}; let individualPayments = []; let unpaidTotal = 0; let unpaidCount = 0;
+    let individualPayments = []; 
+    let activeBundles = {};
+    let unpaidTotal = 0; 
+    let unpaidCount = 0;
 
-    unpaidLessonsRaw.forEach(l => {
-        let effectivePrice = Number(l.price || 0);
-        if (l.bundleId && l.bundleValue !== null && l.bundleValue !== undefined) {
-            effectivePrice = Number(l.bundleValue);
-        }
+    lessons.forEach(l => {
+        if (l.cancelled) return; // Ignoruj odwołane całkowicie
         
-        unpaidTotal += effectivePrice; unpaidCount++;
+        let isPast = (l.date < todayString || (l.date === todayString && l.endTime < nowTime));
         
-        if (l.bundleId) {
+        if (!l.bundleId) {
+            // Standardowe lekcje (pojedyncze) - pokaż tylko gdy już się odbyły i nie są opłacone
+            if (!l.paid && isPast) {
+                individualPayments.push(l);
+                unpaidTotal += Number(l.price || 0);
+                unpaidCount++;
+            }
+        } else {
+            // Lekcje z pakietu - grupuj cały cykl płatności w jedno
             let payDate = l.paymentDate || l.date;
             let key = `${l.studentId}_${l.bundleId}_${payDate}`;
-            if(!bundledPayments[key]) bundledPayments[key] = { lessons: [], total: 0, studentId: l.studentId, bundleId: l.bundleId, paymentDate: payDate };
-            bundledPayments[key].lessons.push(l);
-            bundledPayments[key].total += effectivePrice;
-        } else { individualPayments.push(l); }
+            
+            if (!activeBundles[key]) {
+                activeBundles[key] = {
+                    studentId: l.studentId,
+                    bundleId: l.bundleId,
+                    paymentDate: payDate,
+                    totalLessons: 0,
+                    completedLessons: 0,
+                    isFullyPaid: true,
+                    hasPastLessons: false,
+                    summedValue: 0
+                };
+            }
+            
+            // Zliczamy wszystkie lekcje w danym cyklu
+            activeBundles[key].totalLessons++;
+            
+            // Sprawdzamy, które się już odbyły
+            if (isPast) {
+                activeBundles[key].completedLessons++;
+                activeBundles[key].hasPastLessons = true;
+            }
+            
+            // Jeśli znajdziemy choć jedną nieopłaconą, cykl traktujemy jako nieopłacony w całości
+            if (!l.paid) {
+                activeBundles[key].isFullyPaid = false;
+                activeBundles[key].summedValue += Number(l.bundleValue || 0);
+            }
+        }
+    });
+
+    // Filtrujemy pakiety: pokaż tylko te, które NIE SĄ w pełni opłacone, a w których odbyła się już przynajmniej jedna lekcja.
+    let bundlesToShow = Object.values(activeBundles).filter(b => !b.isFullyPaid && b.hasPastLessons);
+    
+    bundlesToShow.forEach(b => {
+        // Pobierz oryginalną cenę pakietu z profilu ucznia (gdyby ułamki coś zepsuły)
+        let student = students.find(s => s.id == b.studentId);
+        let bun = student && student.bundles ? student.bundles.find(x => x.id == b.bundleId) : null;
+        b.displayPrice = bun ? Number(bun.total) : b.summedValue;
+        
+        unpaidTotal += b.displayPrice;
+        unpaidCount++; // Liczymy cały pakiet jako jedną zaległość dla czytelności
     });
 
     animateValue('dashboard-unpaid-sum', 0, Math.round(unpaidTotal), 800, ' zł');
     let dashUnpaidCount = document.getElementById('dashboard-unpaid-count');
-    if(dashUnpaidCount) dashUnpaidCount.innerText = `${unpaidCount} zaległych lekcji`;
+    if(dashUnpaidCount) dashUnpaidCount.innerText = `${unpaidCount} zaległości`;
 
     const unpaidContainer = document.getElementById('pulpit-unpaid-lessons'); 
     if(unpaidContainer) {
@@ -136,36 +180,51 @@ function renderDashboard() {
         if(unpaidCount === 0) {
             unpaidContainer.innerHTML = `<div class="border-2 p-4 md:p-6 rounded-xl text-center" style="background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3)"><div class="text-2xl md:text-3xl mb-1 md:mb-2">🎉</div><p class="text-emerald-500 font-bold text-sm md:text-base">Uczniowie nie mają zaległości.</p></div>`;
         } else {
-            Object.values(bundledPayments).forEach(group => {
+            // Renderuj pakiety
+            bundlesToShow.forEach(group => {
                 let student = students.find(s => s.id == group.studentId) || {name: 'Nieznany uczeń'};
                 let bundle = student.bundles ? student.bundles.find(b => b.id == group.bundleId) : null;
                 let bundleName = bundle ? bundle.name : 'Usunięty pakiet';
                 
+                // Sprawdź czy dzisiejsza data przekroczyła termin wpłaty
+                let isOverdue = todayString > group.paymentDate; 
+                
+                let bgClass = isOverdue ? 'bg-rose-50 border-rose-300' : 'bg-orange-50 border-orange-300';
+                let textClass = isOverdue ? 'text-rose-600' : 'text-orange-600';
+                let textSubClass = isOverdue ? 'text-rose-500' : 'text-orange-500';
+                let priceClass = isOverdue ? 'text-rose-600' : 'text-orange-600';
+                let badgeClass = isOverdue ? 'bg-rose-100 text-rose-700 border-rose-300' : 'bg-orange-100 text-orange-700 border-orange-300';
+                let icon = isOverdue ? '⚠️ ZALEGŁOŚĆ' : '⏳ W TRAKCIE (Oczekuje)';
+                
                 unpaidContainer.innerHTML += `
-                    <div class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2 bg-rose-50 border-rose-300">
+                    <div class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2 ${bgClass}">
                         <div>
                             <div class="font-bold text-sm md:text-base">${esc(student.name)}</div>
-                            <div class="text-[10px] md:text-xs font-bold text-rose-500">📦 PAKIET: ${esc(bundleName)}</div>
-                            <div class="text-[9px] md:text-[10px] text-rose-400 mt-0.5">Termin wpłaty: ${group.paymentDate}</div>
+                            <div class="text-[10px] md:text-xs font-bold mt-0.5 ${textClass}">
+                                📦 ${esc(bundleName)} 
+                                <span class="ml-1 px-1.5 py-0.5 rounded border text-[9px] whitespace-nowrap ${badgeClass}">Lekcje: ${group.completedLessons}/${group.totalLessons}</span>
+                            </div>
+                            <div class="text-[9px] md:text-[10px] ${textSubClass} font-bold mt-1">${icon} | Termin wpłaty: ${group.paymentDate}</div>
                         </div>
                         <div class="flex flex-col items-end gap-2">
-                            <div class="font-extrabold text-rose-600 text-sm md:text-base">${Math.round(group.total)} zł</div>
-                            <button onclick="markBundleAsPaid('${group.studentId}', '${group.bundleId}', '${group.paymentDate}', event)" class="px-3 py-1.5 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-200 transition whitespace-nowrap">Opłać pakiet</button>
+                            <div class="font-extrabold ${priceClass} text-sm md:text-base">${Math.round(group.displayPrice)} zł</div>
+                            <button onclick="markBundleAsPaid('${group.studentId}', '${group.bundleId}', '${group.paymentDate}', event)" class="px-3 py-1.5 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-white ${textClass} border-[currentColor] hover:bg-slate-50 transition whitespace-nowrap">Opłać pakiet</button>
                         </div>
                     </div>`;
             });
 
-            individualPayments.sort((a,b) => (b.date + b.startTime).localeCompare(a.date + a.startTime)).slice(0, 5).forEach(l => {
+            // Renderuj pojedyncze lekcje (posortowane od najstarszych)
+            individualPayments.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime)).slice(0, 5).forEach(l => {
                 let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
                 unpaidContainer.innerHTML += `
-                    <div onclick="editLesson('${l.id}')" class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2 lesson-block" style="background-color: rgba(244, 63, 94, 0.05); border-color: rgba(244, 63, 94, 0.2)" data-id="${l.id}">
+                    <div onclick="editLesson('${l.id}')" class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2 lesson-block bg-rose-50 border-rose-200 hover:border-rose-300" data-id="${l.id}">
                         <div>
                             <div class="font-bold text-sm md:text-base">${esc(student.name)}</div>
                             <div class="text-[10px] md:text-xs font-medium text-rose-500">${l.date} | ${l.startTime}</div>
                         </div>
                         <div class="flex items-center gap-3">
-                            <div class="font-extrabold text-rose-500 text-sm md:text-base">${l.price || 0} zł</div>
-                            <button onclick="markAsPaid('${l.id}', event)" class="px-2 py-1 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-200 transition whitespace-nowrap">Zapłacone</button>
+                            <div class="font-extrabold text-rose-600 text-sm md:text-base">${l.price || 0} zł</div>
+                            <button onclick="markAsPaid('${l.id}', event)" class="px-2 py-1 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-white text-rose-600 border-rose-300 hover:bg-rose-100 transition whitespace-nowrap">Zapłacone</button>
                         </div>
                     </div>`;
             });
