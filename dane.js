@@ -354,12 +354,15 @@ function handleBundleChange() {
     const priceInput = document.getElementById('lesson-price');
     const priceLabel = document.getElementById('lesson-price-label');
     const paymentDateDiv = document.getElementById('lesson-payment-date-div');
+    const realInput = document.getElementById('lesson-payment-date');
     
+    console.log("🛠️ TEST NOWEGO KODU: handleBundleChange uruchomione!");
+
     if (bundleId) {
         if(priceLabel) priceLabel.innerText = 'Cena poza pakietem (zł)';
         if(paymentDateDiv) {
             paymentDateDiv.classList.remove('hidden');
-            paymentDateDiv.style.pointerEvents = 'auto'; // Resetujemy blokadę
+            paymentDateDiv.style.pointerEvents = 'auto'; // Reset
             paymentDateDiv.style.opacity = '1';
         }
         if(priceInput) priceInput.readOnly = false; 
@@ -369,7 +372,6 @@ function handleBundleChange() {
         const bundle = student ? (student.bundles || []).find(b => b.id == bundleId) : null;
         
         if (bundle && bundle.payDay !== undefined && bundle.payDay !== "") {
-            // W starym kodzie braliśmy to z wartości tekstowej pola data
             let lDateStr = document.getElementById('lesson-date').value;
             let lDate = lDateStr ? new Date(lDateStr + "T12:00:00") : new Date();
             lDate.setHours(12,0,0,0);
@@ -388,19 +390,23 @@ function handleBundleChange() {
             } else {
                 let weekMonday = getMonday(lDate);
                 let offset = parseInt(bundle.payDay);
-                if(!isNaN(offset)) {
-                    if (offset === 0) { weekMonday.setDate(weekMonday.getDate() + 6); } 
-                    else { weekMonday.setDate(weekMonday.getDate() + (offset - 1)); }
-                    finalDateStr = getLocalISODate(weekMonday);
-                }
+                if (offset === 0) { weekMonday.setDate(weekMonday.getDate() + 6); } 
+                else { weekMonday.setDate(weekMonday.getDate() + (offset - 1)); }
+                finalDateStr = getLocalISODate(weekMonday);
             }
 
+            console.log("💡 OBLICZONA DATA PAKIETU:", finalDateStr);
+
             if (finalDateStr && paymentDatePicker) {
-                paymentDatePicker.setDate(finalDateStr);
-                // Nakładamy szarą blokadę na cały div (użytkownik nie może kliknąć w pole)
+                paymentDatePicker.setDate(finalDateStr, true);
+                
+                // Agresywne zablokowanie pola
+                if(realInput) realInput.value = finalDateStr;
+                
                 if (paymentDateDiv) {
                     paymentDateDiv.style.pointerEvents = 'none';
-                    paymentDateDiv.style.opacity = '0.6';
+                    paymentDateDiv.style.opacity = '0.5';
+                    paymentDateDiv.style.filter = 'grayscale(100%)';
                 }
             }
         }
@@ -410,6 +416,7 @@ function handleBundleChange() {
             paymentDateDiv.classList.add('hidden');
             paymentDateDiv.style.pointerEvents = 'auto';
             paymentDateDiv.style.opacity = '1';
+            paymentDateDiv.style.filter = 'none';
         }
         if(priceInput) priceInput.readOnly = false;
     }
@@ -727,7 +734,6 @@ async function saveLesson() {
                         finalPayDateStr = getLocalISODate(correctPayDate);
                     }
                 } else {
-                    // UWZGLĘDNIONO RÓWNIEŻ PAKIETY TYGODNIOWE W NOWYCH LEKCJACH
                     let wMon = getMonday(lessonDate);
                     let offset = parseInt(bundle.payDay);
                     if(!isNaN(offset)) {
