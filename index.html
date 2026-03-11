@@ -14,11 +14,16 @@
                         'float-slow': 'float 6s ease-in-out infinite',
                         'float-fast': 'float 4s ease-in-out infinite',
                         'float-delayed': 'float 5s ease-in-out 2s infinite',
+                        'marquee': 'marquee 25s linear infinite', /* Nowa animacja paska */
                     },
                     keyframes: {
                         float: {
                             '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
                             '50%': { transform: 'translateY(-15px) rotate(1deg)' },
+                        },
+                        marquee: {
+                            '0%': { transform: 'translateX(0%)' },
+                            '100%': { transform: 'translateX(-50%)' }
                         }
                     }
                 }
@@ -49,6 +54,7 @@
 <body class="font-sans h-screen flex flex-col overflow-hidden transition-colors duration-300 relative">
 
     <div id="view-login" class="absolute inset-0 z-50 overflow-y-auto no-scrollbar hidden transition-opacity duration-500">
+        
         <nav class="w-full flex justify-between items-center px-4 py-4 md:px-12 md:py-6 bg-white border-b-4 border-black sticky top-0 z-50">
             <div class="flex items-center gap-8">
                 <h1 class="text-xl md:text-2xl font-black tracking-tighter uppercase flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
@@ -58,28 +64,164 @@
                     </span>
                     <span class="text-sm md:text-base font-black tracking-tight hidden sm:inline-block tekst-glowny normal-case">Twój Planer Korepetytora</span>
                 </h1>
+                
+                <div class="hidden lg:flex items-center gap-6 font-extrabold text-sm uppercase tracking-wider text-black">
+                    <a href="#funkcje" class="hover:text-[#4f46e5] hover:-translate-y-1 transition-transform border-b-2 border-transparent hover:border-[#4f46e5]">Funkcje</a>
+                    <a href="#dla-kogo" class="hover:text-[#4f46e5] hover:-translate-y-1 transition-transform border-b-2 border-transparent hover:border-[#4f46e5]">Dla kogo?</a>
+                </div>
             </div>
+
             <button onclick="zalogujPrzezGoogle()" class="font-extrabold text-sm md:text-base border-4 border-black px-4 py-2 md:px-8 md:py-3 bg-[#4f46e5] text-white shadow-[4px_4px_0_black] hover:translate-x-1 hover:translate-y-1 hover:shadow-[0px_0px_0_black] transition-all flex items-center gap-3">
+                <svg class="w-5 h-5 bg-white rounded-full p-0.5 hidden sm:block" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/><path fill="none" d="M1 1h22v22H1z"/></svg>
                 Zaloguj się
             </button>
         </nav>
 
-        <header class="max-w-7xl mx-auto px-4 py-16 flex flex-col items-center gap-8 text-center">
-            <h2 class="text-5xl md:text-7xl font-black leading-[1.0] tracking-tighter text-black">
-                Zarządzaj swoimi zajęciami
+        <header class="max-w-7xl mx-auto px-4 py-16 md:px-12 md:py-24 text-center">
+            <div class="inline-block px-4 py-1 border-4 border-black font-black text-sm bg-[#ffc900] shadow-[4px_4px_0_black] mb-6 uppercase tracking-widest text-black">Zbudowane z myślą o Edukatorach</div>
+            <h2 class="text-5xl md:text-7xl font-black leading-[1.1] tracking-tighter text-black mb-6">
+                Twój stary zeszyt <br>właśnie przeszedł na <span class="bg-[#4f46e5] text-white px-4 py-1 border-4 border-black shadow-[6px_6px_0_black] inline-block transform -rotate-2">emeryturę.</span>
             </h2>
-            <button onclick="zalogujPrzezGoogle()" class="text-lg md:text-xl font-black border-4 border-black px-8 py-4 bg-[#ffc900] text-black shadow-[6px_6px_0_black] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all">
-                Rozpocznij za darmo &rarr;
-            </button>
+            <p class="text-lg md:text-xl font-bold text-gray-700 max-w-3xl mx-auto mb-10 bg-white p-4 border-4 border-black shadow-[4px_4px_0_black] rounded-xl transform rotate-1">
+                TutoGrid to jedyne narzędzie, którego potrzebujesz. Ogarnij płatności, nie trać czasu na planowanie grafiku i skup się na tym, co robisz najlepiej – na uczeniu innych.
+            </p>
+            <div class="flex justify-center">
+                <button onclick="zalogujPrzezGoogle()" class="text-lg md:text-xl font-black border-4 border-black px-10 py-5 bg-[#ffc900] text-black shadow-[8px_8px_0_black] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all flex items-center justify-center gap-4">
+                    Zacznij korzystać za darmo &rarr;
+                </button>
+            </div>
         </header>
+
+        <div class="w-full bg-[#4f46e5] border-y-4 border-black py-4 overflow-hidden flex whitespace-nowrap select-none">
+            <div class="animate-marquee font-black text-white text-2xl uppercase tracking-widest flex gap-8 items-center min-w-max">
+                <span>⚡ ZERO PAPIERU</span> <span>•</span> <span>💸 KONTROLA FINANSÓW</span> <span>•</span> <span>📅 PRZEJRZYSTY GRAFIK</span> <span>•</span> <span>🚀 PROSTA OBSŁUGA</span> <span>•</span>
+                <span>⚡ ZERO PAPIERU</span> <span>•</span> <span>💸 KONTROLA FINANSÓW</span> <span>•</span> <span>📅 PRZEJRZYSTY GRAFIK</span> <span>•</span> <span>🚀 PROSTA OBSŁUGA</span> <span>•</span>
+                <span>⚡ ZERO PAPIERU</span> <span>•</span> <span>💸 KONTROLA FINANSÓW</span> <span>•</span> <span>📅 PRZEJRZYSTY GRAFIK</span> <span>•</span> <span>🚀 PROSTA OBSŁUGA</span>
+            </div>
+        </div>
+
+        <section id="funkcje" class="max-w-7xl mx-auto px-4 py-20">
+            <h3 class="text-4xl md:text-5xl font-black text-center mb-12 text-black">Wszystko, czego potrzebujesz, w jednym miejscu</h3>
+            
+            <div class="flex flex-wrap justify-center gap-4 mb-12">
+                <button id="btn-landing-1" onclick="switchLandingTab(1)" class="landing-tab-btn font-extrabold text-sm md:text-base px-6 py-3 border-4 border-black shadow-[4px_4px_0_black] bg-[#4f46e5] text-white hover:translate-y-1 transition-transform">📅 Kalendarz</button>
+                <button id="btn-landing-2" onclick="switchLandingTab(2)" class="landing-tab-btn font-extrabold text-sm md:text-base px-6 py-3 border-4 border-black shadow-[4px_4px_0_black] bg-white text-black hover:translate-y-1 transition-transform">💸 Finanse</button>
+                <button id="btn-landing-3" onclick="switchLandingTab(3)" class="landing-tab-btn font-extrabold text-sm md:text-base px-6 py-3 border-4 border-black shadow-[4px_4px_0_black] bg-white text-black hover:translate-y-1 transition-transform">👥 Uczniowie</button>
+            </div>
+
+            <div id="landing-tab-1" class="landing-tab-content bg-[#14b8a6] border-4 border-black shadow-[12px_12px_0_black] rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 text-black">
+                <div class="flex-1 space-y-6">
+                    <div class="inline-block px-3 py-1 bg-white border-2 border-black font-black text-xs uppercase tracking-widest">Krok 1</div>
+                    <h4 class="text-3xl md:text-4xl font-black leading-tight">Planuj zajęcia z prędkością światła.</h4>
+                    <p class="text-lg font-bold">Zastąp skreślanie w kalendarzu automatycznym wyszukiwaniem luk w grafiku. Znajdź idealny termin dla ucznia w 3 sekundy bez nakładających się godzin.</p>
+                    <ul class="space-y-3 font-bold text-lg">
+                        <li class="flex items-center gap-3"><span class="w-6 h-6 rounded-full bg-white border-2 border-black flex items-center justify-center text-xs">✓</span> Szybkie dodawanie cykli (lekcje co tydzień)</li>
+                        <li class="flex items-center gap-3"><span class="w-6 h-6 rounded-full bg-white border-2 border-black flex items-center justify-center text-xs">✓</span> Inteligentne omijanie konfliktów godzinowych</li>
+                        <li class="flex items-center gap-3"><span class="w-6 h-6 rounded-full bg-white border-2 border-black flex items-center justify-center text-xs">✓</span> Wizualne kodowanie kolorami przedmiotów</li>
+                    </ul>
+                </div>
+                <div class="flex-1 w-full flex justify-center transform rotate-3">
+                    <div class="bg-white border-4 border-black p-6 rounded-xl shadow-[8px_8px_0_black] text-center w-full max-w-sm">
+                        <div class="text-6xl mb-4">🗓️</div>
+                        <div class="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
+                        <div class="h-4 bg-[#14b8a6] rounded w-1/2 mx-auto"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="landing-tab-2" class="landing-tab-content hidden bg-[#ec4899] border-4 border-black shadow-[12px_12px_0_black] rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 text-white">
+                <div class="flex-1 space-y-6">
+                    <div class="inline-block px-3 py-1 bg-white text-black border-2 border-black font-black text-xs uppercase tracking-widest">Krok 2</div>
+                    <h4 class="text-3xl md:text-4xl font-black leading-tight">Koniec z "chyba mi zapłacił".</h4>
+                    <p class="text-lg font-bold">Wiesz dokładnie, kto, ile i za co zalega. System automatycznie przelicza wartości dla zajęć z doskoku, jak i wielkich pakietów miesięcznych.</p>
+                    <ul class="space-y-3 font-bold text-lg">
+                        <li class="flex items-center gap-3"><span class="w-6 h-6 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-xs">✓</span> Precyzyjne raporty i wykresy kołowe</li>
+                        <li class="flex items-center gap-3"><span class="w-6 h-6 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-xs">✓</span> Lista dłużników na głównym pulpicie</li>
+                        <li class="flex items-center gap-3"><span class="w-6 h-6 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-xs">✓</span> Obsługa abonamentów i pakietów godzinowych</li>
+                    </ul>
+                </div>
+                <div class="flex-1 w-full flex justify-center transform -rotate-3">
+                    <div class="bg-white border-4 border-black p-6 rounded-xl shadow-[8px_8px_0_black] text-center w-full max-w-sm text-black">
+                        <div class="text-6xl mb-4">💸</div>
+                        <div class="text-3xl font-black text-[#ec4899]">Zarobki: 3500 zł</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="landing-tab-3" class="landing-tab-content hidden bg-[#ffc900] border-4 border-black shadow-[12px_12px_0_black] rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 text-black">
+                <div class="flex-1 space-y-6">
+                    <div class="inline-block px-3 py-1 bg-white border-2 border-black font-black text-xs uppercase tracking-widest">Krok 3</div>
+                    <h4 class="text-3xl md:text-4xl font-black leading-tight">Baza kontaktów z prawdziwego zdarzenia.</h4>
+                    <p class="text-lg font-bold">Każdy uczeń ma swój profil. Przypisz przedmioty, włącz niestandardowy cennik i miej całą wiedzę o podopiecznym pod ręką, gdziekolwiek jesteś.</p>
+                    <ul class="space-y-3 font-bold text-lg">
+                        <li class="flex items-center gap-3"><span class="w-6 h-6 rounded-full bg-white border-2 border-black flex items-center justify-center text-xs">✓</span> Zapisuj i profiluj każdego ucznia</li>
+                        <li class="flex items-center gap-3"><span class="w-6 h-6 rounded-full bg-white border-2 border-black flex items-center justify-center text-xs">✓</span> Archiwizuj tych, z którymi nie masz już zajęć</li>
+                        <li class="flex items-center gap-3"><span class="w-6 h-6 rounded-full bg-white border-2 border-black flex items-center justify-center text-xs">✓</span> Wyszukiwarka Live – zero przewijania długich list</li>
+                    </ul>
+                </div>
+                <div class="flex-1 w-full flex justify-center transform rotate-2">
+                    <div class="bg-white border-4 border-black p-6 rounded-xl shadow-[8px_8px_0_black] text-center w-full max-w-sm">
+                        <div class="text-6xl mb-4">👥</div>
+                        <div class="h-4 bg-gray-200 rounded w-full mx-auto mb-2"></div>
+                        <div class="h-4 bg-[#ffc900] rounded w-3/4 mx-auto"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="dla-kogo" class="bg-white border-y-4 border-black py-20">
+            <div class="max-w-7xl mx-auto px-4">
+                <h3 class="text-4xl md:text-5xl font-black text-center mb-16 text-black">Dla kogo zaprojektowaliśmy TutoGrid?</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div class="bg-white border-4 border-black shadow-[6px_6px_0_black] p-6 text-center rounded-2xl hover:-translate-y-2 transition-transform">
+                        <div class="text-6xl mb-4">🎓</div>
+                        <h4 class="font-black text-xl mb-2 text-black">Korepetytorzy</h4>
+                        <p class="font-bold text-gray-600 text-sm">Zarządzaj uczniami z matematyki, chemii czy fizyki bez gubienia się w różnych stawkach godzinowych.</p>
+                    </div>
+                    <div class="bg-white border-4 border-black shadow-[6px_6px_0_black] p-6 text-center rounded-2xl hover:-translate-y-2 transition-transform">
+                        <div class="text-6xl mb-4">🗣️</div>
+                        <h4 class="font-black text-xl mb-2 text-black">Lektorzy Językowi</h4>
+                        <p class="font-bold text-gray-600 text-sm">Rozliczaj pakiety miesięczne i przypisuj materiały (linki) bezpośrednio do przedmiotu.</p>
+                    </div>
+                    <div class="bg-white border-4 border-black shadow-[6px_6px_0_black] p-6 text-center rounded-2xl hover:-translate-y-2 transition-transform">
+                        <div class="text-6xl mb-4">🎵</div>
+                        <h4 class="font-black text-xl mb-2 text-black">Nauczyciele Muzyki</h4>
+                        <p class="font-bold text-gray-600 text-sm">Zapanuj nad chaosem odwoływanych zajęć z instrumentu. Jedno kliknięcie i lekcja oznaczona jako anulowana.</p>
+                    </div>
+                    <div class="bg-white border-4 border-black shadow-[6px_6px_0_black] p-6 text-center rounded-2xl hover:-translate-y-2 transition-transform">
+                        <div class="text-6xl mb-4">💪</div>
+                        <h4 class="font-black text-xl mb-2 text-black">Trenerzy Personalni</h4>
+                        <p class="font-bold text-gray-600 text-sm">Rozpisuj treningi dla klientów w prostej agendzie. Zobacz od razu, kto zalega z płatnością za cykl.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="bg-black text-white py-24 text-center px-4">
+            <div class="max-w-4xl mx-auto">
+                <h2 class="text-5xl md:text-7xl font-black mb-8 leading-none">Gotowy, aby wyrzucić stary notes?</h2>
+                <p class="text-xl font-bold mb-12 text-gray-400">Dołącz do nowoczesnych edukatorów. Założenie konta to dosłownie jedno kliknięcie przycisku Google. Działaj.</p>
+                <div class="flex justify-center">
+                    <button onclick="zalogujPrzezGoogle()" class="text-xl md:text-2xl font-black border-4 border-black px-12 py-6 bg-[#ffc900] text-black shadow-[8px_8px_0_white] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all flex items-center gap-4">
+                        <svg class="w-8 h-8 bg-white rounded-full p-1" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/><path fill="none" d="M1 1h22v22H1z"/></svg>
+                        Loguję się
+                    </button>
+                </div>
+                <div class="mt-16 text-sm font-bold text-gray-500 uppercase tracking-widest flex justify-center items-center gap-2">
+                    TutoGrid - Stworzone z ❤️ dla edukacji
+                </div>
+            </div>
+        </footer>
     </div>
 
-    <nav id="app-nav" class="backdrop-blur border-b px-3 py-3 md:px-6 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 z-30 relative shadow-sm hidden bg-karta ramka-szara opacity-95">
+    <nav id="app-nav" class="backdrop-blur border-b px-3 py-3 md:px-6 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 z-30 relative shadow-sm hidden" style="background-color: rgba(var(--karta-bg), 0.9); border-color: var(--szary-ramka)">
         <div class="flex items-center justify-between w-full md:w-auto gap-4">
+            
             <div class="flex items-baseline gap-1.5 md:gap-2">
-                <h1 class="font-black text-xl md:text-2xl tracking-tight tekst-akcent">TutoGrid.</h1>
-                <span class="text-sm md:text-base font-black tracking-tight hidden sm:inline-block tekst-glowny">Twój Planer Korepetytora</span>
+                <h1 class="font-black text-xl md:text-2xl tracking-tight" style="color: var(--akcent)">TutoGrid.</h1>
+                <span class="text-[10px] md:text-xs font-bold uppercase tracking-widest hidden sm:inline-block" style="color: var(--tekst-glowny)">Twój Planer Korepetytora</span>
             </div>
+
             <div class="flex items-center gap-1 md:gap-2 md:hidden">
                 <button onclick="switchTab('ustawienia')" class="nav-tab px-2 text-xl" title="Ustawienia">⚙️</button>
                 <button onclick="wyloguj()" class="text-rose-500 font-bold px-2 py-1.5 rounded-lg border-2 border-transparent text-sm">Wyloguj</button>
@@ -104,9 +246,24 @@
         
         <div id="view-skeleton" class="max-w-6xl mx-auto hidden flex flex-col gap-6 md:gap-8 w-full transition-all duration-300 transform opacity-0 translate-y-4">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                <div class="karta animate-pulse h-28 bg-slate-200 border-2 ramka-szara"></div>
-                <div class="karta animate-pulse h-28 bg-slate-200 border-2 ramka-szara"></div>
-                <div class="karta animate-pulse h-28 bg-slate-200 border-2 ramka-szara"></div>
+                <div class="karta animate-pulse h-28 bg-slate-200 border-2" style="border-color: var(--szary-ramka)"></div>
+                <div class="karta animate-pulse h-28 bg-slate-200 border-2" style="border-color: var(--szary-ramka)"></div>
+                <div class="karta animate-pulse h-28 bg-slate-200 border-2" style="border-color: var(--szary-ramka)"></div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 items-start">
+                <div>
+                    <div class="h-6 w-1/3 bg-slate-200 rounded animate-pulse mb-4"></div>
+                    <div class="space-y-3">
+                        <div class="h-20 bg-slate-200 rounded-xl animate-pulse border-2" style="border-color: var(--szary-ramka)"></div>
+                        <div class="h-20 bg-slate-200 rounded-xl animate-pulse border-2" style="border-color: var(--szary-ramka)"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="h-6 w-1/3 bg-slate-200 rounded animate-pulse mb-4"></div>
+                    <div class="space-y-3">
+                        <div class="h-20 bg-slate-200 rounded-xl animate-pulse border-2" style="border-color: var(--szary-ramka)"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -120,8 +277,8 @@
                     <div>
                         <div id="dashboard-monthly-earnings" class="text-3xl md:text-4xl font-extrabold mb-0">0 zł</div>
                         <div id="dashboard-mom-comparison" class="text-[10px] md:text-xs font-bold mt-1 mb-1.5"></div>
-                        <div id="dashboard-planned-earnings" class="text-[10px] md:text-xs font-bold mb-1 opacity-80 tekst-akcent">(w planach: +0 zł)</div>
-                        <div id="dashboard-monthly-lessons" class="text-xs md:text-sm font-medium tekst-szary">0 lekcji</div>
+                        <div id="dashboard-planned-earnings" class="text-[10px] md:text-xs font-bold mb-1 opacity-80" style="color: var(--akcent)">(w planach: +0 zł)</div>
+                        <div id="dashboard-monthly-lessons" class="text-xs md:text-sm font-medium" style="color: var(--tekst-szary)">0 lekcji</div>
                     </div>
                 </div>
 
@@ -132,7 +289,7 @@
                     </div>
                     <div>
                         <div id="dashboard-unpaid-sum" class="text-3xl md:text-4xl font-extrabold mb-1 text-rose-500">0 zł</div>
-                        <div id="dashboard-unpaid-count" class="text-xs md:text-sm font-medium tekst-szary">0 zaległych lekcji</div>
+                        <div id="dashboard-unpaid-count" class="text-xs md:text-sm font-medium" style="color: var(--tekst-szary)">0 zaległych lekcji</div>
                     </div>
                 </div>
 
@@ -143,6 +300,7 @@
                     </div>
                     <div>
                         <div id="dashboard-active-students" class="text-3xl md:text-4xl font-extrabold mb-1">0</div>
+                        <div class="text-xs md:text-sm font-medium" style="color: var(--karta-bg)">-</div> 
                     </div>
                 </div>
             </div>
@@ -151,7 +309,7 @@
                 <div>
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg md:text-xl font-bold">Nadchodzące lekcje</h3>
-                        <button onclick="switchTab('kalendarz')" class="text-sm md:text-base font-medium hover:underline tekst-akcent">Zobacz kalendarz &rarr;</button>
+                        <button onclick="switchTab('kalendarz')" class="text-sm md:text-base font-medium hover:underline" style="color: var(--akcent)">Zobacz kalendarz &rarr;</button>
                     </div>
                     <div id="pulpit-upcoming-lessons" class="space-y-3"></div>
                 </div>
@@ -162,7 +320,7 @@
             </div>
 
             <div class="mt-2 md:mt-4">
-                <h3 class="text-xl md:text-2xl font-extrabold mb-4 md:mb-6 border-b-2 pb-2 ramka-szara">Plan na ten tydzień</h3>
+                <h3 class="text-xl md:text-2xl font-extrabold mb-4 md:mb-6 border-b-2 pb-2" style="border-color: var(--szary-ramka)">Plan na ten tydzień</h3>
                 <div id="pulpit-week-view" class="space-y-2"></div>
             </div>
         </div>
@@ -172,31 +330,31 @@
                 <h2 id="month-year-display" class="text-xl md:text-3xl font-extrabold w-full text-center xl:text-left"></h2>
                 
                 <div class="flex flex-wrap items-center justify-between xl:justify-end gap-2 md:gap-4 w-full xl:w-auto relative">
-                    <button onclick="goToToday()" class="border-2 font-bold py-2 px-3 md:px-4 rounded-xl text-xs md:text-sm hover:opacity-70 transition bg-karta ramka-ciemna cien-ciemny">Dzisiaj</button>
+                    <button onclick="goToToday()" class="border-2 font-bold py-2 px-3 md:px-4 rounded-xl text-xs md:text-sm hover:opacity-70 transition shadow-[2px_2px_0px_var(--ciemny)]" style="background-color: var(--karta-bg); border-color: var(--ciemny)">Dzisiaj</button>
                     
-                    <div class="flex rounded-xl border-2 items-center flex-1 sm:flex-none justify-between bg-karta ramka-ciemna cien-ciemny">
-                        <button onclick="changeWeek(-1)" class="px-3 py-2 font-bold border-r-2 hover:opacity-60 transition flex items-center justify-center ramka-ciemna tekst-glowny">
-                            &lt;
+                    <div class="flex rounded-xl border-2 items-center shadow-[2px_2px_0px_var(--ciemny)] flex-1 sm:flex-none justify-between" style="background-color: var(--karta-bg); border-color: var(--ciemny)">
+                        <button onclick="changeWeek(-1)" class="px-3 py-2 font-bold border-r-2 hover:opacity-60 transition flex items-center justify-center" style="border-color: var(--ciemny); color: var(--tekst-glowny)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                         </button>
-                        <span id="calendar-week-btn-text" onclick="openJumpPicker()" class="px-2 py-2 text-xs md:text-sm font-extrabold min-w-[110px] md:min-w-[130px] text-center tracking-wide uppercase cursor-pointer transition hover:opacity-70 tekst-glowny" title="Kliknij, aby wybrać datę"></span>
+                        <span id="calendar-week-btn-text" onclick="openJumpPicker()" class="px-2 py-2 text-xs md:text-sm font-extrabold min-w-[110px] md:min-w-[130px] text-center tracking-wide uppercase cursor-pointer transition hover:opacity-70" style="color: var(--tekst-glowny)" title="Kliknij, aby wybrać datę"></span>
                         <input type="text" id="jump-date-picker" class="hidden">
-                        <button onclick="changeWeek(1)" class="px-3 py-2 font-bold border-l-2 hover:opacity-60 transition flex items-center justify-center ramka-ciemna tekst-glowny">
-                            &gt;
+                        <button onclick="changeWeek(1)" class="px-3 py-2 font-bold border-l-2 hover:opacity-60 transition flex items-center justify-center" style="border-color: var(--ciemny); color: var(--tekst-glowny)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                         </button>
                     </div>
 
                     <div class="flex gap-2 w-full sm:w-auto mt-1 sm:mt-0">
-                        <button onclick="toggleCalendarView()" id="btn-toggle-view" class="border-2 font-bold py-2 px-3 md:px-4 rounded-xl text-xs md:text-sm hover:opacity-70 transition bg-jasny ramka-ciemna cien-ciemny">Widok Listy 📋</button>
-                        <button onclick="openFindSlotModal()" class="przycisk-anuluj border-2 text-xs md:text-sm w-1/2 sm:w-auto hover:translate-y-0 bg-jasny ramka-ciemna cien-ciemny tekst-glowny">🔍 Znajdź termin</button>
+                        <button onclick="toggleCalendarView()" id="btn-toggle-view" class="border-2 font-bold py-2 px-3 md:px-4 rounded-xl text-xs md:text-sm hover:opacity-70 transition shadow-[2px_2px_0px_var(--ciemny)]" style="background-color: var(--jasny); border-color: var(--ciemny)">Widok Listy 📋</button>
+                        <button onclick="openFindSlotModal()" class="przycisk-anuluj border-2 text-xs md:text-sm w-1/2 sm:w-auto shadow-[2px_2px_0px_var(--ciemny)] hover:translate-y-0" style="border-color: var(--ciemny); background-color: var(--jasny); color: var(--tekst-glowny)">🔍 Znajdź termin</button>
                         <button onclick="openLessonModal()" class="przycisk-glowny text-xs md:text-sm w-1/2 sm:w-auto">+ Dodaj lekcję</button>
                     </div>
                 </div>
             </div>
 
-            <div class="rounded-2xl border-2 flex-1 flex flex-col overflow-hidden bg-karta ramka-ciemna cien-ciemny">
+            <div class="rounded-2xl shadow-[4px_4px_0px_var(--ciemny)] border-2 flex-1 flex flex-col overflow-hidden" style="background-color: var(--karta-bg); border-color: var(--ciemny)">
                 <div id="calendar-grid-container" class="overflow-x-auto flex-1 flex flex-col">
                     <div class="min-w-[700px] flex-1 flex flex-col">
-                        <div id="calendar-header" class="grid grid-cols-8 border-b-2 sticky top-0 z-20 bg-karta ramka-ciemna"></div>
+                        <div id="calendar-header" class="grid grid-cols-8 border-b-2 sticky top-0 z-20" style="background-color: var(--karta-bg); border-color: var(--ciemny)"></div>
                         <div class="relative flex-1 overflow-y-auto" id="calendar-body-scroll">
                             <div id="current-time-line" class="absolute left-0 right-0 h-[2px] bg-pink-500 z-10 hidden">
                                 <div class="absolute left-8 -top-1.5 w-3 h-3 bg-pink-500 rounded-full"></div>
@@ -206,13 +364,13 @@
                     </div>
                 </div>
 
-                <div id="calendar-agenda-container" class="hidden flex-1 overflow-y-auto p-4 md:p-8 bg-jasny">
+                <div id="calendar-agenda-container" class="hidden flex-1 overflow-y-auto p-4 md:p-8" style="background-color: var(--jasny);">
                 </div>
             </div>
         </div>
 
         <div id="view-przedmioty" class="max-w-4xl mx-auto hidden transition-all duration-300 transform opacity-0 translate-y-4">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b-2 pb-4 gap-3 ramka-szara">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b-2 pb-4 gap-3" style="border-color: var(--szary-ramka)">
                 <h2 class="text-2xl md:text-3xl font-extrabold">Twoje Przedmioty</h2>
                 <button onclick="openSubjectModal()" class="przycisk-glowny w-full sm:w-auto text-sm md:text-base">+ Dodaj przedmiot</button>
             </div>
@@ -220,7 +378,7 @@
         </div>
 
         <div id="view-uczniowie" class="max-w-4xl mx-auto hidden transition-all duration-300 transform opacity-0 translate-y-4">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 border-b-2 pb-4 gap-3 ramka-szara">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 border-b-2 pb-4 gap-3" style="border-color: var(--szary-ramka)">
                 <h2 class="text-2xl md:text-3xl font-extrabold">Baza Uczniów</h2>
                 <button onclick="openStudentModal()" class="przycisk-glowny w-full sm:w-auto text-sm md:text-base">+ Dodaj ucznia</button>
             </div>
@@ -229,7 +387,7 @@
             </div>
             <div id="students-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8"></div>
             <div id="archived-students-section" class="hidden">
-                <h3 class="text-xl font-bold mb-4 pt-4 border-t-2 ramka-szara tekst-szary">🗄️ Zarchiwizowani Uczniowie</h3>
+                <h3 class="text-xl font-bold mb-4 pt-4 border-t-2" style="border-color: var(--szary-ramka); color: var(--tekst-szary)">🗄️ Zarchiwizowani Uczniowie</h3>
                 <div id="archived-students-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-70 grayscale"></div>
             </div>
         </div>
@@ -237,34 +395,64 @@
         <div id="view-zarobki" class="max-w-6xl mx-auto hidden space-y-8 md:space-y-12 pb-12 transition-all duration-300 transform opacity-0 translate-y-4">
             <div>
                 <h2 class="text-3xl md:text-4xl font-extrabold mb-2">Raport Finansowy</h2>
-                <p class="text-sm md:text-base tekst-szary">Przeanalizuj swoje przychody.</p>
+                <p class="text-sm md:text-base" style="color: var(--tekst-szary)">Przeanalizuj swoje przychody z podziałem na okresy, przedmioty i uczniów.</p>
             </div>
             <section class="space-y-4 md:space-y-6">
-                <h3 class="text-xl md:text-2xl font-extrabold border-b-2 pb-2 ramka-szara">1. Łączne zarobki</h3>
+                <h3 class="text-xl md:text-2xl font-extrabold border-b-2 pb-2" style="border-color: var(--szary-ramka)">1. Łączne zarobki (od początku)</h3>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                     <div class="karta text-center flex flex-col justify-center items-center lg:col-span-1">
-                        <p class="text-xs md:text-sm font-bold uppercase mb-2 tekst-szary">Całkowity przychód</p>
-                        <p class="text-4xl md:text-5xl font-extrabold tekst-akcent" id="total-all-earnings">0 zł</p>
+                        <p class="text-xs md:text-sm font-bold uppercase mb-2" style="color: var(--tekst-szary)">Całkowity przychód</p>
+                        <p class="text-4xl md:text-5xl font-extrabold" style="color: var(--akcent)" id="total-all-earnings">0 zł</p>
                     </div>
                     <div class="karta lg:col-span-1 min-h-[200px] md:min-h-[250px] relative">
                         <canvas id="chart-all-subject"></canvas>
                     </div>
                     <div class="karta lg:col-span-1">
-                        <h4 class="font-bold mb-4 border-b-2 pb-2 ramka-szara">Top Uczniowie</h4>
+                        <h4 class="font-bold mb-4 border-b-2 pb-2" style="border-color: var(--szary-ramka)">Top Uczniowie</h4>
                         <div id="list-all-student" class="space-y-3 max-h-48 overflow-y-auto pr-2"></div>
+                    </div>
+                </div>
+            </section>
+            <section class="space-y-4 md:space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between sm:items-end border-b-2 pb-2 gap-2" style="border-color: var(--szary-ramka)">
+                    <h3 class="text-xl md:text-2xl font-extrabold">2. Zarobki w miesiącu</h3>
+                    <input type="month" id="earnings-month-picker" onchange="renderZarobki()" class="border-2 p-2 rounded-xl font-bold outline-none cursor-pointer w-full sm:w-auto" style="background-color: var(--karta-bg); border-color: var(--ciemny); color: var(--tekst-glowny)">
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+                    <div class="karta text-center flex flex-col justify-center items-center lg:col-span-1">
+                        <p class="text-xs md:text-sm font-bold uppercase mb-2" style="color: var(--tekst-szary)">Przychód w tym miesiącu</p>
+                        <p class="text-4xl md:text-5xl font-extrabold" style="color: var(--akcent)" id="total-month-earnings">0 zł</p>
+                    </div>
+                    <div class="karta lg:col-span-2 min-h-[200px] md:min-h-[250px] relative">
+                        <canvas id="chart-month-subject"></canvas>
+                    </div>
+                </div>
+            </section>
+            <section class="space-y-4 md:space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between sm:items-end border-b-2 pb-2 gap-2" style="border-color: var(--szary-ramka)">
+                    <h3 class="text-xl md:text-2xl font-extrabold">3. Zarobki w wybranym tygodniu</h3>
+                    <input type="week" id="earnings-week-picker" onchange="renderZarobki()" class="border-2 p-2 rounded-xl font-bold outline-none cursor-pointer w-full sm:w-auto" style="background-color: var(--karta-bg); border-color: var(--ciemny); color: var(--tekst-glowny)">
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+                    <div class="karta text-center flex flex-col justify-center items-center lg:col-span-1">
+                        <p class="text-xs md:text-sm font-bold uppercase mb-2" style="color: var(--tekst-szary)">Przychód w tym tygodniu</p>
+                        <p class="text-4xl md:text-5xl font-extrabold" style="color: var(--akcent)" id="total-week-earnings">0 zł</p>
+                    </div>
+                    <div class="karta lg:col-span-2 min-h-[200px] md:min-h-[250px] relative">
+                        <canvas id="chart-week-subject"></canvas>
                     </div>
                 </div>
             </section>
         </div>
 
         <div id="view-ustawienia" class="max-w-3xl mx-auto hidden space-y-6 pb-12 transition-all duration-300 transform opacity-0 translate-y-4">
-            <h2 class="text-2xl md:text-3xl font-extrabold mb-4 md:mb-6 border-b-2 pb-4 ramka-szara">Ustawienia TutoGrid</h2>
+            <h2 class="text-2xl md:text-3xl font-extrabold mb-4 md:mb-6 border-b-2 pb-4" style="border-color: var(--szary-ramka)">Ustawienia TutoGrid</h2>
             <div class="karta space-y-8">
                 <div>
                     <h3 class="font-bold text-lg mb-3">Wygląd (Motyw)</h3>
                     <div class="flex gap-4">
-                        <button onclick="ustawMotyw('light')" class="px-4 md:px-6 py-2 border-2 rounded-xl font-bold transition text-sm md:text-base ramka-ciemna" style="background: #f8fafc; color: #1e293b">Jasny ☀️</button>
-                        <button onclick="ustawMotyw('dark')" class="px-4 md:px-6 py-2 border-2 rounded-xl font-bold transition text-sm md:text-base ramka-ciemna" style="background: #0f172a; color: #f8fafc">Ciemny 🌙</button>
+                        <button onclick="ustawMotyw('light')" class="px-4 md:px-6 py-2 border-2 rounded-xl font-bold transition text-sm md:text-base flex-1 md:flex-none" style="border-color: var(--ciemny); background: #f8fafc; color: #1e293b">Jasny ☀️</button>
+                        <button onclick="ustawMotyw('dark')" class="px-4 md:px-6 py-2 border-2 rounded-xl font-bold transition text-sm md:text-base flex-1 md:flex-none" style="border-color: var(--ciemny); background: #0f172a; color: #f8fafc">Ciemny 🌙</button>
                     </div>
                 </div>
                 <div>
@@ -279,22 +467,39 @@
                         <div onclick="ustawAkcent('#ec4899')" class="kolor-kolo bg-[#ec4899]" title="Różowy"></div>
                     </div>
                 </div>
-                <hr class="ramka-szara">
+                <hr style="border-color: var(--szary-ramka)">
                 <div>
                     <h3 class="font-bold text-lg mb-3">Opcje Kalendarza</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
-                            <label class="text-xs md:text-sm font-bold block mb-1 tekst-szary">Początek dnia (godz.)</label>
+                            <label class="text-xs md:text-sm font-bold block mb-1" style="color: var(--tekst-szary)">Początek dnia (godz.)</label>
                             <input type="number" id="ust-start" class="pole-tekstowe mb-0" min="0" max="23" onchange="zapiszOpcje()">
                         </div>
                         <div>
-                            <label class="text-xs md:text-sm font-bold block mb-1 tekst-szary">Koniec dnia (godz.)</label>
+                            <label class="text-xs md:text-sm font-bold block mb-1" style="color: var(--tekst-szary)">Koniec dnia (godz.)</label>
                             <input type="number" id="ust-end" class="pole-tekstowe mb-0" min="1" max="24" onchange="zapiszOpcje()">
                         </div>
                         <div>
-                            <label class="text-xs md:text-sm font-bold block mb-1 tekst-szary">Czas lekcji (minuty)</label>
+                            <label class="text-xs md:text-sm font-bold block mb-1" style="color: var(--tekst-szary)">Czas lekcji (minuty)</label>
                             <input type="number" id="ust-czas" class="pole-tekstowe mb-0" step="15" onchange="zapiszOpcje()">
+                            <p class="text-xs mt-1" style="color: var(--tekst-szary)">Auto-wypełnianie</p>
                         </div>
+                    </div>
+                </div>
+                <hr style="border-color: var(--szary-ramka)">
+                <div>
+                    <h3 class="font-bold text-lg mb-3">Mój stały grafik (Dostępność)</h3>
+                    <p class="text-sm mb-4" style="color: var(--tekst-szary)">Ustaw, w jakich godzinach przyjmujesz uczniów. TutoGrid podświetli te okienka na zielono w wyszukiwarce terminów.</p>
+                    <div id="availability-container" class="space-y-2"></div>
+                </div>
+                <hr style="border-color: var(--szary-ramka)">
+                <div>
+                    <h3 class="font-bold text-lg mb-3">Zarządzanie danymi (Baza)</h3>
+                    <p class="text-sm mb-4" style="color: var(--tekst-szary)">Możesz pobrać swoją bazę na dysk lub wgrać ją z powrotem (np. na innym koncie).</p>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button onclick="eksportujDane()" class="przycisk-glowny w-full sm:w-1/2 bg-slate-800 border-slate-800 text-white flex justify-center items-center gap-2">⬆️ Pobierz (Eksport)</button>
+                        <input type="file" id="import-file" class="hidden" accept=".json" onchange="importujDane(event)">
+                        <button onclick="document.getElementById('import-file').click()" class="przycisk-anuluj w-full sm:w-1/2 border-2 flex justify-center items-center gap-2 hover:bg-slate-100" style="border-color: var(--szary-ramka); color: var(--tekst-glowny)">⬇️ Wgraj plik (Import)</button>
                     </div>
                 </div>
             </div>
@@ -309,9 +514,16 @@
             <input type="hidden" id="subject-id">
             <input type="text" id="subject-name" placeholder="Nazwa (np. Matematyka)" class="pole-tekstowe text-sm md:text-base">
             <div class="mb-6">
-                <label class="text-xs md:text-sm font-bold mb-2 block tekst-szary">Kolor przedmiotu:</label>
-                <input type="color" id="subject-color" value="#ef4444" class="w-full h-12 rounded-xl cursor-pointer border-2 p-1 bg-karta ramka-szara">
+                <label class="text-xs md:text-sm font-bold mb-2 block" style="color: var(--tekst-szary)">Kolor przedmiotu:</label>
+                <input type="color" id="subject-color" value="#ef4444" class="w-full h-12 rounded-xl cursor-pointer border-2 p-1" style="background-color: var(--karta-bg); border-color: var(--szary-ramka)">
             </div>
+            
+            <div class="mb-6">
+                <label class="text-xs md:text-sm font-bold mb-1 block" style="color: var(--tekst-szary)">Przydatne linki (Opcjonalnie):</label>
+                <p class="text-[9px] md:text-[10px] mb-2 font-medium" style="color: var(--tekst-szary)">Wklej linki do dysku, podręczników itp. (każdy w nowej linii). Pojawią się na liście lekcji.</p>
+                <textarea id="subject-links" placeholder="np. https://meet.google.com/..." class="pole-tekstowe text-sm md:text-base min-h-[80px] resize-y mb-0"></textarea>
+            </div>
+
             <div class="flex justify-between items-center">
                 <button id="btn-delete-subject" onclick="deleteSubject()" class="text-rose-500 font-bold hover:underline hidden text-sm">Usuń</button>
                 <div class="flex gap-2 ml-auto">
@@ -321,15 +533,24 @@
             </div>
         </div>
     </div>
-    
+
     <div id="modal-student" class="modal-tlo hidden z-[60]" data-editing-id="">
         <div class="modal-okno">
             <h3 class="text-xl font-bold mb-4">Uczeń</h3>
             <input type="text" id="student-name" placeholder="Imię i nazwisko" class="pole-tekstowe text-sm md:text-base">
+            
             <div class="mb-4">
-                <label class="text-xs md:text-sm font-bold mb-2 block tekst-szary">Czego uczysz tę osobę?</label>
-                <div id="student-subjects-container" class="space-y-2 max-h-40 overflow-y-auto p-3 rounded-xl border-2 text-sm md:text-base bg-jasny ramka-szara"></div>
+                <label class="text-xs md:text-sm font-bold mb-2 block" style="color: var(--tekst-szary)">Czego uczysz tę osobę?</label>
+                <div id="student-subjects-container" class="space-y-2 max-h-40 overflow-y-auto p-3 rounded-xl border-2 text-sm md:text-base" style="background-color: var(--jasny); border-color: var(--szary-ramka)"></div>
             </div>
+
+            <div class="mb-6 pt-4 border-t-2" style="border-color: var(--szary-ramka)">
+                <label class="text-xs md:text-sm font-bold mb-1 block" style="color: var(--tekst-szary)">Cenniki Łączone / Pakiety (Opcjonalnie)</label>
+                <p class="text-[10px] md:text-xs mb-3 font-medium" style="color: var(--tekst-szary)">Zdefiniuj pakiet (tygodniowy lub miesięczny) i wskaż dzień wpłaty.</p>
+                <div id="student-bundles-container" class="space-y-2 mb-3 w-full"></div>
+                <button type="button" onclick="addBundleToStudent()" class="font-bold text-xs md:text-sm hover:underline" style="color: var(--akcent)">+ Dodaj pakiet do tego ucznia</button>
+            </div>
+
             <div class="flex justify-end gap-2">
                 <button onclick="closeModals()" class="przycisk-anuluj text-sm md:text-base">Anuluj</button>
                 <button onclick="saveStudent()" class="przycisk-glowny text-sm md:text-base">Zapisz</button>
@@ -340,44 +561,139 @@
     <div id="modal-lesson" class="modal-tlo hidden z-[90]"> 
         <div class="modal-okno">
             <h3 id="lesson-modal-title" class="text-xl font-bold mb-4">Zaplanuj lekcję</h3>
+            
             <input type="hidden" id="lesson-id">
             
-            <label class="text-[10px] md:text-xs font-bold uppercase tekst-szary">Uczeń</label>
-            <select id="lesson-student" class="pole-tekstowe text-sm md:text-base w-full"></select>
+            <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Uczeń</label>
+            <select id="lesson-student" onchange="updateLessonSubjectDropdown(); updateLessonBundleDropdown();" class="pole-tekstowe text-sm md:text-base w-full max-w-full overflow-hidden text-ellipsis"></select>
             
-            <label class="text-[10px] md:text-xs font-bold uppercase tekst-szary">Przedmiot</label>
-            <select id="lesson-subject" class="pole-tekstowe text-sm md:text-base mb-2 w-full"></select>
+            <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Przedmiot</label>
+            <select id="lesson-subject" class="pole-tekstowe text-sm md:text-base mb-2 w-full max-w-full overflow-hidden text-ellipsis"></select>
 
+            <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Temat (Opcjonalnie)</label>
+            <input type="text" id="lesson-topic" placeholder="np. Ułamki, Sprawdzian..." class="pole-tekstowe text-sm md:text-base w-full">
+            
+            <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Sposób rozliczenia</label>
+            <select id="lesson-bundle" onchange="handleBundleChange()" class="pole-tekstowe text-sm md:text-base mb-2 w-full max-w-full overflow-hidden text-ellipsis">
+                <option value="">Standardowa cena (wpisz ręcznie)</option>
+            </select>
+
+            <div id="lesson-payment-date-div" class="hidden mb-3 p-3 rounded-xl border-2 shadow-sm w-full box-border" style="background-color: rgba(var(--akcent), 0.05); border-color: rgba(var(--akcent), 0.2)">
+                <label class="text-[10px] md:text-xs font-bold uppercase block w-full truncate" style="color: var(--akcent)">Kiedy uczeń płaci za ten pakiet?</label>
+                <p class="text-[9px] md:text-[10px] mb-2 font-medium leading-tight" style="color: var(--tekst-szary)">(Jeśli przypisałeś dzień wpłaty w profilu ucznia, ta data uzupełni się automatycznie)</p>
+                <input type="text" id="lesson-payment-date" class="pole-tekstowe text-sm md:text-base mb-0 bg-white cursor-pointer w-full box-border" placeholder="Wybierz datę rozliczenia pakietu">
+            </div>
+            
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:gap-3 mb-1">
                 <div>
-                    <label class="text-[10px] md:text-xs font-bold uppercase tekst-szary">Data Lekcji</label>
+                    <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Data Lekcji</label>
                     <input type="text" id="lesson-date" class="pole-tekstowe text-sm md:text-base cursor-pointer w-full" placeholder="Wybierz datę">
                 </div>
                 <div>
-                    <label class="text-[10px] md:text-xs font-bold uppercase tekst-szary">Cena (zł)</label>
-                    <input type="number" id="lesson-price" placeholder="np. 80" class="pole-tekstowe text-sm md:text-base font-bold w-full">
+                    <label id="lesson-price-label" class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Cena za tę lekcję (zł)</label>
+                    <input type="number" id="lesson-price" placeholder="np. 80" class="pole-tekstowe text-sm md:text-base font-bold transition-all w-full">
                 </div>
             </div>
             
             <div class="flex gap-2 mb-1">
                 <div class="w-1/2">
-                    <label class="text-[10px] md:text-xs font-bold uppercase tekst-szary">Od</label>
-                    <input type="text" id="lesson-time-start" class="pole-tekstowe text-sm md:text-base cursor-pointer w-full">
+                    <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Od</label>
+                    <input type="text" id="lesson-time-start" class="pole-tekstowe text-sm md:text-base cursor-pointer w-full" placeholder="HH:MM" onchange="autoUzupelnijCzas()">
                 </div>
                 <div class="w-1/2">
-                    <label class="text-[10px] md:text-xs font-bold uppercase tekst-szary">Do</label>
-                    <input type="text" id="lesson-time-end" class="pole-tekstowe text-sm md:text-base cursor-pointer w-full">
+                    <label class="text-[10px] md:text-xs font-bold uppercase" style="color: var(--tekst-szary)">Do</label>
+                    <input type="text" id="lesson-time-end" class="pole-tekstowe text-sm md:text-base cursor-pointer w-full" placeholder="HH:MM" onchange="handleBundleChange()">
                 </div>
             </div>
 
-            <div class="flex flex-col-reverse sm:flex-row justify-between items-center sm:pt-2 sm:border-t-2 gap-3 ramka-szara">
+            <div class="flex flex-col mb-4 md:mb-6 p-3 md:p-4 rounded-xl border-2 gap-3" style="background-color: var(--jasny); border-color: var(--szary-ramka)">
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center w-full gap-3">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="lesson-paid" class="w-5 h-5 md:w-6 md:h-6 accent-emerald-500 rounded cursor-pointer">
+                        <span class="font-bold text-sm md:text-base">Opłacone</span>
+                    </label>
+                    <label id="recurring-box" class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="lesson-recurring" class="w-4 h-4 md:w-5 md:h-5 rounded cursor-pointer" style="accent-color: var(--akcent)">
+                        <span class="text-xs md:text-sm font-bold" style="color: var(--tekst-szary)">Powtarzaj co tydzień</span>
+                    </label>
+                </div>
+                <label id="cancelled-box" class="flex items-center gap-3 cursor-pointer border-t-2 pt-3 mt-1" style="border-color: var(--szary-ramka)">
+                    <input type="checkbox" id="lesson-cancelled" class="w-5 h-5 md:w-6 md:h-6 accent-rose-500 rounded cursor-pointer">
+                    <span class="font-bold text-rose-500 text-sm md:text-base">❌ Lekcja Odwołana</span>
+                </label>
+            </div>
+
+            <div class="flex flex-col-reverse sm:flex-row justify-between items-center sm:pt-2 sm:border-t-2 gap-3" style="border-color: var(--szary-ramka)">
                 <button id="btn-delete-lesson" onclick="deleteLesson()" class="text-rose-500 font-bold hover:underline hidden w-full sm:w-auto text-sm md:text-base py-2">Usuń wpis</button>
                 <div class="flex gap-2 w-full sm:w-auto ml-auto">
-                    <button onclick="closeModals()" class="przycisk-anuluj w-full sm:w-auto text-sm md:text-base">Anuluj</button>
-                    <button onclick="saveLesson()" class="przycisk-glowny w-full sm:w-auto text-sm md:text-base">Zapisz</button>
+                    <button onclick="closeModals()" class="przycisk-anuluj w-full sm:w-auto text-sm md:text-base text-center">Anuluj</button>
+                    <button onclick="saveLesson()" class="przycisk-glowny w-full sm:w-auto text-sm md:text-base text-center">Zapisz</button>
                 </div>
             </div>
         </div>
+    </div>
+
+    <div id="modal-find-slot" class="modal-tlo hidden z-[70]">
+        <div class="modal-okno w-full max-w-5xl h-[90vh] flex flex-col p-3 md:p-6" style="max-height: 90vh;">
+            <div class="flex justify-between items-center mb-4 border-b-2 pb-3 shrink-0" style="border-color: var(--szary-ramka)">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 md:gap-4 w-full">
+                    <h3 class="text-xl md:text-2xl font-extrabold flex items-center gap-2">🔍 Wybierz termin</h3>
+                    <div class="flex rounded-xl border-2 items-center shadow-sm w-full sm:w-auto justify-between" style="background-color: var(--karta-bg); border-color: var(--ciemny)">
+                        <button onclick="changeSlotWeek(-1)" class="px-3 py-1.5 font-bold border-r-2 hover:opacity-60 transition" style="border-color: var(--ciemny); color: var(--tekst-glowny)">&lt;</button>
+                        <span id="slot-week-btn-text" class="px-3 py-1.5 text-xs md:text-sm font-extrabold min-w-[120px] text-center tracking-wide uppercase" style="color: var(--tekst-glowny)"></span>
+                        <button onclick="changeSlotWeek(1)" class="px-3 py-1.5 font-bold border-l-2 hover:opacity-60 transition" style="border-color: var(--ciemny); color: var(--tekst-glowny)">&gt;</button>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('modal-find-slot').classList.add('hidden')" class="font-bold text-rose-500 text-3xl hover:scale-110 transition ml-2">&times;</button>
+            </div>
+            <p class="text-xs md:text-sm mb-3 shrink-0" style="color: var(--tekst-szary)">Kliknij na wybrane <span class="font-bold px-1.5 py-0.5 rounded border-2 shadow-[2px_2px_0_var(--ciemny)]" style="background-color: #bbf7d0; border-color: var(--ciemny); color: var(--ciemny);">ZIELONE</span> pole, aby idealnie wpasować tam lekcję.</p>
+            <div class="flex-1 overflow-hidden flex flex-col rounded-2xl border-2 shadow-[2px_2px_0_var(--ciemny)]" style="background-color: var(--karta-bg); border-color: var(--ciemny)">
+                <div class="overflow-x-auto flex-1 flex flex-col">
+                    <div class="min-w-[600px] flex-1 flex flex-col relative">
+                        <div id="slot-calendar-header" class="grid grid-cols-8 border-b-2 sticky top-0 z-20" style="background-color: var(--karta-bg); border-color: var(--ciemny)"></div>
+                        <div class="relative flex-1 overflow-y-auto">
+                            <div id="slot-calendar-grid" class="grid grid-cols-8 relative min-h-[600px]"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-alert" class="modal-tlo hidden z-[100]">
+        <div class="modal-okno text-center max-w-sm">
+            <h3 class="text-2xl font-extrabold mb-3" id="alert-title">Uwaga</h3>
+            <p class="mb-6 font-bold" style="color: var(--tekst-szary)" id="alert-message"></p>
+            <button id="btn-alert-ok" class="przycisk-glowny w-full">Zrozumiałem</button>
+        </div>
+    </div>
+
+    <div id="modal-confirm" class="modal-tlo hidden z-[100]">
+        <div class="modal-okno text-center max-w-sm">
+            <h3 class="text-2xl font-extrabold mb-3" id="confirm-title">Potwierdzenie</h3>
+            <p class="mb-6 font-bold whitespace-pre-line" style="color: var(--tekst-szary)" id="confirm-message"></p>
+            <div class="flex justify-center gap-3">
+                <button id="btn-confirm-cancel" class="przycisk-anuluj w-1/2 border-2" style="border-color: var(--szary-ramka)">Anuluj</button>
+                <button id="btn-confirm-ok" class="przycisk-glowny w-1/2">Tak</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-series" class="modal-tlo hidden z-[100]">
+        <div class="modal-okno text-center max-w-sm">
+            <h3 class="text-xl md:text-2xl font-extrabold mb-3" id="series-title">Cykl Lekcji</h3>
+            <p class="mb-6 font-bold text-sm md:text-base" style="color: var(--tekst-szary)" id="series-message"></p>
+            <div class="flex flex-col gap-3">
+                <button id="btn-series-single" class="w-full font-bold py-3 rounded-xl border-2 transition shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5" style="border-color: var(--ciemny); background-color: var(--karta-bg); color: var(--tekst-glowny)">Tylko tę jedną lekcję</button>
+                <button id="btn-series-future" class="w-full font-bold py-3 rounded-xl border-2 transition shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 text-white" style="border-color: var(--ciemny); background-color: var(--akcent);">Tę i wszystkie przyszłe</button>
+                <button id="btn-series-cancel" class="przycisk-anuluj mt-2">Anuluj</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pwa-update-toast" class="hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-2xl z-[100] flex flex-col sm:flex-row items-center gap-3 md:gap-4 border-2 border-slate-700 w-[90%] sm:w-auto">
+        <span class="text-sm font-bold text-center">Dostępna nowa wersja TutoGrid!</span>
+        <button onclick="window.location.reload(true)" class="bg-[#4f46e5] text-white px-4 py-2 rounded-lg text-xs md:text-sm font-bold hover:opacity-80 transition shadow-sm w-full sm:w-auto">Odśwież stronę</button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
