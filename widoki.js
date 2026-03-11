@@ -213,8 +213,9 @@ function renderDashboard() {
     let sumEl = document.getElementById('dashboard-unpaid-sum');
     if (sumEl) {
         // Wrzucamy do diva osobny span na animowaną zaległość i statyczny pomarańczowy span na oczekujące
+        // Zmieniono nawias, usunięto znak plusa
         sumEl.innerHTML = `<span id="dashboard-animated-overdue">0</span> zł` + 
-                          (pendingTotal > 0 ? ` <span class="text-orange-500 text-[0.55em] font-extrabold ml-1 align-middle">(+${Math.round(pendingTotal)} zł w trakcie)</span>` : '');
+                          (pendingTotal > 0 ? ` <span class="text-orange-500 text-[0.55em] font-extrabold ml-1 align-middle">(${Math.round(pendingTotal)} zł w trakcie)</span>` : '');
         
         // Animujemy tylko twarde zaległości
         animateValue('dashboard-animated-overdue', 0, Math.round(overdueTotal), 800, '');
@@ -222,11 +223,8 @@ function renderDashboard() {
 
     let dashUnpaidCount = document.getElementById('dashboard-unpaid-count');
     if(dashUnpaidCount) {
-        if (overdueCount === 0 && pendingTotal > 0) {
-            dashUnpaidCount.innerText = `0 zaległości (tylko oczekujące)`;
-        } else {
-            dashUnpaidCount.innerText = `${overdueCount} zaległości`;
-        }
+        // Usunięto nawias (tylko oczekujące)
+        dashUnpaidCount.innerText = `${overdueCount} zaległości`;
     }
 
     const unpaidContainer = document.getElementById('pulpit-unpaid-lessons'); 
