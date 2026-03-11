@@ -125,16 +125,18 @@ function renderDashboard() {
     }
 
     // ========================================================
-    // NOWA LOGIKA ZALEGŁOŚCI (PAKIETY Z POSTĘPEM 1/3)
+    // NOWA LOGIKA ZALEGŁOŚCI (ODDZIELENIE OCZEKUJĄCYCH)
     // ========================================================
     
     let individualPayments = []; 
     let activeBundles = {};
-    let unpaidTotal = 0; 
-    let unpaidCount = 0;
+    
+    let overdueTotal = 0; 
+    let pendingTotal = 0;
+    let overdueCount = 0;
 
     lessons.forEach(l => {
-        if (l.cancelled) return; // Ignorujemy całkowicie usunięte/odwołane lekcje
+        if (l.cancelled) return; 
         
         let isPast = (l.date < todayString || (l.date === todayString && l.endTime < nowTime));
         let student = students.find(s => s.id == l.studentId);
@@ -144,17 +146,17 @@ function renderDashboard() {
             // Zwykła, pojedyncza lekcja
             if (!l.paid && isPast) {
                 individualPayments.push(l);
-                unpaidTotal += Number(l.price || 0);
-                unpaidCount++;
+                overdueTotal += Number(l.price || 0);
+                overdueCount++;
             }
         } else {
-            // Lekcja z Pakietu - twarde grupowanie cyklem czasowym
+            // Lekcja z Pakietu - grupujemy po cyklu
             let cycleKey = '';
             
             if (bundle.type === 'monthly') {
-                cycleKey = l.date.substring(0, 7); // np. "2026-03"
+                cycleKey = l.date.substring(0, 7); 
             } else {
-                cycleKey = getLocalISODate(getMonday(l.date + "T12:00:00")); // Data poniedziałku z danego tygodnia
+                cycleKey = getLocalISODate(getMonday(l.date + "T12:00:00")); 
             }
             
             let key = `${l.studentId}_${l.bundleId}_${cycleKey}`;
@@ -175,7 +177,7 @@ function renderDashboard() {
             }
             
             activeBundles[key].lessonIds.push(l.id);
-            activeBundles[key].totalLessons++; // Zlicza ile lekcji zaplanowano w tym cyklu
+            activeBundles[key].totalLessons++; 
             
             if (isPast) {
                 activeBundles[key].completedLessons++;
@@ -186,7 +188,6 @@ function renderDashboard() {
                 activeBundles[key].isFullyPaid = false;
             }
             
-            // Bezpiecznik: bierzemy najpóźniejszą ustawioną datę płatności w całej grupie
             let lPay = l.paymentDate || l.date;
             if (lPay > activeBundles[key].paymentDate) {
                 activeBundles[key].paymentDate = lPay;
@@ -194,30 +195,54 @@ function renderDashboard() {
         }
     });
 
-    // Pokaż tylko te pakiety, które nie są opłacone całkowicie i mają już choć 1 odbytą lekcję
     let bundlesToShow = Object.values(activeBundles).filter(b => !b.isFullyPaid && b.hasPastLessons);
     
+    // Sortujemy i dzielimy kwoty
     bundlesToShow.forEach(b => {
-        unpaidTotal += b.displayPrice;
-        unpaidCount++; // Liczymy cały cykl pakietu jako 1 spójną zaległość
+        let isOverdue = todayString > b.paymentDate; 
+        if (isOverdue) {
+            overdueTotal += b.displayPrice;
+            overdueCount++; // Wliczamy tylko spóźnione pakiety
+        } else {
+            pendingTotal += b.displayPrice; // "Oczekujące"
+        }
     });
 
-    animateValue('dashboard-unpaid-sum', 0, Math.round(unpaidTotal), 800, ' zł');
+    // --- AKTUALIZACJA LICZNIKÓW NA PULPICIE ---
+    
+    let sumEl = document.getElementById('dashboard-unpaid-sum');
+    if (sumEl) {
+        // Wrzucamy do diva osobny span na animowaną zaległość i statyczny pomarańczowy span na oczekujące
+        sumEl.innerHTML = `<span id="dashboard-animated-overdue">0</span> zł` + 
+                          (pendingTotal > 0 ? ` <span class="text-orange-500 text-[0.55em] font-extrabold ml-1 align-middle">(+${Math.round(pendingTotal)} zł w trakcie)</span>` : '');
+        
+        // Animujemy tylko twarde zaległości
+        animateValue('dashboard-animated-overdue', 0, Math.round(overdueTotal), 800, '');
+    }
+
     let dashUnpaidCount = document.getElementById('dashboard-unpaid-count');
-    if(dashUnpaidCount) dashUnpaidCount.innerText = `${unpaidCount} zaległości`;
+    if(dashUnpaidCount) {
+        if (overdueCount === 0 && pendingTotal > 0) {
+            dashUnpaidCount.innerText = `0 zaległości (tylko oczekujące)`;
+        } else {
+            dashUnpaidCount.innerText = `${overdueCount} zaległości`;
+        }
+    }
 
     const unpaidContainer = document.getElementById('pulpit-unpaid-lessons'); 
     if(unpaidContainer) {
         unpaidContainer.innerHTML = '';
 
-        if(unpaidCount === 0) {
+        // Sprawdzamy, czy cokolwiek ma się pokazać w listingu poniżej
+        let totalCards = overdueCount + bundlesToShow.filter(b => todayString <= b.paymentDate).length;
+
+        if(totalCards === 0) {
             unpaidContainer.innerHTML = `<div class="border-2 p-4 md:p-6 rounded-xl text-center" style="background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3)"><div class="text-2xl md:text-3xl mb-1 md:mb-2">🎉</div><p class="text-emerald-500 font-bold text-sm md:text-base">Uczniowie nie mają zaległości.</p></div>`;
         } else {
-            // Renderowanie skondensowanych PAKIETÓW
+            // Renderowanie PAKIETÓW (zarówno po terminie jak i w trakcie)
             bundlesToShow.forEach(group => {
                 let student = students.find(s => s.id == group.studentId) || {name: 'Nieznany uczeń'};
                 
-                // Magia kolorów (Pomarańczowy: w trakcie, Czerwony: po terminie)
                 let isOverdue = todayString > group.paymentDate; 
                 
                 let bgClass = isOverdue ? 'bg-rose-50 border-rose-300' : 'bg-orange-50 border-orange-300';
@@ -246,7 +271,7 @@ function renderDashboard() {
                     </div>`;
             });
 
-            // Renderowanie POJEDYNCZYCH lekcji
+            // Renderowanie POJEDYNCZYCH lekcji (tylko spóźnione)
             individualPayments.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime)).slice(0, 5).forEach(l => {
                 let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
                 unpaidContainer.innerHTML += `
