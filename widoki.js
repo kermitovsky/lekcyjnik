@@ -86,7 +86,7 @@ function renderDashboard() {
                 let badge = subject ? `<span class="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded border" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${esc(subject.color)}; border-color: ${esc(subject.color)}">${esc(subject.name).toUpperCase()}</span>` : '';
 
                 upcomingContainer.innerHTML += `
-                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-sm hover:shadow-md gap-2 sm:gap-0 lesson-block bg-karta ramka-szara" data-id="${l.id}">
+                    <div onclick="editLesson('${l.id}')" class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-sm hover:shadow-md gap-2 sm:gap-0 lesson-block bg-karta ramka-szara" data-id="${l.id}">
                         <div class="flex items-center gap-3 md:gap-4">
                             <div class="w-8 h-8 md:w-10 h-10 rounded-full flex items-center justify-center font-bold border text-sm md:text-base bg-jasny ramka-szara tekst-szary">🕒</div>
                             <div>
@@ -158,7 +158,7 @@ function renderDashboard() {
             individualPayments.sort((a,b) => (b.date + b.startTime).localeCompare(a.date + a.startTime)).slice(0, 5).forEach(l => {
                 let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
                 unpaidContainer.innerHTML += `
-                    <div class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2 lesson-block" style="background-color: rgba(244, 63, 94, 0.05); border-color: rgba(244, 63, 94, 0.2)" data-id="${l.id}">
+                    <div onclick="editLesson('${l.id}')" class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2 lesson-block" style="background-color: rgba(244, 63, 94, 0.05); border-color: rgba(244, 63, 94, 0.2)" data-id="${l.id}">
                         <div>
                             <div class="font-bold text-sm md:text-base">${esc(student.name)}</div>
                             <div class="text-[10px] md:text-xs font-medium text-rose-500">${l.date} | ${l.startTime}</div>
@@ -202,7 +202,7 @@ function renderDashboard() {
                 let bundleBadge = l.bundleId ? `<span class="text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded ml-1 border bg-blue-50 text-blue-600 border-blue-200">📦 PAKIET</span>` : '';
 
                 weekContainer.innerHTML += `
-                    <div class="flex items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition cien-ciemny hover:-translate-y-0.5 gap-2 md:gap-4 lesson-block bg-karta ramka-ciemna" style="${cardOpacity}" data-id="${l.id}">
+                    <div onclick="editLesson('${l.id}')" class="flex items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition cien-ciemny hover:-translate-y-0.5 gap-2 md:gap-4 lesson-block bg-karta ramka-ciemna" style="${cardOpacity}" data-id="${l.id}">
                         <div class="flex items-center gap-3 md:gap-4 w-full truncate">
                             <div class="w-1.5 h-10 md:h-12 rounded-full shrink-0" style="background-color: ${esc(subject.color)}"></div>
                             <div class="truncate flex-1">
@@ -318,7 +318,7 @@ function renderCalendar() {
             let topicHtml = lesson.topic ? `<div class="truncate text-[8px] md:text-[10px] font-medium mt-0.5 tekst-glowny">📝 ${esc(lesson.topic)}</div>` : '';
 
             gridHtml += `
-                <div class="absolute w-[94%] left-[3%] rounded-lg md:rounded-xl p-1 md:p-1.5 overflow-hidden shadow-sm hover:shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 transition cursor-pointer flex flex-col border-l-2 md:border-l-4 border lesson-block" 
+                <div onclick="editLesson('${lesson.id}')" class="absolute w-[94%] left-[3%] rounded-lg md:rounded-xl p-1 md:p-1.5 overflow-hidden shadow-sm hover:shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 transition cursor-pointer flex flex-col border-l-2 md:border-l-4 border lesson-block" 
                      style="top: ${topPosition}px; height: ${height}px; background-color: ${bgColor}; border-left-color: ${esc(subject.color)}; border-color: ${esc(subject.color)}; ${opacityAndStrike}"
                      data-id="${lesson.id}">
                     <div class="font-bold flex justify-between text-[9px] md:text-xs mb-0.5" style="color: ${esc(subject.color)}">
@@ -335,7 +335,6 @@ function renderCalendar() {
     document.getElementById('calendar-grid').innerHTML = gridHtml;
     updateCurrentTimeLine();
 
-    // --- AUTO PRZEWIJANIE (POPRAWIONE) ---
     let weekStringStart = getLocalISODate(monday);
     let weekStringEnd = getLocalISODate(sunday);
     let weekLessons = lessons.filter(l => l.date >= weekStringStart && l.date <= weekStringEnd && !l.cancelled);
@@ -351,7 +350,6 @@ function renderCalendar() {
         }
     });
 
-    // Zwiększony timeout do 400ms – czekamy aż skończy się animacja "duration-300" z HTML
     setTimeout(() => {
         let scrollTargetHour = earliestHour - 1;
         if(scrollTargetHour < settings.startHour) scrollTargetHour = settings.startHour;
@@ -359,14 +357,14 @@ function renderCalendar() {
         let targetPos = hasLessons ? ((scrollTargetHour - settings.startHour) * 96) : 0;
 
         let calScroll = document.getElementById('calendar-body-scroll');
-        let mainContent = document.getElementById('main-content'); // Bezpiecznik dla telefonów
+        let mainContent = document.getElementById('main-content'); 
 
         if (calScroll && calScroll.scrollHeight > calScroll.clientHeight) {
             calScroll.scrollTo({ top: targetPos, behavior: 'smooth' });
         } else if (mainContent && mainContent.scrollHeight > mainContent.clientHeight) {
             mainContent.scrollTo({ top: targetPos, behavior: 'smooth' });
         } else if (calScroll) {
-            calScroll.scrollTop = targetPos; // Twardy fallback, gdyby smooth zawiodło
+            calScroll.scrollTop = targetPos; 
         }
     }, 400); 
 }
@@ -425,7 +423,7 @@ function renderAgendaView(monday, sunday) {
         }
 
         container.innerHTML += `
-            <div class="karta cursor-pointer transition hover:-translate-y-1 hover:shadow-[6px_6px_0_var(--ciemny)] border-4 p-4 md:p-5 mb-4 flex flex-col bg-white lesson-block ramka-ciemna" 
+            <div onclick="editLesson('${l.id}')" class="karta cursor-pointer transition hover:-translate-y-1 hover:shadow-[6px_6px_0_var(--ciemny)] border-4 p-4 md:p-5 mb-4 flex flex-col bg-white lesson-block ramka-ciemna" 
                  style="border-left-width: 8px; border-left-color: ${esc(subject.color)}; ${opacityAndStrike}" 
                  data-id="${l.id}">
                  
