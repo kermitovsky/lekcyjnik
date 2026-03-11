@@ -358,6 +358,7 @@ function handleBundleChange() {
     const paymentDateDiv = document.getElementById('lesson-payment-date-div');
     
     if (bundleId) {
+        // Uczeń korzysta z pakietu
         if(priceLabel) priceLabel.innerText = 'Cena poza pakietem (zł)';
         if(paymentDateDiv) paymentDateDiv.classList.remove('hidden');
         if(priceInput) priceInput.readOnly = false; 
@@ -365,15 +366,30 @@ function handleBundleChange() {
         const stId = document.getElementById('lesson-student').value;
         const student = students.find(s => s.id == stId);
         const bundle = student ? (student.bundles || []).find(b => b.id == bundleId) : null;
+
+        // KROK 1: Zdejmujemy wszelkie blokady z kalendarzyka, żeby Flatpickr nie wariował
+        if(paymentDatePicker && paymentDatePicker.altInput) {
+            paymentDatePicker.altInput.removeAttribute('disabled');
+            paymentDatePicker.altInput.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
+            paymentDatePicker.altInput.classList.add('bg-white', 'cursor-pointer');
+        }
         
-        // Zabezpieczenie - jeśli pakiet ma zdefiniowany twardy dzień płatności:
+        // KROK 2: Sprawdzamy, czy w profilu ucznia jest ustawiony "sztywny" dzień płatności (np. Sobota)
         if (bundle && bundle.payDay !== undefined && bundle.payDay !== "") {
-            let lDateStr = document.getElementById('lesson-date').value;
-            let lDate = lDateStr ? new Date(lDateStr + "T12:00:00") : new Date();
+            
+            // Pobieramy "żywą" datę z głównego kalendarza lekcji
+            let lDate;
+            if (datePicker && datePicker.selectedDates.length > 0) {
+                lDate = new Date(datePicker.selectedDates[0]);
+            } else {
+                let lDateStr = document.getElementById('lesson-date').value;
+                lDate = lDateStr ? new Date(lDateStr + "T12:00:00") : new Date();
+            }
             lDate.setHours(12,0,0,0); 
             
             let finalDateStr = '';
 
+            // Obliczamy dokładną datę
             if (bundle.type === 'monthly') {
                 let targetDay = parseInt(bundle.payDay);
                 if(!isNaN(targetDay)) {
@@ -393,39 +409,33 @@ function handleBundleChange() {
                 }
             }
 
-            // Wymuszenie aktualizacji w Flatpickr z jednoczesnym wyszarzeniem pola (zablokowaniem)
+            // Ustawiamy wymuszoną datę w kalendarzyku płatności
             if (finalDateStr && paymentDatePicker) {
-                paymentDatePicker.setDate(finalDateStr, true);
+                paymentDatePicker.setDate(finalDateStr, true); // "true" wymusza odświeżenie UI
                 
-                if(paymentDatePicker.altInput) {
-                    paymentDatePicker.altInput.setAttribute('disabled', 'true');
-                    paymentDatePicker.altInput.style.backgroundColor = '#e2e8f0'; // Szare tło (Tailwind slate-200)
-                    paymentDatePicker.altInput.style.cursor = 'not-allowed';
-                    paymentDatePicker.altInput.style.opacity = '0.6';
-                }
+                // KROK 3: Nakładamy sztywną blokadę na pole (szare tło, brak klikania)
+                setTimeout(() => {
+                    if(paymentDatePicker.altInput) {
+                        paymentDatePicker.altInput.setAttribute('disabled', 'true');
+                        paymentDatePicker.altInput.classList.remove('bg-white', 'cursor-pointer');
+                        paymentDatePicker.altInput.classList.add('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
+                    }
+                }, 10);
             }
             
-        } else {
-            // Jeśli pakiet NIE MA sztywnego dnia płatności - odblokuj i zrób znów białe pole
-            if(paymentDatePicker && paymentDatePicker.altInput) {
-                paymentDatePicker.altInput.removeAttribute('disabled');
-                paymentDatePicker.altInput.style.backgroundColor = '#ffffff'; 
-                paymentDatePicker.altInput.style.cursor = 'pointer';
-                paymentDatePicker.altInput.style.opacity = '1';
-            }
-        }
+        } 
+        
     } else {
-        // Brak pakietu - standardowa lekcja
+        // Brak pakietu - standardowa, pojedyncza lekcja
         if(priceLabel) priceLabel.innerText = 'Cena za tę lekcję (zł)';
         if(paymentDateDiv) paymentDateDiv.classList.add('hidden');
         if(priceInput) priceInput.readOnly = false;
         
-        // Zawsze odblokowuj dla standardowej lekcji na wypadek ponownego użycia pakietu później
+        // Zawsze odblokowujemy kalendarzyk
         if(paymentDatePicker && paymentDatePicker.altInput) {
             paymentDatePicker.altInput.removeAttribute('disabled');
-            paymentDatePicker.altInput.style.backgroundColor = '#ffffff';
-            paymentDatePicker.altInput.style.cursor = 'pointer';
-            paymentDatePicker.altInput.style.opacity = '1';
+            paymentDatePicker.altInput.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
+            paymentDatePicker.altInput.classList.add('bg-white', 'cursor-pointer');
         }
     }
 }
@@ -441,7 +451,7 @@ function autoUzupelnijCzas() {
     let endStr = `${endH}:${endM}`;
     
     document.getElementById('lesson-time-end').value = endStr;
-    if(timeEndPicker) timeEndPicker.setDate(endStr, true); // true wymusza render UI
+    if(timeEndPicker) timeEndPicker.setDate(endStr, true);
     handleBundleChange(); 
 }
 
@@ -452,12 +462,17 @@ function openLessonModal() {
     let topicEl = document.getElementById('lesson-topic');
     if(topicEl) topicEl.value = ''; 
     
+    // Twarde wymuszenie wyczyszczenia i ustawienia "Dzisiaj"
     let defaultDate = getLocalISODate(new Date());
     document.getElementById('lesson-date').value = defaultDate;
+    if(datePicker) {
+        datePicker.clear();
+        datePicker.setDate(defaultDate, true);
+    }
     
-    // Używamy true, aby Flatpickr na pewno wpisał datę do widocznego okienka
-    if(datePicker) datePicker.setDate(defaultDate, true);
-    if(paymentDatePicker) paymentDatePicker.setDate('', true);
+    if(paymentDatePicker) {
+        paymentDatePicker.clear();
+    }
     
     document.getElementById('lesson-time-start').value = '15:00';
     if(timeStartPicker) timeStartPicker.setDate('15:00', true);
@@ -500,17 +515,20 @@ function editLesson(id) {
         let topicEl = document.getElementById('lesson-topic');
         if(topicEl) topicEl.value = lesson.topic || ''; 
         
-        // 1. Zawsze ładujemy datę kalendarzyka pierwszą, z użyciem "true", żeby uniknąć "Wybierz datę"
+        // KROK 1: Najpierw twarde ustawienie dat w kalendarzach
         document.getElementById('lesson-date').value = lesson.date;
         if(datePicker) datePicker.setDate(lesson.date, true); 
-        if(paymentDatePicker) paymentDatePicker.setDate(lesson.paymentDate || lesson.date, true);
+        
+        if(paymentDatePicker) {
+            paymentDatePicker.setDate(lesson.paymentDate || lesson.date, true);
+        }
         
         document.getElementById('lesson-time-start').value = lesson.startTime;
         document.getElementById('lesson-time-end').value = lesson.endTime;
         if(timeStartPicker) timeStartPicker.setDate(lesson.startTime, true);
         if(timeEndPicker) timeEndPicker.setDate(lesson.endTime, true);
 
-        // 2. Ładujemy Ucznia
+        // KROK 2: Ustawienie Ucznia
         const selectStudent = document.getElementById('lesson-student');
         selectStudent.innerHTML = '';
         students.forEach(s => { 
@@ -519,15 +537,15 @@ function editLesson(id) {
             }
         });
 
-        // 3. Ładujemy Przedmioty zależne od ucznia
+        // KROK 3: Ładowanie przedmiotów i pakietów
         updateLessonSubjectDropdown();
         if(lesson.subjectId) document.getElementById('lesson-subject').value = lesson.subjectId;
         
-        // 4. Ładujemy pakiety i ustawiamy wybrany pakiet
         updateLessonBundleDropdown();
         let bundleSel = document.getElementById('lesson-bundle');
         if(bundleSel && lesson.bundleId) bundleSel.value = lesson.bundleId;
 
+        // KROK 4: Ustawienie reszty okienka
         document.getElementById('lesson-price').value = lesson.price || '';
         
         let paidCb = document.getElementById('lesson-paid');
@@ -543,11 +561,11 @@ function editLesson(id) {
 
         document.getElementById('modal-lesson').classList.remove('hidden');
         
-        // 5. NA KONIEC uruchamiamy sprawdzanie blokad, żeby zamrozić pole daty płatności (jeśli trzeba)
+        // KROK 5: Na sam koniec sprawdzamy pakiety i nakładamy szarą blokadę, jeśli trzeba
         handleBundleChange();
         
     } catch(err) {
-        console.error("Błąd podczas edycji lekcji:", err);
+        console.error("Błąd otwierania edycji lekcji:", err);
     }
 }
 
