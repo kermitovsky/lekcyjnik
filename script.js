@@ -1477,7 +1477,7 @@ function renderCalendar() {
 
     let gridHtml = `<div class="border-r-2 relative w-12 md:w-16 shrink-0 z-10" style="background-color: var(--karta-bg); border-color: var(--ciemny)">`;
     for(let h = settings.startHour; h <= settings.endHour; h++) {
-        gridHtml += `<div class="h-24 time-row text-[10px] md:text-xs text-right pr-1 md:pr-2 pt-1 font-bold" style="color: var(--tekst-szary)">${h}:00</div>`;
+        gridHtml += `<div class="h-24 time-row text-[10px] md:text-xs text-right pr-1 md:pr-2 pt-1 font-bold" style="color: var(--tekst-szary)" id="hour-row-${h}">${h}:00</div>`;
     }
     gridHtml += `</div>`;
 
@@ -1524,7 +1524,7 @@ function renderCalendar() {
     document.getElementById('calendar-grid').innerHTML = gridHtml;
     updateCurrentTimeLine();
 
-    // AUTO-SCROLL (CZEKA NA ZAKOŃCZENIE ANIMACJI KARTY)
+    // AUTO-SCROLL (Z PRAWIDŁOWYM OPÓŹNIENIEM I SZUKANIEM KONTENERA)
     let weekStringStart = getLocalISODate(monday);
     let weekStringEnd = getLocalISODate(sunday);
     let weekLessons = lessons.filter(l => l.date >= weekStringStart && l.date <= weekStringEnd && !l.cancelled);
@@ -1541,19 +1541,21 @@ function renderCalendar() {
     });
 
     setTimeout(() => {
-        let scrollContainer = document.getElementById('calendar-body-scroll');
-        if (scrollContainer && hasLessons) {
-            let scrollTargetHour = earliestHour - 1;
-            if(scrollTargetHour < settings.startHour) scrollTargetHour = settings.startHour;
-            
-            scrollContainer.scrollTo({
-                top: (scrollTargetHour - settings.startHour) * 96,
-                behavior: 'smooth'
-            });
-        } else if (scrollContainer && !hasLessons) {
-            scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+        let scrollTargetHour = earliestHour - 1;
+        if(scrollTargetHour < settings.startHour) scrollTargetHour = settings.startHour;
+        
+        let targetPos = hasLessons ? ((scrollTargetHour - settings.startHour) * 96) : 0;
+
+        let calScroll = document.getElementById('calendar-body-scroll');
+        let mainScroll = document.getElementById('main-content');
+        
+        // System sprawdza, który div fizycznie posiada suwak na danym urządzeniu
+        if (calScroll && calScroll.scrollHeight > calScroll.clientHeight) {
+            calScroll.scrollTo({ top: targetPos, behavior: 'smooth' });
+        } else if (mainScroll) {
+            mainScroll.scrollTo({ top: targetPos, behavior: 'smooth' });
         }
-    }, 400); // <-- Magiczna wartość (400ms), która czeka aż widok na pewno się odkryje!
+    }, 500); 
 }
 
 function renderAgendaView(monday, sunday) {
@@ -1691,7 +1693,7 @@ function renderSlotCalendar() {
 
     let gridHtml = `<div class="border-r-2 relative w-12 shrink-0 z-10" style="background-color: var(--karta-bg); border-color: var(--ciemny)">`;
     for(let h = settings.startHour; h <= settings.endHour; h++) {
-        gridHtml += `<div class="h-24 time-row text-[10px] md:text-xs text-right pr-1 pt-1 font-bold" style="color: var(--tekst-szary)">${h}:00</div>`;
+        gridHtml += `<div class="h-24 time-row text-[10px] md:text-xs text-right pr-1 pt-1 font-bold" style="color: var(--tekst-szary)" id="slot-hour-row-${h}">${h}:00</div>`;
     }
     gridHtml += `</div>`;
 
@@ -1763,17 +1765,20 @@ function renderSlotCalendar() {
     document.getElementById('slot-calendar-grid').innerHTML = gridHtml;
 
     setTimeout(() => {
-        let slotScrollContainer = document.querySelector('#slot-calendar-grid').parentElement;
-        if (slotScrollContainer && earliestAvailableHour < settings.endHour) {
-            let scrollTargetHour = earliestAvailableHour - 1;
-            if(scrollTargetHour < settings.startHour) scrollTargetHour = settings.startHour;
-            
-            slotScrollContainer.scrollTo({
-                top: (scrollTargetHour - settings.startHour) * 96,
-                behavior: 'smooth'
-            });
+        let scrollTargetHour = earliestAvailableHour - 1;
+        if(scrollTargetHour < settings.startHour) scrollTargetHour = settings.startHour;
+        
+        let targetPos = earliestAvailableHour < settings.endHour ? ((scrollTargetHour - settings.startHour) * 96) : 0;
+        
+        let slotScroll = document.querySelector('#slot-calendar-grid').parentElement;
+        let modalScroll = document.querySelector('#modal-find-slot .modal-okno');
+
+        if (slotScroll && slotScroll.scrollHeight > slotScroll.clientHeight) {
+            slotScroll.scrollTo({ top: targetPos, behavior: 'smooth' });
+        } else if (modalScroll) {
+            modalScroll.scrollTo({ top: targetPos, behavior: 'smooth' });
         }
-    }, 400); // Opóźnienie również dla wyszukiwarki terminów
+    }, 400); 
 }
 
 function handleSlotClick(e, dateStr) {
