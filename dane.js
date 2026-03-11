@@ -366,12 +366,13 @@ function handleBundleChange() {
         const student = students.find(s => s.id == stId);
         const bundle = student ? (student.bundles || []).find(b => b.id == bundleId) : null;
         
-        // Zabezpieczenie przed błędem, gdy pakiet został usunięty w profilu ucznia, ale lekcja wciąż ma go zapisanego
+        // Zabezpieczenie - jeśli pakiet ma zdefiniowany twardy dzień płatności:
         if (bundle && bundle.payDay !== undefined && bundle.payDay !== "") {
-            // Pakiet ma sztywny dzień - ustawiamy go z automatu
             let lDateStr = document.getElementById('lesson-date').value;
             let lDate = lDateStr ? new Date(lDateStr + "T12:00:00") : new Date();
             lDate.setHours(12,0,0,0); 
+            
+            let finalDateStr = '';
 
             if (bundle.type === 'monthly') {
                 let targetDay = parseInt(bundle.payDay);
@@ -380,38 +381,51 @@ function handleBundleChange() {
                     let finalDay = Math.min(targetDay, lastDayOfMonth);
                     let pDate = new Date(lDate.getFullYear(), lDate.getMonth(), finalDay);
                     pDate.setHours(12,0,0,0);
-                    if(paymentDatePicker) paymentDatePicker.setDate(getLocalISODate(pDate), false);
+                    finalDateStr = getLocalISODate(pDate);
                 }
             } else {
                 let weekMonday = getMonday(lDate);
                 let offset = parseInt(bundle.payDay);
-                if (offset === 0) { weekMonday.setDate(weekMonday.getDate() + 6); } 
-                else { weekMonday.setDate(weekMonday.getDate() + (offset - 1)); }
-                if(paymentDatePicker) paymentDatePicker.setDate(getLocalISODate(weekMonday), false);
+                if(!isNaN(offset)) {
+                    if (offset === 0) { weekMonday.setDate(weekMonday.getDate() + 6); } 
+                    else { weekMonday.setDate(weekMonday.getDate() + (offset - 1)); }
+                    finalDateStr = getLocalISODate(weekMonday);
+                }
             }
-            
-            // Blokujemy możliwość ręcznej zmiany daty (Szary kalendarzyk)
-            if(paymentDatePicker && paymentDatePicker.altInput) {
-                paymentDatePicker.altInput.disabled = true;
-                paymentDatePicker.altInput.classList.add('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
+
+            // Wymuszenie aktualizacji w Flatpickr z jednoczesnym wyszarzeniem pola (zablokowaniem)
+            if (finalDateStr && paymentDatePicker) {
+                paymentDatePicker.setDate(finalDateStr, true);
+                
+                if(paymentDatePicker.altInput) {
+                    paymentDatePicker.altInput.setAttribute('disabled', 'true');
+                    paymentDatePicker.altInput.style.backgroundColor = '#e2e8f0'; // Szare tło (Tailwind slate-200)
+                    paymentDatePicker.altInput.style.cursor = 'not-allowed';
+                    paymentDatePicker.altInput.style.opacity = '0.6';
+                }
             }
             
         } else {
-            // Pakiet nie ma sztywnego dnia - odblokowujemy
+            // Jeśli pakiet NIE MA sztywnego dnia płatności - odblokuj i zrób znów białe pole
             if(paymentDatePicker && paymentDatePicker.altInput) {
-                paymentDatePicker.altInput.disabled = false;
-                paymentDatePicker.altInput.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
+                paymentDatePicker.altInput.removeAttribute('disabled');
+                paymentDatePicker.altInput.style.backgroundColor = '#ffffff'; 
+                paymentDatePicker.altInput.style.cursor = 'pointer';
+                paymentDatePicker.altInput.style.opacity = '1';
             }
         }
     } else {
-        // Brak pakietu - zwykła lekcja
+        // Brak pakietu - standardowa lekcja
         if(priceLabel) priceLabel.innerText = 'Cena za tę lekcję (zł)';
         if(paymentDateDiv) paymentDateDiv.classList.add('hidden');
         if(priceInput) priceInput.readOnly = false;
         
+        // Zawsze odblokowuj dla standardowej lekcji na wypadek ponownego użycia pakietu później
         if(paymentDatePicker && paymentDatePicker.altInput) {
-            paymentDatePicker.altInput.disabled = false;
-            paymentDatePicker.altInput.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
+            paymentDatePicker.altInput.removeAttribute('disabled');
+            paymentDatePicker.altInput.style.backgroundColor = '#ffffff';
+            paymentDatePicker.altInput.style.cursor = 'pointer';
+            paymentDatePicker.altInput.style.opacity = '1';
         }
     }
 }
@@ -427,7 +441,7 @@ function autoUzupelnijCzas() {
     let endStr = `${endH}:${endM}`;
     
     document.getElementById('lesson-time-end').value = endStr;
-    if(timeEndPicker) timeEndPicker.setDate(endStr, false);
+    if(timeEndPicker) timeEndPicker.setDate(endStr, true); // true wymusza render UI
     handleBundleChange(); 
 }
 
@@ -440,11 +454,13 @@ function openLessonModal() {
     
     let defaultDate = getLocalISODate(new Date());
     document.getElementById('lesson-date').value = defaultDate;
-    if(datePicker) datePicker.setDate(defaultDate, false);
-    if(paymentDatePicker) paymentDatePicker.setDate('', false);
+    
+    // Używamy true, aby Flatpickr na pewno wpisał datę do widocznego okienka
+    if(datePicker) datePicker.setDate(defaultDate, true);
+    if(paymentDatePicker) paymentDatePicker.setDate('', true);
     
     document.getElementById('lesson-time-start').value = '15:00';
-    if(timeStartPicker) timeStartPicker.setDate('15:00', false);
+    if(timeStartPicker) timeStartPicker.setDate('15:00', true);
     autoUzupelnijCzas();
 
     document.getElementById('lesson-price').value = '';
@@ -474,60 +490,65 @@ function openLessonModal() {
 }
 
 function editLesson(id) {
-    const lesson = lessons.find(l => l.id == id);
-    if(!lesson) return;
-    
-    document.getElementById('lesson-modal-title').innerText = 'Szczegóły lekcji';
-    document.getElementById('lesson-id').value = lesson.id;
-    
-    let topicEl = document.getElementById('lesson-topic');
-    if(topicEl) topicEl.value = lesson.topic || ''; 
-    
-    // 1. ZAWSZE NAJPIERW USTAW DATY (żeby obliczenia pakietu miały z czego korzystać)
-    document.getElementById('lesson-date').value = lesson.date;
-    if(datePicker) datePicker.setDate(lesson.date, false); // false zatrzymuje błędy przy ładowaniu
-    if(paymentDatePicker) paymentDatePicker.setDate(lesson.paymentDate || lesson.date, false);
-    
-    document.getElementById('lesson-time-start').value = lesson.startTime;
-    document.getElementById('lesson-time-end').value = lesson.endTime;
-    if(timeStartPicker) timeStartPicker.setDate(lesson.startTime, false);
-    if(timeEndPicker) timeEndPicker.setDate(lesson.endTime, false);
+    try {
+        const lesson = lessons.find(l => l.id == id);
+        if(!lesson) return;
+        
+        document.getElementById('lesson-modal-title').innerText = 'Szczegóły lekcji';
+        document.getElementById('lesson-id').value = lesson.id;
+        
+        let topicEl = document.getElementById('lesson-topic');
+        if(topicEl) topicEl.value = lesson.topic || ''; 
+        
+        // 1. Zawsze ładujemy datę kalendarzyka pierwszą, z użyciem "true", żeby uniknąć "Wybierz datę"
+        document.getElementById('lesson-date').value = lesson.date;
+        if(datePicker) datePicker.setDate(lesson.date, true); 
+        if(paymentDatePicker) paymentDatePicker.setDate(lesson.paymentDate || lesson.date, true);
+        
+        document.getElementById('lesson-time-start').value = lesson.startTime;
+        document.getElementById('lesson-time-end').value = lesson.endTime;
+        if(timeStartPicker) timeStartPicker.setDate(lesson.startTime, true);
+        if(timeEndPicker) timeEndPicker.setDate(lesson.endTime, true);
 
-    // 2. USTAW UCZNIA
-    const selectStudent = document.getElementById('lesson-student');
-    selectStudent.innerHTML = '';
-    students.forEach(s => { 
-        if(!s.archived || s.id == lesson.studentId) {
-            selectStudent.innerHTML += `<option value="${s.id}" ${s.id == lesson.studentId ? 'selected' : ''}>${esc(s.name)}</option>`; 
-        }
-    });
+        // 2. Ładujemy Ucznia
+        const selectStudent = document.getElementById('lesson-student');
+        selectStudent.innerHTML = '';
+        students.forEach(s => { 
+            if(!s.archived || s.id == lesson.studentId) {
+                selectStudent.innerHTML += `<option value="${s.id}" ${s.id == lesson.studentId ? 'selected' : ''}>${esc(s.name)}</option>`; 
+            }
+        });
 
-    // 3. ZAKTUALIZUJ LISTY ZALEŻNE OD UCZNIA
-    updateLessonSubjectDropdown();
-    if(lesson.subjectId) document.getElementById('lesson-subject').value = lesson.subjectId;
-    
-    updateLessonBundleDropdown();
-    let bundleSel = document.getElementById('lesson-bundle');
-    if(bundleSel && lesson.bundleId) bundleSel.value = lesson.bundleId;
+        // 3. Ładujemy Przedmioty zależne od ucznia
+        updateLessonSubjectDropdown();
+        if(lesson.subjectId) document.getElementById('lesson-subject').value = lesson.subjectId;
+        
+        // 4. Ładujemy pakiety i ustawiamy wybrany pakiet
+        updateLessonBundleDropdown();
+        let bundleSel = document.getElementById('lesson-bundle');
+        if(bundleSel && lesson.bundleId) bundleSel.value = lesson.bundleId;
 
-    // 4. USTAW RESZTĘ PÓL
-    document.getElementById('lesson-price').value = lesson.price || '';
-    
-    let paidCb = document.getElementById('lesson-paid');
-    if(paidCb) paidCb.checked = lesson.paid || false;
-    let cancelledCb = document.getElementById('lesson-cancelled');
-    if(cancelledCb) cancelledCb.checked = lesson.cancelled || false;
+        document.getElementById('lesson-price').value = lesson.price || '';
+        
+        let paidCb = document.getElementById('lesson-paid');
+        if(paidCb) paidCb.checked = lesson.paid || false;
+        let cancelledCb = document.getElementById('lesson-cancelled');
+        if(cancelledCb) cancelledCb.checked = lesson.cancelled || false;
 
-    let recBox = document.getElementById('recurring-box');
-    if(recBox) recBox.classList.add('hidden');
-    let cancBox = document.getElementById('cancelled-box');
-    if(cancBox) cancBox.classList.remove('hidden'); 
-    document.getElementById('btn-delete-lesson').classList.remove('hidden');
+        let recBox = document.getElementById('recurring-box');
+        if(recBox) recBox.classList.add('hidden');
+        let cancBox = document.getElementById('cancelled-box');
+        if(cancBox) cancBox.classList.remove('hidden'); 
+        document.getElementById('btn-delete-lesson').classList.remove('hidden');
 
-    document.getElementById('modal-lesson').classList.remove('hidden');
-    
-    // 5. NA KONIEC URUCHOM BLOKADY (w tym szarzenie daty płatności)
-    handleBundleChange();
+        document.getElementById('modal-lesson').classList.remove('hidden');
+        
+        // 5. NA KONIEC uruchamiamy sprawdzanie blokad, żeby zamrozić pole daty płatności (jeśli trzeba)
+        handleBundleChange();
+        
+    } catch(err) {
+        console.error("Błąd podczas edycji lekcji:", err);
+    }
 }
 
 async function saveLesson() {
