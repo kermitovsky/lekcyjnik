@@ -34,6 +34,8 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* --- GŁÓWNE KLASY KOMPONENTÓW --- */
+
 .time-row { border-bottom: 1px dashed var(--szary-ramka); }
 .day-col { border-right: 1px dashed var(--szary-ramka); }
 .day-col:last-child { border-right: none; }
@@ -104,8 +106,8 @@ body {
     border-radius: 1rem;
     width: 100%;
     max-width: 28rem;
-    max-height: 90vh; /* Optymalizacja na małe telefony */
-    overflow-y: auto; /* Optymalizacja na małe telefony */
+    max-height: 90vh;
+    overflow-y: auto;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     border: 2px solid var(--ciemny);
     color: var(--tekst-glowny);
@@ -140,3 +142,17 @@ body {
 }
 .kolor-kolo:hover { transform: scale(1.1); }
 .kolor-kolo.aktywny { border-color: var(--ciemny); box-shadow: 0 0 0 2px var(--karta-bg) inset; }
+
+/* --- NOWE KLASY POMOCNICZE (do usunięcia inline stylów) --- */
+.bg-karta { background-color: var(--karta-bg); }
+.bg-jasny { background-color: var(--jasny); }
+
+.tekst-glowny { color: var(--tekst-glowny); }
+.tekst-szary { color: var(--tekst-szary); }
+.tekst-akcent { color: var(--akcent); }
+
+.ramka-ciemna { border-color: var(--ciemny); }
+.ramka-szara { border-color: var(--szary-ramka); }
+
+.cien-ciemny { box-shadow: 2px 2px 0px var(--ciemny); }
+.cien-ciemny-hover:hover { box-shadow: 4px 4px 0px var(--ciemny); }
