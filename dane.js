@@ -356,7 +356,8 @@ function handleBundleChange() {
     const paymentDateDiv = document.getElementById('lesson-payment-date-div');
     const realInput = document.getElementById('lesson-payment-date');
     
-    console.log("🛠️ TEST NOWEGO KODU: handleBundleChange uruchomione!");
+    // 🔥 PANCERNY TRIK: Pobieramy silnik Flatpickr bezpośrednio z elementu HTML!
+    const fpInstance = realInput ? realInput._flatpickr : null;
 
     if (bundleId) {
         if(priceLabel) priceLabel.innerText = 'Cena poza pakietem (zł)';
@@ -366,6 +367,14 @@ function handleBundleChange() {
             paymentDateDiv.style.opacity = '1';
         }
         if(priceInput) priceInput.readOnly = false; 
+        
+        // Odblokuj pole na start
+        if(fpInstance && fpInstance.altInput) {
+            fpInstance.altInput.disabled = false;
+            fpInstance.altInput.style.backgroundColor = '';
+            fpInstance.altInput.style.color = '';
+            fpInstance.altInput.style.cursor = 'pointer';
+        }
         
         const stId = document.getElementById('lesson-student').value;
         const student = students.find(s => s.id == stId);
@@ -395,18 +404,27 @@ function handleBundleChange() {
                 finalDateStr = getLocalISODate(weekMonday);
             }
 
-            console.log("💡 OBLICZONA DATA PAKIETU:", finalDateStr);
-
-            if (finalDateStr && paymentDatePicker) {
-                paymentDatePicker.setDate(finalDateStr, true);
+            if (finalDateStr) {
+                // Wymuszamy datę na znalezionym kalendarzyku
+                if (fpInstance) {
+                    fpInstance.setDate(finalDateStr, true);
+                    
+                    // Bezpośrednie modyfikowanie wyglądu pola wewnątrz Flatpickra
+                    if(fpInstance.altInput) {
+                        fpInstance.altInput.disabled = true;
+                        fpInstance.altInput.style.backgroundColor = '#e2e8f0'; // Szare tło
+                        fpInstance.altInput.style.color = '#64748b'; // Szary tekst
+                        fpInstance.altInput.style.cursor = 'not-allowed'; // Przekreślony kursor
+                    }
+                } else if (realInput) {
+                    realInput.value = finalDateStr;
+                    realInput.disabled = true;
+                }
                 
-                // Agresywne zablokowanie pola
-                if(realInput) realInput.value = finalDateStr;
-                
+                // Dodatkowe zablokowanie całego obszaru
                 if (paymentDateDiv) {
                     paymentDateDiv.style.pointerEvents = 'none';
-                    paymentDateDiv.style.opacity = '0.5';
-                    paymentDateDiv.style.filter = 'grayscale(100%)';
+                    paymentDateDiv.style.opacity = '0.7';
                 }
             }
         }
@@ -416,9 +434,16 @@ function handleBundleChange() {
             paymentDateDiv.classList.add('hidden');
             paymentDateDiv.style.pointerEvents = 'auto';
             paymentDateDiv.style.opacity = '1';
-            paymentDateDiv.style.filter = 'none';
         }
         if(priceInput) priceInput.readOnly = false;
+        
+        // Całkowite odblokowanie pola, gdy nie ma pakietu
+        if(fpInstance && fpInstance.altInput) {
+            fpInstance.altInput.disabled = false;
+            fpInstance.altInput.style.backgroundColor = ''; 
+            fpInstance.altInput.style.color = '';
+            fpInstance.altInput.style.cursor = 'pointer';
+        }
     }
 }
 
@@ -451,7 +476,8 @@ function openLessonModal() {
         datePicker.setDate(defaultDate, true);
     }
     
-    if(paymentDatePicker) paymentDatePicker.clear();
+    let realPayDate = document.getElementById('lesson-payment-date');
+    if(realPayDate && realPayDate._flatpickr) realPayDate._flatpickr.clear();
     
     document.getElementById('lesson-time-start').value = '15:00';
     if(timeStartPicker) timeStartPicker.setDate('15:00', true);
@@ -497,8 +523,9 @@ function editLesson(id) {
         document.getElementById('lesson-date').value = lesson.date;
         if(datePicker) datePicker.setDate(lesson.date, true); 
         
-        if(paymentDatePicker) {
-            paymentDatePicker.setDate(lesson.paymentDate || lesson.date, true);
+        let realPayDate = document.getElementById('lesson-payment-date');
+        if(realPayDate && realPayDate._flatpickr) {
+            realPayDate._flatpickr.setDate(lesson.paymentDate || lesson.date, true);
         }
         
         document.getElementById('lesson-time-start').value = lesson.startTime;
