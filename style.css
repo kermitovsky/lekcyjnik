@@ -7,7 +7,7 @@
     --karta-bg: #ffffff;
     --tekst-glowny: #1e293b;
     --tekst-szary: #64748b;
-    --kropki-kolor: #cbd5e1;
+    --kratka-kolor: rgba(148, 163, 184, 0.15); /* Delikatna szara kratka */
 }
 
 html.dark {
@@ -17,14 +17,18 @@ html.dark {
     --karta-bg: #1e293b;
     --tekst-glowny: #f8fafc;
     --tekst-szary: #94a3b8;
-    --kropki-kolor: #334155;
+    --kratka-kolor: rgba(255, 255, 255, 0.04); /* Delikatna jasna kratka */
 }
 
 body {
     background-color: var(--jasny);
     color: var(--tekst-glowny);
-    background-image: radial-gradient(var(--kropki-kolor) 1.5px, transparent 1.5px);
-    background-size: 28px 28px;
+    /* Zmiana na tło w kratkę zeszytową */
+    background-image: 
+        linear-gradient(var(--kratka-kolor) 1px, transparent 1px),
+        linear-gradient(90deg, var(--kratka-kolor) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: top left;
     transition: background-color 0.3s, color 0.3s;
 }
 
@@ -33,8 +37,6 @@ body {
 ::-webkit-scrollbar-thumb { background: #64748b; border-radius: 10px; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* --- GŁÓWNE KLASY KOMPONENTÓW --- */
 
 .time-row { border-bottom: 1px dashed var(--szary-ramka); }
 .day-col { border-right: 1px dashed var(--szary-ramka); }
@@ -142,17 +144,3 @@ body {
 }
 .kolor-kolo:hover { transform: scale(1.1); }
 .kolor-kolo.aktywny { border-color: var(--ciemny); box-shadow: 0 0 0 2px var(--karta-bg) inset; }
-
-/* --- NOWE KLASY POMOCNICZE (do usunięcia inline stylów) --- */
-.bg-karta { background-color: var(--karta-bg); }
-.bg-jasny { background-color: var(--jasny); }
-
-.tekst-glowny { color: var(--tekst-glowny); }
-.tekst-szary { color: var(--tekst-szary); }
-.tekst-akcent { color: var(--akcent); }
-
-.ramka-ciemna { border-color: var(--ciemny); }
-.ramka-szara { border-color: var(--szary-ramka); }
-
-.cien-ciemny { box-shadow: 2px 2px 0px var(--ciemny); }
-.cien-ciemny-hover:hover { box-shadow: 4px 4px 0px var(--ciemny); }
