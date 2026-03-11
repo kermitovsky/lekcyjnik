@@ -1,859 +1,782 @@
 // ==========================================
-// --- PRZEDMIOTY ---
+// --- WIDOK PULPITU ---
 // ==========================================
 
-function renderSubjects() {
-    const list = document.getElementById('subjects-list');
-    list.innerHTML = '';
-    if(subjects.length === 0) return list.innerHTML = '<p class="tekst-szary">Brak przedmiotów. Dodaj pierwszy!</p>';
+function renderDashboard() {
+    const now = new Date(); const currentMonth = now.getMonth(); const currentYear = now.getFullYear();
+    const todayString = getLocalISODate(now);
+    const nowTime = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    const monthNames = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+    const monthsGenitive = ["stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca", "lipca", "sierpnia", "września", "października", "listopada", "grudnia"];
     
-    subjects.forEach(sub => {
-        let hasLinks = sub.links && sub.links.trim() !== '' ? '<span class="text-sm px-2 rounded bg-slate-100 text-slate-500 shadow-sm border border-slate-200" title="Materiały podpięte">🔗 Linki</span>' : '';
-        list.innerHTML += `
-            <div class="karta flex justify-between items-center cursor-pointer hover:-translate-y-1 transition" onclick="editSubject('${sub.id}')">
-                <div class="flex items-center gap-3">
-                    <div class="w-6 h-6 rounded-md border-2 ramka-ciemna" style="background-color: ${esc(sub.color)};"></div>
-                    <div class="flex flex-col">
-                        <h4 class="font-bold text-lg">${esc(sub.name)}</h4>
-                        <div class="mt-1">${hasLinks}</div>
-                    </div>
-                </div>
-            </div>`;
-    });
-}
+    let pulpitMonthTitle = document.getElementById('pulpit-month-title');
+    if(pulpitMonthTitle) pulpitMonthTitle.innerText = `Zarobki - ${monthNames[currentMonth]}`;
 
-function openSubjectModal() {
-    document.getElementById('subject-id').value = '';
-    document.getElementById('subject-name').value = '';
-    document.getElementById('subject-color').value = '#ef4444';
-    document.getElementById('subject-links').value = ''; 
-    document.getElementById('btn-delete-subject').classList.add('hidden');
-    document.getElementById('modal-subject').classList.remove('hidden');
-}
-
-function editSubject(id) {
-    const sub = subjects.find(s => s.id == id);
-    if(!sub) return;
-    document.getElementById('subject-id').value = sub.id;
-    document.getElementById('subject-name').value = sub.name;
-    document.getElementById('subject-color').value = sub.color;
-    document.getElementById('subject-links').value = sub.links || ''; 
-    document.getElementById('btn-delete-subject').classList.remove('hidden');
-    document.getElementById('modal-subject').classList.remove('hidden');
-}
-
-async function saveSubject() {
-    const id = document.getElementById('subject-id').value;
-    const name = document.getElementById('subject-name').value;
-    const color = document.getElementById('subject-color').value;
-    const links = document.getElementById('subject-links').value; 
-
-    if(!name) return await customAlert('Błąd', 'Wpisz nazwę przedmiotu!');
-    if(id) { 
-        let sub = subjects.find(s => s.id == id); 
-        sub.name = name; sub.color = color; sub.links = links;
-    } else { 
-        subjects.push({ id: Date.now().toString(), name, color, links }); 
-    }
-    saveSubjectsToCloud(); closeModals(); renderSubjects();
-    showToast('Zapisano przedmiot!');
-}
-
-async function deleteSubject() {
-    const id = document.getElementById('subject-id').value;
-    if(await showConfirm('Usuwanie', 'Czy na pewno usunąć ten przedmiot?', true)) {
-        subjects = subjects.filter(s => s.id != id); saveSubjectsToCloud(); closeModals(); renderSubjects();
-        showToast('Usunięto przedmiot');
-    }
-}
-
-// ==========================================
-// --- UCZNIOWIE I PAKIETY ---
-// ==========================================
-
-function toggleBundleType(radioElem) {
-    const row = radioElem.closest('.bundle-row');
-    const weeklyDiv = row.querySelector('.bundle-payday-weekly');
-    const monthlyDiv = row.querySelector('.bundle-payday-monthly');
-    if(radioElem.value === 'monthly') {
-        weeklyDiv.classList.add('hidden');
-        monthlyDiv.classList.remove('hidden');
-    } else {
-        weeklyDiv.classList.remove('hidden');
-        monthlyDiv.classList.add('hidden');
-    }
-}
-
-function renderStudentBundles() {
-    const container = document.getElementById('student-bundles-container');
-    container.innerHTML = '';
-    currentStudentBundles.forEach((b, index) => {
-        let isMonthly = b.type === 'monthly';
-        container.innerHTML += `
-            <div class="flex flex-col gap-3 items-start p-3 md:p-4 rounded-xl border-2 bg-white border-slate-200 bundle-row shadow-sm w-full box-border" data-id="${b.id}">
-                <div class="flex flex-col w-full gap-2">
-                    <input type="text" placeholder="Nazwa pakietu (np. Matma + Fizyka)" value="${esc(b.name || '')}" class="bundle-name w-full text-sm p-2 border-2 rounded-lg font-bold outline-none transition" style="focus:border-color: var(--akcent)">
-                    <div class="flex gap-2 w-full">
-                        <input type="number" placeholder="Cena (zł)" value="${b.total || ''}" class="bundle-total w-1/2 text-sm p-2 border-2 rounded-lg font-bold outline-none transition tekst-akcent">
-                        <input type="number" step="0.5" placeholder="Godz. (np. 2.5)" value="${b.hours || ''}" class="bundle-hours w-1/2 text-sm p-2 border-2 rounded-lg font-bold outline-none transition">
-                    </div>
-                </div>
-                
-                <div class="w-full bg-slate-50 p-3 rounded-lg border border-slate-200 box-border">
-                    <div class="font-bold text-[10px] md:text-xs text-slate-500 mb-2 uppercase tracking-wider">Częstotliwość rozliczania:</div>
-                    
-                    <div class="flex flex-wrap gap-4 mb-3">
-                        <label class="flex items-center gap-2 cursor-pointer font-bold text-xs md:text-sm">
-                            <input type="radio" name="b_type_${index}" value="weekly" class="bundle-type w-4 h-4" style="accent-color: var(--akcent)" onchange="toggleBundleType(this)" ${!isMonthly ? 'checked' : ''}>
-                            Co tydzień
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer font-bold text-xs md:text-sm">
-                            <input type="radio" name="b_type_${index}" value="monthly" class="bundle-type w-4 h-4" style="accent-color: var(--akcent)" onchange="toggleBundleType(this)" ${isMonthly ? 'checked' : ''}>
-                            Co miesiąc
-                        </label>
-                    </div>
-                    
-                    <div class="bundle-payday-weekly flex flex-col gap-1 w-full ${isMonthly ? 'hidden' : ''}">
-                        <span class="text-[10px] md:text-xs font-bold text-slate-600">Dzień wpłaty:</span>
-                        <select class="bundle-payday-weekly-select w-full text-xs md:text-sm p-2 border-2 rounded-lg font-bold outline-none cursor-pointer bg-white transition max-w-full text-ellipsis overflow-hidden">
-                            <option value="" ${b.payDay==='' ? 'selected' : ''}>Wybieram ręcznie w kalendarzu</option>
-                            <option value="1" ${b.payDay==='1' ? 'selected' : ''}>Zawsze w Poniedziałek</option>
-                            <option value="2" ${b.payDay==='2' ? 'selected' : ''}>Zawsze we Wtorek</option>
-                            <option value="3" ${b.payDay==='3' ? 'selected' : ''}>Zawsze w Środę</option>
-                            <option value="4" ${b.payDay==='4' ? 'selected' : ''}>Zawsze w Czwartek</option>
-                            <option value="5" ${b.payDay==='5' ? 'selected' : ''}>Zawsze w Piątek</option>
-                            <option value="6" ${b.payDay==='6' ? 'selected' : ''}>Zawsze w Sobotę</option>
-                            <option value="0" ${b.payDay==='0' ? 'selected' : ''}>Zawsze w Niedzielę</option>
-                        </select>
-                    </div>
-
-                    <div class="bundle-payday-monthly flex flex-col gap-1 w-full ${!isMonthly ? 'hidden' : ''}">
-                        <span class="text-[10px] md:text-xs font-bold text-slate-600">Wpłata zawsze do:</span>
-                        <div class="flex items-center gap-2 w-full">
-                            <input type="number" min="1" max="31" placeholder="np. 10" value="${isMonthly ? (esc(b.payDay)||'') : ''}" class="bundle-payday-monthly-input flex-1 text-sm p-2 border-2 rounded-lg font-bold text-center outline-none bg-white transition w-full">
-                            <span class="text-[10px] md:text-xs font-bold text-slate-500 whitespace-nowrap">dnia miesiąca</span>
-                        </div>
-                    </div>
-                </div>
-
-                <button type="button" onclick="this.closest('.bundle-row').remove()" class="text-rose-500 font-extrabold w-full text-center py-2 bg-rose-50 rounded-lg border border-rose-100 hover:bg-rose-100 transition text-[10px] md:text-xs uppercase tracking-wider mt-1">Usuń ten pakiet</button>
-            </div>`;
-    });
-}
-
-function addBundleToStudent() {
-    currentStudentBundles.push({ id: 'b_' + Date.now(), name: '', total: '', hours: '', type: 'weekly', payDay: '' });
-    renderStudentBundles();
-}
-
-function renderStudents() {
-    const list = document.getElementById('students-list');
-    const archivedList = document.getElementById('archived-students-list');
-    const archivedSection = document.getElementById('archived-students-section');
+    let earnings = 0, lessonsThisMonth = 0; let plannedEarnings = 0; 
+    let prevMonthEarnings = 0;
     
-    list.innerHTML = ''; archivedList.innerHTML = '';
-    const searchInput = document.getElementById('student-search');
-    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-    
-    let activeStudents = students.filter(s => !s.archived && s.name.toLowerCase().includes(searchTerm));
-    let archivedStudents = students.filter(s => s.archived && s.name.toLowerCase().includes(searchTerm));
+    let prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    let prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
-    if(activeStudents.length === 0) {
-        list.innerHTML = '<p class="tekst-szary">Brak aktywnych uczniów.</p>';
-    } else {
-        activeStudents.forEach(student => {
-            let studentSubjectsHtml = '';
-            if(student.subjectIds && student.subjectIds.length > 0) {
-                student.subjectIds.forEach(subId => {
-                    let sub = subjects.find(s => s.id == subId);
-                    if(sub) studentSubjectsHtml += `<span class="text-[10px] md:text-xs font-bold px-2 py-1 rounded-md text-white border ramka-ciemna" style="background-color: ${esc(sub.color)};">${esc(sub.name).toUpperCase()}</span> `;
-                });
-            } else { studentSubjectsHtml = `<span class="text-xs font-medium tekst-szary">Brak przypisanych przedmiotów</span>`; }
-            
-            let bundlesHtml = '';
-            if(student.bundles && student.bundles.length > 0) {
-                bundlesHtml = `<div class="mt-2 text-[10px] md:text-xs font-bold text-slate-500">PAKIETY: ${student.bundles.map(b => esc(b.name)).join(', ')}</div>`;
-            }
-
-            list.innerHTML += `
-                <div class="karta flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0">
-                    <div class="space-y-2">
-                        <h4 class="font-extrabold text-lg md:text-xl">${esc(student.name)}</h4>
-                        <div class="flex flex-wrap gap-1">${studentSubjectsHtml}</div>
-                        ${bundlesHtml}
-                    </div>
-                    <div class="flex flex-wrap sm:flex-col gap-3 sm:gap-2 w-full sm:w-auto text-center sm:text-right">
-                        <button onclick="editStudent('${student.id}')" class="text-sm font-bold hover:underline flex-1 sm:flex-none tekst-akcent">Edytuj</button>
-                        <button onclick="toggleArchiveStudent('${student.id}')" class="text-sm font-bold hover:underline flex-1 sm:flex-none tekst-szary">Zarchiwizuj</button>
-                        <button onclick="deleteStudent('${student.id}')" class="text-sm font-bold text-rose-500 hover:underline flex-1 sm:flex-none">Usuń</button>
-                    </div>
-                </div>`;
-        });
-    }
-
-    if(archivedStudents.length > 0) {
-        archivedSection.classList.remove('hidden');
-        archivedStudents.forEach(student => {
-            archivedList.innerHTML += `
-                <div class="karta flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0 bg-jasny">
-                    <div class="space-y-1">
-                        <h4 class="font-extrabold text-lg md:text-xl tekst-szary">${esc(student.name)}</h4>
-                        <span class="text-xs font-bold px-2 py-1 rounded-md text-white border bg-slate-400 border-slate-500">ARCHIWUM</span>
-                    </div>
-                    <div class="flex flex-wrap sm:flex-col gap-3 sm:gap-2 w-full sm:w-auto text-center sm:text-right">
-                        <button onclick="toggleArchiveStudent('${student.id}')" class="text-sm font-bold hover:underline flex-1 sm:flex-none tekst-akcent">Przywróć</button>
-                        <button onclick="deleteStudent('${student.id}')" class="text-sm font-bold text-rose-500 hover:underline flex-1 sm:flex-none">Usuń na zawsze</button>
-                    </div>
-                </div>`;
-        });
-    } else { archivedSection.classList.add('hidden'); }
-}
-
-async function toggleArchiveStudent(id) {
-    let student = students.find(s => s.id == id);
-    if(student) {
-        let action = student.archived ? "przywrócić ucznia do aktywnych" : "przenieść ucznia do archiwum";
-        if(await showConfirm('Archiwum', `Czy na pewno chcesz ${action}? Jego lekcje w historii pozostaną nienaruszone.`)) {
-            student.archived = !student.archived; saveStudentsToCloud(); renderStudents(); 
-            if(typeof renderDashboard === 'function') renderDashboard(); 
-            showToast('Uczeń zarchiwizowany/przywrócony');
-        }
-    }
-}
-
-function openStudentModal() {
-    document.getElementById('student-name').value = '';
-    const container = document.getElementById('student-subjects-container');
-    container.innerHTML = '';
-    if(subjects.length === 0) container.innerHTML = '<p class="text-sm text-rose-500 font-bold">Najpierw dodaj przedmioty w zakładce "Przedmioty"!</p>';
-    else subjects.forEach(sub => {
-        container.innerHTML += `
-            <label class="flex items-center gap-3 p-2 hover:bg-slate-500/10 rounded-lg cursor-pointer transition">
-                <input type="checkbox" value="${sub.id}" class="student-subject-cb w-5 h-5 rounded" style="accent-color: var(--akcent)">
-                <span class="font-bold flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background-color:${esc(sub.color)}"></div> ${esc(sub.name)}</span>
-            </label>`;
-    });
-    
-    currentStudentBundles = [];
-    renderStudentBundles();
-    
-    document.getElementById('modal-student').setAttribute('data-editing-id', '');
-    document.getElementById('modal-student').classList.remove('hidden');
-}
-
-function editStudent(id) {
-    const student = students.find(s => s.id == id);
-    if(!student) return;
-    document.getElementById('student-name').value = student.name;
-    const container = document.getElementById('student-subjects-container');
-    container.innerHTML = '';
-    subjects.forEach(sub => {
-        let isChecked = (student.subjectIds || []).includes(sub.id) ? 'checked' : '';
-        container.innerHTML += `
-            <label class="flex items-center gap-3 p-2 hover:bg-slate-500/10 rounded-lg cursor-pointer transition">
-                <input type="checkbox" value="${sub.id}" class="student-subject-cb w-5 h-5 rounded" style="accent-color: var(--akcent)" ${isChecked}>
-                <span class="font-bold flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background-color:${esc(sub.color)}"></div> ${esc(sub.name)}</span>
-            </label>`;
-    });
-    
-    currentStudentBundles = student.bundles ? JSON.parse(JSON.stringify(student.bundles)) : [];
-    renderStudentBundles();
-
-    document.getElementById('modal-student').setAttribute('data-editing-id', id);
-    document.getElementById('modal-student').classList.remove('hidden');
-}
-
-async function saveStudent() {
-    const name = document.getElementById('student-name').value;
-    const editingId = document.getElementById('modal-student').getAttribute('data-editing-id');
-    if(!name) return await customAlert('Błąd', 'Wpisz imię ucznia!');
-    let selectedSubjects = [];
-    document.querySelectorAll('.student-subject-cb:checked').forEach(cb => selectedSubjects.push(cb.value));
-    
-    let finalBundles = [];
-    document.querySelectorAll('.bundle-row').forEach(row => {
-        let bName = row.querySelector('.bundle-name').value;
-        let bTotal = parseFloat(row.querySelector('.bundle-total').value);
-        let bHours = parseFloat(row.querySelector('.bundle-hours').value);
-        
-        let radioElem = row.querySelector('input[type="radio"].bundle-type:checked');
-        let bType = radioElem ? radioElem.value : 'weekly';
-        let bPayDay = '';
-        
-        if(bType === 'monthly') {
-            bPayDay = row.querySelector('.bundle-payday-monthly-input').value;
-        } else {
-            bPayDay = row.querySelector('.bundle-payday-weekly-select').value;
-        }
-
-        if(bName && bTotal && bHours) {
-            finalBundles.push({ id: row.getAttribute('data-id'), name: bName, total: bTotal, hours: bHours, type: bType, payDay: bPayDay });
-        }
-    });
-
-    if(editingId) {
-        let student = students.find(s => s.id == editingId);
-        student.name = name; student.subjectIds = selectedSubjects; student.bundles = finalBundles;
-    } else {
-        students.push({ id: Date.now().toString(), name, subjectIds: selectedSubjects, archived: false, bundles: finalBundles });
-    }
-    saveStudentsToCloud(); closeModals(); renderStudents();
-    showToast('Zapisano ucznia!');
-}
-
-async function deleteStudent(id) {
-    if(await showConfirm('Usuwanie Ucznia', 'Na pewno usunąć ucznia i wszystkie jego zaplanowane lekcje? Zamiast tego możesz go po prostu zarchiwizować!', true)) {
-        students = students.filter(s => s.id != id);
-        lessons = lessons.filter(l => l.studentId != id);
-        saveStudentsToCloud(); saveLessonsToCloud(); renderStudents(); 
-        if(typeof renderDashboard === 'function') renderDashboard();
-        showToast('Usunięto ucznia i jego lekcje');
-    }
-}
-
-// ==========================================
-// --- LOGIKA FORMULARZA LEKCJI ---
-// ==========================================
-
-function updateLessonSubjectDropdown() {
-    const stId = document.getElementById('lesson-student').value;
-    const student = students.find(s => s.id == stId);
-    const subjectSelect = document.getElementById('lesson-subject');
-    subjectSelect.innerHTML = '';
-    if(!student || !student.subjectIds || student.subjectIds.length === 0) {
-        subjects.forEach(sub => subjectSelect.innerHTML += `<option value="${sub.id}">${esc(sub.name)}</option>`);
-    } else {
-        student.subjectIds.forEach(subId => {
-            let sub = subjects.find(s => s.id == subId);
-            if(sub) subjectSelect.innerHTML += `<option value="${sub.id}">${esc(sub.name)}</option>`;
-        });
-    }
-}
-
-function updateLessonBundleDropdown() {
-    const stId = document.getElementById('lesson-student').value;
-    const student = students.find(s => s.id == stId);
-    const bundleSelect = document.getElementById('lesson-bundle');
-    
-    if(!bundleSelect) return; 
-    bundleSelect.innerHTML = '<option value="">Standardowa cena (wpisz ręcznie)</option>';
-    
-    if(student && student.bundles && student.bundles.length > 0) {
-        student.bundles.forEach(b => {
-            let bTypeText = b.type === 'monthly' ? 'Miesięczny' : 'Tygodniowy';
-            bundleSelect.innerHTML += `<option value="${b.id}">Pakiet [${bTypeText}]: ${esc(b.name)} (${b.total} zł / ${b.hours}h)</option>`;
-        });
-    }
-    handleBundleChange();
-}
-
-function handleBundleChange() {
-    const bundleSelect = document.getElementById('lesson-bundle');
-    if(!bundleSelect) return;
-    const bundleId = bundleSelect.value;
-    const priceInput = document.getElementById('lesson-price');
-    const priceLabel = document.getElementById('lesson-price-label');
-    const paymentDateDiv = document.getElementById('lesson-payment-date-div');
-    const realInput = document.getElementById('lesson-payment-date');
-    
-    // 🔥 PANCERNY TRIK: Pobieramy silnik Flatpickr bezpośrednio z elementu HTML!
-    const fpInstance = realInput ? realInput._flatpickr : null;
-
-    if (bundleId) {
-        if(priceLabel) priceLabel.innerText = 'Cena poza pakietem (zł)';
-        if(paymentDateDiv) {
-            paymentDateDiv.classList.remove('hidden');
-            paymentDateDiv.style.pointerEvents = 'auto'; // Reset
-            paymentDateDiv.style.opacity = '1';
-        }
-        if(priceInput) priceInput.readOnly = false; 
-        
-        // Odblokuj pole na start
-        if(fpInstance && fpInstance.altInput) {
-            fpInstance.altInput.disabled = false;
-            fpInstance.altInput.style.backgroundColor = '';
-            fpInstance.altInput.style.color = '';
-            fpInstance.altInput.style.cursor = 'pointer';
-        }
-        
-        const stId = document.getElementById('lesson-student').value;
-        const student = students.find(s => s.id == stId);
-        const bundle = student ? (student.bundles || []).find(b => b.id == bundleId) : null;
-        
-        if (bundle && bundle.payDay !== undefined && bundle.payDay !== "") {
-            let lDateStr = document.getElementById('lesson-date').value;
-            let lDate = lDateStr ? new Date(lDateStr + "T12:00:00") : new Date();
-            lDate.setHours(12,0,0,0);
-
-            let finalDateStr = '';
-
-            if (bundle.type === 'monthly') {
-                let targetDay = parseInt(bundle.payDay);
-                if(!isNaN(targetDay)) {
-                    let lastDayOfMonth = new Date(lDate.getFullYear(), lDate.getMonth() + 1, 0).getDate();
-                    let finalDay = Math.min(targetDay, lastDayOfMonth);
-                    let pDate = new Date(lDate.getFullYear(), lDate.getMonth(), finalDay);
-                    pDate.setHours(12,0,0,0);
-                    finalDateStr = getLocalISODate(pDate);
-                }
-            } else {
-                let weekMonday = getMonday(lDate);
-                let offset = parseInt(bundle.payDay);
-                if (offset === 0) { weekMonday.setDate(weekMonday.getDate() + 6); } 
-                else { weekMonday.setDate(weekMonday.getDate() + (offset - 1)); }
-                finalDateStr = getLocalISODate(weekMonday);
-            }
-
-            if (finalDateStr) {
-                // Wymuszamy datę na znalezionym kalendarzyku
-                if (fpInstance) {
-                    fpInstance.setDate(finalDateStr, true);
-                    
-                    // Bezpośrednie modyfikowanie wyglądu pola wewnątrz Flatpickra
-                    if(fpInstance.altInput) {
-                        fpInstance.altInput.disabled = true;
-                        fpInstance.altInput.style.backgroundColor = '#e2e8f0'; // Szare tło
-                        fpInstance.altInput.style.color = '#64748b'; // Szary tekst
-                        fpInstance.altInput.style.cursor = 'not-allowed'; // Przekreślony kursor
-                    }
-                } else if (realInput) {
-                    realInput.value = finalDateStr;
-                    realInput.disabled = true;
-                }
-                
-                // Dodatkowe zablokowanie całego obszaru
-                if (paymentDateDiv) {
-                    paymentDateDiv.style.pointerEvents = 'none';
-                    paymentDateDiv.style.opacity = '0.7';
-                }
-            }
-        }
-    } else {
-        if(priceLabel) priceLabel.innerText = 'Cena za tę lekcję (zł)';
-        if(paymentDateDiv) {
-            paymentDateDiv.classList.add('hidden');
-            paymentDateDiv.style.pointerEvents = 'auto';
-            paymentDateDiv.style.opacity = '1';
-        }
-        if(priceInput) priceInput.readOnly = false;
-        
-        // Całkowite odblokowanie pola, gdy nie ma pakietu
-        if(fpInstance && fpInstance.altInput) {
-            fpInstance.altInput.disabled = false;
-            fpInstance.altInput.style.backgroundColor = ''; 
-            fpInstance.altInput.style.color = '';
-            fpInstance.altInput.style.cursor = 'pointer';
-        }
-    }
-}
-
-function autoUzupelnijCzas() {
-    let start = document.getElementById('lesson-time-start').value;
-    if(!start) return;
-    let [h, m] = start.split(':').map(Number);
-    let date = new Date();
-    date.setHours(h, m + settings.duration);
-    let endH = date.getHours().toString().padStart(2, '0');
-    let endM = date.getMinutes().toString().padStart(2, '0');
-    let endStr = `${endH}:${endM}`;
-    
-    document.getElementById('lesson-time-end').value = endStr;
-    if(timeEndPicker) timeEndPicker.setDate(endStr, true);
-    handleBundleChange(); 
-}
-
-function openLessonModal() {
-    document.getElementById('lesson-modal-title').innerText = 'Zaplanuj lekcję';
-    document.getElementById('lesson-id').value = '';
-    
-    let topicEl = document.getElementById('lesson-topic');
-    if(topicEl) topicEl.value = ''; 
-    
-    let defaultDate = getLocalISODate(new Date());
-    document.getElementById('lesson-date').value = defaultDate;
-    if(datePicker) {
-        datePicker.clear();
-        datePicker.setDate(defaultDate, true);
-    }
-    
-    let realPayDate = document.getElementById('lesson-payment-date');
-    if(realPayDate && realPayDate._flatpickr) realPayDate._flatpickr.clear();
-    
-    document.getElementById('lesson-time-start').value = '15:00';
-    if(timeStartPicker) timeStartPicker.setDate('15:00', true);
-    autoUzupelnijCzas();
-
-    document.getElementById('lesson-price').value = '';
-    
-    let paidCb = document.getElementById('lesson-paid');
-    if(paidCb) paidCb.checked = false;
-    let cancelledCb = document.getElementById('lesson-cancelled');
-    if(cancelledCb) cancelledCb.checked = false;
-    
-    let recBox = document.getElementById('recurring-box');
-    if(recBox) recBox.classList.remove('hidden');
-    let cancBox = document.getElementById('cancelled-box');
-    if(cancBox) cancBox.classList.add('hidden'); 
-    document.getElementById('btn-delete-lesson').classList.add('hidden');
-
-    const selectStudent = document.getElementById('lesson-student');
-    selectStudent.innerHTML = '<option value="">Wybierz ucznia...</option>';
-    students.filter(s => !s.archived).forEach(s => { selectStudent.innerHTML += `<option value="${s.id}">${esc(s.name)}</option>`; });
-
-    document.getElementById('lesson-subject').innerHTML = '<option value="">Wybierz ucznia najpierw...</option>';
-    
-    let bundleSel = document.getElementById('lesson-bundle');
-    if(bundleSel) bundleSel.innerHTML = '<option value="">Standardowa cena (wpisz ręcznie)</option>';
-    
-    document.getElementById('modal-lesson').classList.remove('hidden');
-    handleBundleChange();
-}
-
-function editLesson(id) {
-    try {
-        const lesson = lessons.find(l => l.id == id);
-        if(!lesson) return;
-        
-        document.getElementById('lesson-modal-title').innerText = 'Szczegóły lekcji';
-        document.getElementById('lesson-id').value = lesson.id;
-        
-        let topicEl = document.getElementById('lesson-topic');
-        if(topicEl) topicEl.value = lesson.topic || ''; 
-        
-        document.getElementById('lesson-date').value = lesson.date;
-        if(datePicker) datePicker.setDate(lesson.date, true); 
-        
-        let realPayDate = document.getElementById('lesson-payment-date');
-        if(realPayDate && realPayDate._flatpickr) {
-            realPayDate._flatpickr.setDate(lesson.paymentDate || lesson.date, true);
-        }
-        
-        document.getElementById('lesson-time-start').value = lesson.startTime;
-        document.getElementById('lesson-time-end').value = lesson.endTime;
-        if(timeStartPicker) timeStartPicker.setDate(lesson.startTime, true);
-        if(timeEndPicker) timeEndPicker.setDate(lesson.endTime, true);
-
-        const selectStudent = document.getElementById('lesson-student');
-        selectStudent.innerHTML = '';
-        students.forEach(s => { 
-            if(!s.archived || s.id == lesson.studentId) {
-                selectStudent.innerHTML += `<option value="${s.id}" ${s.id == lesson.studentId ? 'selected' : ''}>${esc(s.name)}</option>`; 
-            }
-        });
-
-        updateLessonSubjectDropdown();
-        if(lesson.subjectId) document.getElementById('lesson-subject').value = lesson.subjectId;
-        
-        updateLessonBundleDropdown();
-        let bundleSel = document.getElementById('lesson-bundle');
-        if(bundleSel && lesson.bundleId) bundleSel.value = lesson.bundleId;
-
-        document.getElementById('lesson-price').value = lesson.price || '';
-        
-        let paidCb = document.getElementById('lesson-paid');
-        if(paidCb) paidCb.checked = lesson.paid || false;
-        let cancelledCb = document.getElementById('lesson-cancelled');
-        if(cancelledCb) cancelledCb.checked = lesson.cancelled || false;
-
-        let recBox = document.getElementById('recurring-box');
-        if(recBox) recBox.classList.add('hidden');
-        let cancBox = document.getElementById('cancelled-box');
-        if(cancBox) cancBox.classList.remove('hidden'); 
-        document.getElementById('btn-delete-lesson').classList.remove('hidden');
-
-        document.getElementById('modal-lesson').classList.remove('hidden');
-        
-        handleBundleChange();
-        
-    } catch(err) {
-        console.error("Błąd otwierania edycji lekcji:", err);
-    }
-}
-
-async function saveLesson() {
-    const id = document.getElementById('lesson-id').value;
-    const studentId = document.getElementById('lesson-student').value;
-    const subjectId = document.getElementById('lesson-subject').value;
-    
-    let bundleSel = document.getElementById('lesson-bundle');
-    const bundleId = bundleSel ? bundleSel.value : '';
-    
-    let topicEl = document.getElementById('lesson-topic');
-    const topic = topicEl ? topicEl.value : ''; 
-    
-    const date = document.getElementById('lesson-date').value;
-    const startTime = document.getElementById('lesson-time-start').value;
-    const endTime = document.getElementById('lesson-time-end').value;
-    const price = document.getElementById('lesson-price').value;
-    
-    let paidCb = document.getElementById('lesson-paid');
-    const paid = paidCb ? paidCb.checked : false;
-    
-    let cancelledCb = document.getElementById('lesson-cancelled');
-    const cancelled = cancelledCb ? cancelledCb.checked : false;
-    
-    let recurringCb = document.getElementById('lesson-recurring');
-    const isRecurring = recurringCb ? recurringCb.checked : false;
-    
-    let paymentDateEl = document.getElementById('lesson-payment-date');
-    const paymentDate = bundleId && paymentDateEl ? paymentDateEl.value : date;
-
-    if(!studentId || !date || !subjectId || !startTime || !endTime) return await customAlert('Błąd', 'Uzupełnij wszystkie wymagane dane (uczeń, przedmiot, data, godziny)!');
-
-    let isConflict = lessons.find(l => {
-        if (id && l.id == id) return false; 
-        if (l.date !== date) return false;  
-        if (l.cancelled) return false;      
-        return (startTime < l.endTime && endTime > l.startTime);
-    });
-
-    if (isConflict) {
-        let conflictStudent = students.find(s => s.id == isConflict.studentId) || {name: 'Ktoś inny'};
-        let proceed = await showConfirm('Konflikt godzin!', `Masz już zaplanowaną lekcję w tym czasie:\n${esc(conflictStudent.name)} (${isConflict.startTime} - ${isConflict.endTime})\n\nCzy na pewno chcesz zapisać nakładające się zajęcia?`, true);
-        if (!proceed) return;
-    }
-
-    let bundleValue = null;
-    if (bundleId) {
-        const student = students.find(s => s.id == studentId);
-        const bundle = student ? (student.bundles || []).find(b => b.id == bundleId) : null;
-        if (bundle && bundle.hours > 0) {
-            let [sh, sm] = startTime.split(':').map(Number);
-            let [eh, em] = endTime.split(':').map(Number);
-            let durationHours = ((eh * 60 + em) - (sh * 60 + sm)) / 60;
-            bundleValue = (durationHours / bundle.hours) * bundle.total;
-        }
-    }
-
-    if (id) {
-        let originalLesson = lessons.find(l => l.id == id);
-        let oldDate = originalLesson.date;
-        
-        let isStructureChanged = (
-            originalLesson.studentId !== studentId ||
-            originalLesson.subjectId !== subjectId ||
-            originalLesson.date !== date ||
-            originalLesson.startTime !== startTime ||
-            originalLesson.endTime !== endTime ||
-            originalLesson.price != price ||
-            originalLesson.bundleId !== bundleId ||
-            originalLesson.paymentDate !== paymentDate
-        );
-
-        let futureLessons = [];
-        if (isStructureChanged) {
-            futureLessons = lessons.filter(l => {
-                if (l.id == id || l.date < oldDate) return false;
-                if (originalLesson.groupId && l.groupId === originalLesson.groupId) return true;
-                if (!originalLesson.groupId && l.studentId == originalLesson.studentId && l.subjectId == originalLesson.subjectId) {
-                    return new Date(l.date + "T12:00:00").getDay() === new Date(oldDate + "T12:00:00").getDay();
-                }
-                return false;
-            });
-        }
-
-        if (futureLessons.length > 0) {
-            let choice = await showSeriesChoice('Aktualizacja cyklu', 'Zmieniłeś szczegóły lekcji. Co chcesz zaktualizować?');
-            if (choice === 'future') {
-                let dateDiff = Math.round((new Date(date + "T12:00:00") - new Date(oldDate + "T12:00:00")) / (1000 * 60 * 60 * 24));
-                futureLessons.forEach(fl => {
-                    fl.studentId = studentId; fl.subjectId = subjectId; fl.bundleId = bundleId;
-                    fl.startTime = startTime; fl.endTime = endTime; fl.price = price; fl.topic = topic; 
-                    fl.bundleValue = bundleValue;
-                    
-                    if (dateDiff !== 0) {
-                        let fd = new Date(fl.date + "T12:00:00");
-                        fd.setDate(fd.getDate() + dateDiff);
-                        fl.date = getLocalISODate(fd);
-                        
-                        if(bundleId) {
-                            const st = students.find(s => s.id == studentId);
-                            const bun = st ? st.bundles.find(b => b.id == bundleId) : null;
-                            if(bun && bun.payDay !== undefined && bun.payDay !== null && bun.payDay !== "") {
-                                let flDateObj = new Date(fl.date + "T12:00:00");
-                                if(bun.type === 'monthly') {
-                                    let targetDay = parseInt(bun.payDay);
-                                    if(!isNaN(targetDay)) {
-                                        let lastDayOfMonth = new Date(flDateObj.getFullYear(), flDateObj.getMonth() + 1, 0).getDate();
-                                        let finalDay = Math.min(targetDay, lastDayOfMonth);
-                                        let pDate = new Date(flDateObj.getFullYear(), flDateObj.getMonth(), finalDay);
-                                        pDate.setHours(12,0,0,0);
-                                        fl.paymentDate = getLocalISODate(pDate);
-                                    }
-                                } else {
-                                    let wMon = getMonday(fl.date + "T12:00:00");
-                                    let offset = parseInt(bun.payDay);
-                                    if(!isNaN(offset)) {
-                                        if (offset === 0) { wMon.setDate(wMon.getDate() + 6); } 
-                                        else { wMon.setDate(wMon.getDate() + (offset - 1)); }
-                                        fl.paymentDate = getLocalISODate(wMon);
-                                    }
-                                }
-                            } else {
-                                let pd = new Date((fl.paymentDate || fl.date) + "T12:00:00");
-                                pd.setDate(pd.getDate() + dateDiff);
-                                fl.paymentDate = getLocalISODate(pd);
-                            }
-                        } else { fl.paymentDate = fl.date; }
-                    } else {
-                        if(bundleId) {
-                            const st = students.find(s => s.id == studentId);
-                            const bun = st ? st.bundles.find(b => b.id == bundleId) : null;
-                            if(bun && bun.payDay !== undefined && bun.payDay !== null && bun.payDay !== "") {
-                                let flDateObj = new Date(fl.date + "T12:00:00");
-                                if(bun.type === 'monthly') {
-                                    let targetDay = parseInt(bun.payDay);
-                                    if(!isNaN(targetDay)) {
-                                        let lastDayOfMonth = new Date(flDateObj.getFullYear(), flDateObj.getMonth() + 1, 0).getDate();
-                                        let finalDay = Math.min(targetDay, lastDayOfMonth);
-                                        let pDate = new Date(flDateObj.getFullYear(), flDateObj.getMonth(), finalDay);
-                                        pDate.setHours(12,0,0,0);
-                                        fl.paymentDate = getLocalISODate(pDate);
-                                    }
-                                } else {
-                                    let wMon = getMonday(fl.date + "T12:00:00");
-                                    let offset = parseInt(bun.payDay);
-                                    if(!isNaN(offset)) {
-                                        if (offset === 0) { wMon.setDate(wMon.getDate() + 6); } 
-                                        else { wMon.setDate(wMon.getDate() + (offset - 1)); }
-                                        fl.paymentDate = getLocalISODate(wMon);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            } else if (choice === 'single') {
-            } else { return; }
-        }
-
-        originalLesson.studentId = studentId; originalLesson.subjectId = subjectId;
-        originalLesson.bundleId = bundleId; originalLesson.paymentDate = paymentDate;
-        originalLesson.topic = topic; originalLesson.date = date;
-        originalLesson.startTime = startTime; originalLesson.endTime = endTime;
-        originalLesson.price = price; originalLesson.paid = paid; originalLesson.cancelled = cancelled;
-        originalLesson.bundleValue = bundleValue;
-
-    } else {
-        const repetitions = isRecurring ? 156 : 1; 
-        let baseDate = new Date(date + "T12:00:00");
-        let basePayDate = new Date(paymentDate + "T12:00:00");
-        let newGroupId = "grp_" + Date.now().toString() + Math.floor(Math.random() * 1000); 
-
-        for(let i=0; i<repetitions; i++) {
-            let lessonDate = new Date(baseDate); lessonDate.setDate(baseDate.getDate() + (i * 7));
-            let pDate = new Date(basePayDate); pDate.setDate(basePayDate.getDate() + (i * 7));
-            
-            const stId = document.getElementById('lesson-student').value;
-            const student = students.find(s => s.id == stId);
-            const bundle = student ? (student.bundles || []).find(b => b.id == bundleId) : null;
-            
-            let finalPayDateStr = bundleId ? getLocalISODate(pDate) : getLocalISODate(lessonDate);
-            
-            if (bundle && bundle.payDay !== undefined && bundle.payDay !== null && bundle.payDay !== "") {
-                if (bundle.type === 'monthly') {
-                    let targetDay = parseInt(bundle.payDay);
-                    if(!isNaN(targetDay)) {
-                        let lastDayOfMonth = new Date(lessonDate.getFullYear(), lessonDate.getMonth() + 1, 0).getDate();
-                        let finalDay = Math.min(targetDay, lastDayOfMonth);
-                        let correctPayDate = new Date(lessonDate.getFullYear(), lessonDate.getMonth(), finalDay);
-                        correctPayDate.setHours(12,0,0,0);
-                        finalPayDateStr = getLocalISODate(correctPayDate);
-                    }
-                } else {
-                    let wMon = getMonday(lessonDate);
-                    let offset = parseInt(bundle.payDay);
-                    if(!isNaN(offset)) {
-                        if (offset === 0) { wMon.setDate(wMon.getDate() + 6); } 
-                        else { wMon.setDate(wMon.getDate() + (offset - 1)); }
-                        finalPayDateStr = getLocalISODate(wMon);
-                    }
-                }
-            }
-
-            lessons.push({
-                id: Date.now().toString() + Math.floor(Math.random() * 1000) + i,
-                groupId: isRecurring ? newGroupId : null,
-                studentId, subjectId, bundleId, 
-                paymentDate: finalPayDateStr,
-                topic, date: getLocalISODate(lessonDate),
-                startTime, endTime, price, 
-                bundleValue: bundleValue,
-                cancelled: false,
-                paid: (paid && i === 0) ? true : false
-            });
-        }
-    }
-    saveLessonsToCloud(); closeModals(); 
-    if(typeof renderCalendar === 'function') renderCalendar();
-    let pulpitView = document.getElementById('view-pulpit');
-    if(pulpitView && !pulpitView.classList.contains('hidden')) {
-        if(typeof renderDashboard === 'function') renderDashboard();
-    }
-    showToast('Zapisano lekcję!');
-}
-
-async function deleteLesson() {
-    const id = document.getElementById('lesson-id').value;
-    let originalLesson = lessons.find(l => l.id == id);
-    
-    let futureLessons = lessons.filter(l => {
-        if (l.id == id || l.date < originalLesson.date) return false;
-        if (originalLesson.groupId && l.groupId === originalLesson.groupId) return true;
-        if (!originalLesson.groupId && l.studentId == originalLesson.studentId && l.subjectId == originalLesson.subjectId) {
-            return new Date(l.date + "T12:00:00").getDay() === new Date(originalLesson.date + "T12:00:00").getDay();
-        }
-        return false;
-    });
-
-    if (futureLessons.length > 0) {
-        let choice = await showSeriesChoice('Usuwanie cyklu', 'Wybierz zakres usuwania. Zamiast usuwać, możesz zaznaczyć lekcję jako Odwołaną.', true);
-        if (choice === 'single') { lessons = lessons.filter(l => l.id != id); } 
-        else if (choice === 'future') {
-            let idsToDelete = futureLessons.map(f => f.id); idsToDelete.push(id);
-            lessons = lessons.filter(l => !idsToDelete.includes(l.id));
-        } else { return; }
-    } else {
-        if(!await showConfirm('Usuwanie lekcji', 'Na pewno całkowicie USUNĄĆ tę lekcję?', true)) return;
-        lessons = lessons.filter(l => l.id != id);
-    }
-    
-    saveLessonsToCloud(); closeModals(); 
-    if(typeof renderCalendar === 'function') renderCalendar();
-    let pulpitView = document.getElementById('view-pulpit');
-    if(pulpitView && !pulpitView.classList.contains('hidden')) {
-        if(typeof renderDashboard === 'function') renderDashboard();
-    }
-    showToast('Lekcja usunięta', 'success');
-}
-
-function markAsPaid(id, event) {
-    event.stopPropagation(); 
-    let lesson = lessons.find(l => l.id == id);
-    if(lesson) {
-        lesson.paid = true; saveLessonsToCloud(); 
-        if(typeof renderDashboard === 'function') renderDashboard();
-        let kalendarzView = document.getElementById('view-kalendarz');
-        if(kalendarzView && !kalendarzView.classList.contains('hidden')) {
-            if(typeof renderCalendar === 'function') renderCalendar();
-        }
-        showToast('Oznaczono jako opłacone!');
-    }
-}
-
-function markBundleAsPaid(studentId, bundleId, paymentDate, event) {
-    event.stopPropagation();
     lessons.forEach(l => {
-        let lPayDate = l.paymentDate || l.date;
-        if (l.studentId == studentId && l.bundleId == bundleId && lPayDate === paymentDate) {
-            l.paid = true;
+        let lDate = new Date(l.date + "T12:00:00"); 
+        let effectivePrice = Number(l.price || 0);
+        if (l.bundleId && l.bundleValue !== null && l.bundleValue !== undefined) {
+            effectivePrice = Number(l.bundleValue);
+        }
+
+        if(!l.cancelled && l.paid) {
+            if(lDate.getMonth() === currentMonth && lDate.getFullYear() === currentYear) {
+                earnings += effectivePrice; 
+                lessonsThisMonth++;
+            } else if (lDate.getMonth() === prevMonth && lDate.getFullYear() === prevYear) {
+                prevMonthEarnings += effectivePrice;
+            }
+        }
+        
+        if(!l.cancelled && !l.paid) {
+            if(lDate.getMonth() === currentMonth && lDate.getFullYear() === currentYear) {
+                plannedEarnings += effectivePrice; 
+                lessonsThisMonth++;
+            }
         }
     });
-    saveLessonsToCloud(); 
-    if(typeof renderDashboard === 'function') renderDashboard();
-    let kalendarzView = document.getElementById('view-kalendarz');
-    if(kalendarzView && !kalendarzView.classList.contains('hidden')) {
-        if(typeof renderCalendar === 'function') renderCalendar();
+
+    animateValue('dashboard-monthly-earnings', 0, Math.round(earnings), 800, ' zł');
+    animateValue('dashboard-planned-earnings', 0, Math.round(plannedEarnings), 800, ' zł');
+
+    let dashboardLessons = document.getElementById('dashboard-monthly-lessons');
+    if(dashboardLessons) dashboardLessons.innerText = `${lessonsThisMonth} lekcji`;
+    
+    let dashboardStudents = document.getElementById('dashboard-active-students');
+    if(dashboardStudents) dashboardStudents.innerText = students.filter(s => !s.archived).length;
+
+    let momEl = document.getElementById('dashboard-mom-comparison');
+    if (momEl) {
+        if (prevMonthEarnings === 0) {
+            momEl.innerHTML = `<span class="tekst-szary">Pierwszy miesiąc z TutoGrid 🚀</span>`;
+        } else {
+            let diff = earnings - prevMonthEarnings;
+            let percent = Math.round((diff / prevMonthEarnings) * 100);
+            if (percent > 0) {
+                momEl.innerHTML = `<span class="text-emerald-500">📈 +${percent}% (${Math.round(earnings)} zł vs ${Math.round(prevMonthEarnings)} zł)</span>`;
+            } else if (percent < 0) {
+                momEl.innerHTML = `<span class="text-rose-500">📉 ${percent}% (${Math.round(earnings)} zł vs ${Math.round(prevMonthEarnings)} zł)</span>`;
+            } else {
+                momEl.innerHTML = `<span class="tekst-szary">Zarobki na tym samym poziomie (0%)</span>`;
+            }
+        }
     }
-    showToast('Pakiet opłacony!');
+
+    let upcomingLessons = lessons.filter(l => !l.cancelled && (l.date > todayString || (l.date === todayString && l.endTime >= nowTime)));
+    upcomingLessons.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
+    
+    const upcomingContainer = document.getElementById('pulpit-upcoming-lessons'); 
+    if(upcomingContainer) {
+        upcomingContainer.innerHTML = '';
+        
+        if(upcomingLessons.length === 0) {
+            upcomingContainer.innerHTML = '<p class="text-sm md:text-base tekst-szary">Brak zaplanowanych lekcji.</p>';
+        } else {
+            upcomingLessons.slice(0, 5).forEach(l => {
+                let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
+                let subject = subjects.find(s => s.id == l.subjectId);
+                let lDate = new Date(l.date + "T12:00:00"); let dayNames = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
+                let dateDisplay = l.date === todayString ? 'Dzisiaj' : `${dayNames[lDate.getDay()]}, ${lDate.getDate()} ${monthsGenitive[lDate.getMonth()]}`;
+                let badge = subject ? `<span class="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded border" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${esc(subject.color)}; border-color: ${esc(subject.color)}">${esc(subject.name).toUpperCase()}</span>` : '';
+
+                upcomingContainer.innerHTML += `
+                    <div onclick="editLesson('${l.id}')" class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-sm hover:shadow-md gap-2 sm:gap-0 lesson-block bg-karta ramka-szara" data-id="${l.id}">
+                        <div class="flex items-center gap-3 md:gap-4">
+                            <div class="w-8 h-8 md:w-10 h-10 rounded-full flex items-center justify-center font-bold border text-sm md:text-base bg-jasny ramka-szara tekst-szary">🕒</div>
+                            <div>
+                                <div class="font-extrabold text-sm md:text-base">${esc(student.name)}</div>
+                                <div class="text-xs md:text-sm font-medium tekst-szary">${dateDisplay}, ${l.startTime}</div>
+                            </div>
+                        </div>
+                        <div>${badge}</div>
+                    </div>`;
+            });
+        }
+    }
+
+    // ========================================================
+    // NOWA LOGIKA ZALEGŁOŚCI (W TYM PAKIETY Z POSTĘPEM)
+    // ========================================================
+    
+    let individualPayments = []; 
+    let activeBundles = {};
+    let unpaidTotal = 0; 
+    let unpaidCount = 0;
+
+    lessons.forEach(l => {
+        if (l.cancelled) return; // Ignoruj odwołane całkowicie
+        
+        let isPast = (l.date < todayString || (l.date === todayString && l.endTime < nowTime));
+        
+        if (!l.bundleId) {
+            // Standardowe lekcje (pojedyncze) - pokaż tylko gdy już się odbyły i nie są opłacone
+            if (!l.paid && isPast) {
+                individualPayments.push(l);
+                unpaidTotal += Number(l.price || 0);
+                unpaidCount++;
+            }
+        } else {
+            // Lekcje z pakietu - grupuj cały cykl płatności w jedno
+            let payDate = l.paymentDate || l.date;
+            let key = `${l.studentId}_${l.bundleId}_${payDate}`;
+            
+            if (!activeBundles[key]) {
+                activeBundles[key] = {
+                    studentId: l.studentId,
+                    bundleId: l.bundleId,
+                    paymentDate: payDate,
+                    totalLessons: 0,
+                    completedLessons: 0,
+                    isFullyPaid: true,
+                    hasPastLessons: false,
+                    summedValue: 0
+                };
+            }
+            
+            // Zliczamy wszystkie lekcje w danym cyklu
+            activeBundles[key].totalLessons++;
+            
+            // Sprawdzamy, które się już odbyły
+            if (isPast) {
+                activeBundles[key].completedLessons++;
+                activeBundles[key].hasPastLessons = true;
+            }
+            
+            // Jeśli znajdziemy choć jedną nieopłaconą, cykl traktujemy jako nieopłacony w całości
+            if (!l.paid) {
+                activeBundles[key].isFullyPaid = false;
+                activeBundles[key].summedValue += Number(l.bundleValue || 0);
+            }
+        }
+    });
+
+    // Filtrujemy pakiety: pokaż tylko te, które NIE SĄ w pełni opłacone, a w których odbyła się już przynajmniej jedna lekcja.
+    let bundlesToShow = Object.values(activeBundles).filter(b => !b.isFullyPaid && b.hasPastLessons);
+    
+    bundlesToShow.forEach(b => {
+        // Pobierz oryginalną cenę pakietu z profilu ucznia (gdyby ułamki coś zepsuły)
+        let student = students.find(s => s.id == b.studentId);
+        let bun = student && student.bundles ? student.bundles.find(x => x.id == b.bundleId) : null;
+        b.displayPrice = bun ? Number(bun.total) : b.summedValue;
+        
+        unpaidTotal += b.displayPrice;
+        unpaidCount++; // Liczymy cały pakiet jako jedną zaległość dla czytelności
+    });
+
+    animateValue('dashboard-unpaid-sum', 0, Math.round(unpaidTotal), 800, ' zł');
+    let dashUnpaidCount = document.getElementById('dashboard-unpaid-count');
+    if(dashUnpaidCount) dashUnpaidCount.innerText = `${unpaidCount} zaległości`;
+
+    const unpaidContainer = document.getElementById('pulpit-unpaid-lessons'); 
+    if(unpaidContainer) {
+        unpaidContainer.innerHTML = '';
+
+        if(unpaidCount === 0) {
+            unpaidContainer.innerHTML = `<div class="border-2 p-4 md:p-6 rounded-xl text-center" style="background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3)"><div class="text-2xl md:text-3xl mb-1 md:mb-2">🎉</div><p class="text-emerald-500 font-bold text-sm md:text-base">Uczniowie nie mają zaległości.</p></div>`;
+        } else {
+            // Renderuj pakiety
+            bundlesToShow.forEach(group => {
+                let student = students.find(s => s.id == group.studentId) || {name: 'Nieznany uczeń'};
+                let bundle = student.bundles ? student.bundles.find(b => b.id == group.bundleId) : null;
+                let bundleName = bundle ? bundle.name : 'Usunięty pakiet';
+                
+                // Sprawdź czy dzisiejsza data przekroczyła termin wpłaty
+                let isOverdue = todayString > group.paymentDate; 
+                
+                let bgClass = isOverdue ? 'bg-rose-50 border-rose-300' : 'bg-orange-50 border-orange-300';
+                let textClass = isOverdue ? 'text-rose-600' : 'text-orange-600';
+                let textSubClass = isOverdue ? 'text-rose-500' : 'text-orange-500';
+                let priceClass = isOverdue ? 'text-rose-600' : 'text-orange-600';
+                let badgeClass = isOverdue ? 'bg-rose-100 text-rose-700 border-rose-300' : 'bg-orange-100 text-orange-700 border-orange-300';
+                let icon = isOverdue ? '⚠️ ZALEGŁOŚĆ' : '⏳ W TRAKCIE (Oczekuje)';
+                
+                unpaidContainer.innerHTML += `
+                    <div class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2 ${bgClass}">
+                        <div>
+                            <div class="font-bold text-sm md:text-base">${esc(student.name)}</div>
+                            <div class="text-[10px] md:text-xs font-bold mt-0.5 ${textClass}">
+                                📦 ${esc(bundleName)} 
+                                <span class="ml-1 px-1.5 py-0.5 rounded border text-[9px] whitespace-nowrap ${badgeClass}">Lekcje: ${group.completedLessons}/${group.totalLessons}</span>
+                            </div>
+                            <div class="text-[9px] md:text-[10px] ${textSubClass} font-bold mt-1">${icon} | Termin wpłaty: ${group.paymentDate}</div>
+                        </div>
+                        <div class="flex flex-col items-end gap-2">
+                            <div class="font-extrabold ${priceClass} text-sm md:text-base">${Math.round(group.displayPrice)} zł</div>
+                            <button onclick="markBundleAsPaid('${group.studentId}', '${group.bundleId}', '${group.paymentDate}', event)" class="px-3 py-1.5 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-white ${textClass} border-[currentColor] hover:bg-slate-50 transition whitespace-nowrap">Opłać pakiet</button>
+                        </div>
+                    </div>`;
+            });
+
+            // Renderuj pojedyncze lekcje (posortowane od najstarszych)
+            individualPayments.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime)).slice(0, 5).forEach(l => {
+                let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
+                unpaidContainer.innerHTML += `
+                    <div onclick="editLesson('${l.id}')" class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2 lesson-block bg-rose-50 border-rose-200 hover:border-rose-300" data-id="${l.id}">
+                        <div>
+                            <div class="font-bold text-sm md:text-base">${esc(student.name)}</div>
+                            <div class="text-[10px] md:text-xs font-medium text-rose-500">${l.date} | ${l.startTime}</div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="font-extrabold text-rose-600 text-sm md:text-base">${l.price || 0} zł</div>
+                            <button onclick="markAsPaid('${l.id}', event)" class="px-2 py-1 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-white text-rose-600 border-rose-300 hover:bg-rose-100 transition whitespace-nowrap">Zapłacone</button>
+                        </div>
+                    </div>`;
+            });
+        }
+    }
+
+    const weekContainer = document.getElementById('pulpit-week-view'); 
+    if(weekContainer) {
+        weekContainer.innerHTML = '';
+        const mondayString = getLocalISODate(getMonday(now));
+        let sundayDate = new Date(getMonday(now)); sundayDate.setDate(sundayDate.getDate() + 6);
+        const sundayString = getLocalISODate(sundayDate);
+
+        let thisWeekLessons = lessons.filter(l => l.date >= mondayString && l.date <= sundayString);
+        thisWeekLessons.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
+
+        if(thisWeekLessons.length === 0) weekContainer.innerHTML = '<p class="text-sm md:text-base tekst-szary">Pusty grafik na ten tydzień.</p>';
+        else {
+            const daysNamesPL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota']; let lastDay = '';
+            thisWeekLessons.forEach(l => {
+                let lDate = new Date(l.date + "T12:00:00");
+                let dayDisplay = l.date === todayString ? `<span class="tekst-akcent">Dzisiaj</span>` : daysNamesPL[lDate.getDay()];
+                if(l.date !== lastDay) {
+                    weekContainer.innerHTML += `<div class="text-xs md:text-sm font-extrabold uppercase tracking-wider mt-4 md:mt-6 mb-2 border-b-2 pb-1 ramka-szara">${dayDisplay} <span class="font-medium text-[10px] md:text-xs normal-case tekst-szary">(${l.date})</span></div>`;
+                    lastDay = l.date;
+                }
+
+                let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
+                let subject = subjects.find(s => s.id == l.subjectId) || {name: 'Brak', color: '#cbd5e1'};
+                let statusIcon = l.cancelled ? '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm bg-jasny tekst-szary ramka-szara">Odwołana ❌</span>' : (l.paid ? '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm text-emerald-600 bg-emerald-50 border-emerald-200">Opłacone</span>' : '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm text-rose-500 bg-rose-50 border-rose-200">Brak</span>');
+                let cardOpacity = l.cancelled ? 'opacity: 0.5; filter: grayscale(100%)' : '';
+                let lineThrough = l.cancelled ? 'text-decoration: line-through' : '';
+                let topicHtml = l.topic ? `<p class="text-[10px] md:text-xs font-medium truncate mt-0.5 tekst-szary">📝 ${esc(l.topic)}</p>` : '';
+                let bundleBadge = l.bundleId ? `<span class="text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded ml-1 border bg-blue-50 text-blue-600 border-blue-200">📦 PAKIET</span>` : '';
+
+                weekContainer.innerHTML += `
+                    <div onclick="editLesson('${l.id}')" class="flex items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition cien-ciemny hover:-translate-y-0.5 gap-2 md:gap-4 lesson-block bg-karta ramka-ciemna" style="${cardOpacity}" data-id="${l.id}">
+                        <div class="flex items-center gap-3 md:gap-4 w-full truncate">
+                            <div class="w-1.5 h-10 md:h-12 rounded-full shrink-0" style="background-color: ${esc(subject.color)}"></div>
+                            <div class="truncate flex-1">
+                                <p class="font-extrabold text-sm md:text-base" style="${lineThrough}">${l.startTime} - ${l.endTime}</p>
+                                <p class="text-xs md:text-sm font-medium truncate tekst-szary">${esc(student.name)} <span class="text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 border hidden sm:inline-block" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${esc(subject.color)}; border-color: ${esc(subject.color)}">${esc(subject.name).toUpperCase()}</span>${bundleBadge}</p>
+                                ${topicHtml}
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end gap-1 md:gap-2 shrink-0">
+                            <span class="font-extrabold text-sm md:text-base" style="${lineThrough}">${l.price || 0} zł</span>
+                            ${statusIcon}
+                        </div>
+                    </div>`;
+            });
+        }
+    }
+}
+
+
+// ==========================================
+// --- WIDOK KALENDARZA ---
+// ==========================================
+
+function toggleCalendarView() {
+    currentCalendarView = currentCalendarView === 'grid' ? 'agenda' : 'grid';
+    const btn = document.getElementById('btn-toggle-view');
+    if (currentCalendarView === 'agenda') {
+        btn.innerHTML = 'Widok Siatki 📅';
+        document.getElementById('calendar-grid-container').classList.add('hidden');
+        document.getElementById('calendar-agenda-container').classList.remove('hidden');
+    } else {
+        btn.innerHTML = 'Widok Listy 📋';
+        document.getElementById('calendar-grid-container').classList.remove('hidden');
+        document.getElementById('calendar-agenda-container').classList.add('hidden');
+    }
+    renderCalendar();
+}
+
+function changeWeek(offset) {
+    currentDate = new Date(currentDate.getTime() + offset * 7 * 24 * 60 * 60 * 1000);
+    renderCalendar();
+}
+
+function goToToday() { currentDate = new Date(); renderCalendar(); }
+
+function renderCalendar() {
+    let monday = getMonday(currentDate); let sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+    const monthNames = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+    
+    let monthDisplay = document.getElementById('month-year-display');
+    if(monthDisplay) monthDisplay.innerText = `${monthNames[sunday.getMonth()]} ${sunday.getFullYear()}`;
+    
+    let formatDay = (date) => date.getDate().toString().padStart(2, '0');
+    let weekBtnText = document.getElementById('calendar-week-btn-text');
+    if(weekBtnText) weekBtnText.innerText = `${formatDay(monday)} - ${formatDay(sunday)} ${monthNames[sunday.getMonth()].substring(0,3).toUpperCase()}`;
+
+    let calHeader = document.getElementById('calendar-header');
+    if(!calHeader) return;
+
+    if (currentCalendarView === 'agenda') {
+        renderAgendaView(monday, sunday);
+        return;
+    }
+
+    const daysNames = ['PON', 'WT', 'ŚR', 'CZW', 'PT', 'SOB', 'ND'];
+    let headerHtml = '<div class="border-r-2 p-1 md:p-2 w-12 md:w-16 shrink-0 bg-karta ramka-ciemna"></div>';
+    
+    for(let i=0; i<7; i++) {
+        let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
+        let isToday = getLocalISODate(dayDate) === getLocalISODate(new Date());
+        let circleStyle = isToday ? `background-color: var(--akcent); color: #fff; border: 2px solid var(--ciemny); box-shadow: 2px 2px 0 var(--ciemny)` : `color: var(--tekst-glowny)`;
+        let textStyle = isToday ? `color: var(--akcent)` : `color: var(--tekst-szary)`;
+        
+        headerHtml += `
+            <div class="text-center py-2 md:py-3 border-r-2 day-col flex-1 bg-karta ramka-ciemna">
+                <div class="text-[10px] md:text-xs font-extrabold mb-1 md:mb-2 tracking-wider" style="${textStyle}">${daysNames[i]}</div>
+                <div class="mx-auto w-8 h-8 md:w-12 md:h-12 flex items-center justify-center rounded-full font-extrabold text-sm md:text-xl" style="${circleStyle}">
+                    ${dayDate.getDate()}
+                </div>
+            </div>`;
+    }
+    calHeader.innerHTML = headerHtml;
+
+    let gridHtml = `<div class="border-r-2 relative w-12 md:w-16 shrink-0 z-10 bg-karta ramka-ciemna">`;
+    for(let h = settings.startHour; h <= settings.endHour; h++) {
+        gridHtml += `<div class="h-24 time-row text-[10px] md:text-xs text-right pr-1 md:pr-2 pt-1 font-bold tekst-szary" id="hour-row-${h}">${h}:00</div>`;
+    }
+    gridHtml += `</div>`;
+
+    for(let i=0; i<7; i++) {
+        let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
+        let dateString = getLocalISODate(dayDate);
+        let isWeekend = (i === 5 || i === 6) ? `background-color: rgba(120, 120, 120, 0.03);` : '';
+
+        gridHtml += `<div class="relative day-col flex-1 border-r-2 last:border-r-0 ramka-szara" style="${isWeekend}" data-date="${dateString}">`;
+        for(let h = settings.startHour; h <= settings.endHour; h++) { gridHtml += `<div class="h-24 time-row"></div>`; }
+        
+        let dailyLessons = lessons.filter(l => l.date === dateString);
+        dailyLessons.forEach(lesson => {
+            let start = lesson.startTime.split(':'); let end = lesson.endTime.split(':');
+            if(parseInt(start[0]) < settings.startHour && parseInt(end[0]) <= settings.startHour) return;
+
+            let topPosition = ((parseInt(start[0]) - settings.startHour) * 96) + (parseInt(start[1]) / 60 * 96);
+            let height = (((parseInt(end[0]) - parseInt(start[0])) * 96) + ((parseInt(end[1]) - parseInt(start[1])) / 60 * 96));
+            if(topPosition < 0) { height += topPosition; topPosition = 0; }
+
+            let student = students.find(s => s.id == lesson.studentId) || {name: 'Usunięty'};
+            let subject = subjects.find(s => s.id == lesson.subjectId) || {name: '', color: '#cbd5e1'};
+            
+            let bgColor = hexToRgba(subject.color, 0.15);
+            let icon = lesson.cancelled ? '❌' : (lesson.paid ? '✅' : '<span class="text-rose-500 font-extrabold text-xs md:text-sm">!</span>');
+            let opacityAndStrike = lesson.cancelled ? 'opacity: 0.5; filter: grayscale(100%); text-decoration: line-through;' : '';
+            let topicHtml = lesson.topic ? `<div class="truncate text-[8px] md:text-[10px] font-medium mt-0.5 tekst-glowny">📝 ${esc(lesson.topic)}</div>` : '';
+
+            gridHtml += `
+                <div onclick="editLesson('${lesson.id}')" class="absolute w-[94%] left-[3%] rounded-lg md:rounded-xl p-1 md:p-1.5 overflow-hidden shadow-sm hover:shadow-[2px_2px_0_var(--ciemny)] hover:-translate-y-0.5 transition cursor-pointer flex flex-col border-l-2 md:border-l-4 border lesson-block" 
+                     style="top: ${topPosition}px; height: ${height}px; background-color: ${bgColor}; border-left-color: ${esc(subject.color)}; border-color: ${esc(subject.color)}; ${opacityAndStrike}"
+                     data-id="${lesson.id}">
+                    <div class="font-bold flex justify-between text-[9px] md:text-xs mb-0.5" style="color: ${esc(subject.color)}">
+                        <span class="whitespace-nowrap tracking-tighter md:tracking-normal">${lesson.startTime}-${lesson.endTime}</span>
+                        <span title="Status" class="hidden md:inline">${icon}</span>
+                    </div>
+                    <div class="font-extrabold truncate leading-tight text-[11px] md:text-sm">${esc(student.name)}</div>
+                    <div class="font-bold truncate mt-auto text-[8px] md:text-[9px] uppercase tracking-wider tekst-szary">${esc(subject.name)}</div>
+                    ${topicHtml}
+                </div>`;
+        });
+        gridHtml += `</div>`;
+    }
+    document.getElementById('calendar-grid').innerHTML = gridHtml;
+    updateCurrentTimeLine();
+
+    let weekStringStart = getLocalISODate(monday);
+    let weekStringEnd = getLocalISODate(sunday);
+    let weekLessons = lessons.filter(l => l.date >= weekStringStart && l.date <= weekStringEnd && !l.cancelled);
+
+    let earliestHour = settings.endHour;
+    let hasLessons = false;
+    
+    weekLessons.forEach(l => {
+        let h = parseInt(l.startTime.split(':')[0]);
+        if(h < earliestHour) {
+            earliestHour = h;
+            hasLessons = true;
+        }
+    });
+
+    setTimeout(() => {
+        let scrollTargetHour = earliestHour - 1;
+        if(scrollTargetHour < settings.startHour) scrollTargetHour = settings.startHour;
+        
+        let targetPos = hasLessons ? ((scrollTargetHour - settings.startHour) * 96) : 0;
+
+        let calScroll = document.getElementById('calendar-body-scroll');
+        let mainContent = document.getElementById('main-content'); 
+
+        if (calScroll && calScroll.scrollHeight > calScroll.clientHeight) {
+            calScroll.scrollTo({ top: targetPos, behavior: 'smooth' });
+        } else if (mainContent && mainContent.scrollHeight > mainContent.clientHeight) {
+            mainContent.scrollTo({ top: targetPos, behavior: 'smooth' });
+        } else if (calScroll) {
+            calScroll.scrollTop = targetPos; 
+        }
+    }, 400); 
+}
+
+function renderAgendaView(monday, sunday) {
+    const container = document.getElementById('calendar-agenda-container');
+    container.innerHTML = '';
+    
+    let weekStringStart = getLocalISODate(monday);
+    let weekStringEnd = getLocalISODate(sunday);
+
+    let weekLessons = lessons.filter(l => l.date >= weekStringStart && l.date <= weekStringEnd);
+    weekLessons.sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
+
+    if (weekLessons.length === 0) {
+        container.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-center opacity-50 p-10"><div class="text-6xl mb-4">☕</div><h3 class="text-xl font-extrabold">Brak zajęć w tym tygodniu</h3><p class="font-bold">Czas na odpoczynek!</p></div>';
+        return;
+    }
+
+    const daysNamesPL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
+    let lastDate = '';
+
+    weekLessons.forEach(l => {
+        if (l.date !== lastDate) {
+            let d = new Date(l.date + "T12:00:00");
+            let dayName = daysNamesPL[d.getDay()];
+            let todayStr = getLocalISODate(new Date());
+            let isToday = l.date === todayStr;
+            let dayHeaderColor = isToday ? 'color: var(--akcent)' : 'color: var(--tekst-glowny)';
+            
+            container.innerHTML += `
+                <div class="text-lg md:text-xl font-black uppercase tracking-wider mb-3 mt-6 border-b-4 pb-1 flex items-baseline gap-2 ramka-ciemna" style="${dayHeaderColor}">
+                    ${isToday ? 'Dzisiaj' : dayName} <span class="font-bold text-xs md:text-sm normal-case opacity-60">(${l.date})</span>
+                </div>`;
+            lastDate = l.date;
+        }
+
+        let student = students.find(s => s.id == l.studentId) || {name: 'Usunięty uczeń'};
+        let subject = subjects.find(s => s.id == l.subjectId) || {name: 'Brak', color: '#cbd5e1'};
+        let statusIcon = l.cancelled ? 'Odwołana ❌' : (l.paid ? 'Opłacone ✅' : 'Brak wpłaty ⏳');
+        let opacityAndStrike = l.cancelled ? 'opacity: 0.5; filter: grayscale(100%);' : '';
+        let lineThrough = l.cancelled ? 'text-decoration: line-through;' : '';
+        let topicHtml = l.topic ? `<div class="text-xs md:text-sm font-bold opacity-75 mt-1">📝 Temat: ${esc(l.topic)}</div>` : '';
+        
+        let linksHtml = '';
+        if (subject.links && subject.links.trim() !== '') {
+            let linksArr = subject.links.split('\n').map(u => u.trim()).filter(u => u !== '');
+            if(linksArr.length > 0) {
+                linksHtml += '<div class="flex flex-wrap gap-2 mt-3 pt-3 border-t-2" style="border-color: rgba(0,0,0,0.05)">';
+                linksArr.forEach((link, idx) => {
+                    let url = link.startsWith('http') ? link : 'https://' + link;
+                    linksHtml += `<a href="${esc(url)}" target="_blank" onclick="event.stopPropagation()" class="px-3 py-1.5 bg-white border-2 rounded-lg text-[10px] md:text-xs font-bold hover:-translate-y-0.5 transition shadow-[2px_2px_0_var(--ciemny)] ramka-ciemna tekst-ciemny">🔗 Materiał ${idx+1}</a>`;
+                });
+                linksHtml += '</div>';
+            }
+        }
+
+        container.innerHTML += `
+            <div onclick="editLesson('${l.id}')" class="karta cursor-pointer transition hover:-translate-y-1 hover:shadow-[6px_6px_0_var(--ciemny)] border-4 p-4 md:p-5 mb-4 flex flex-col bg-white lesson-block ramka-ciemna" 
+                 style="border-left-width: 8px; border-left-color: ${esc(subject.color)}; ${opacityAndStrike}" 
+                 data-id="${l.id}">
+                 
+                <div class="flex justify-between items-start gap-4">
+                    <div class="flex-1 min-w-0">
+                        <div class="font-black text-lg md:text-xl" style="${lineThrough}">${l.startTime} - ${l.endTime}</div>
+                        <div class="font-extrabold text-base md:text-lg mt-1 truncate w-full">${esc(student.name)}</div>
+                        <div class="inline-block px-2 py-0.5 mt-2 rounded border-2 text-[10px] md:text-xs font-bold uppercase tracking-wider truncate max-w-full" style="background-color: ${hexToRgba(subject.color, 0.15)}; border-color: ${esc(subject.color)}; color: ${esc(subject.color)}">${esc(subject.name)}</div>
+                        ${topicHtml}
+                    </div>
+                    
+                    <div class="flex flex-col items-end gap-2 shrink-0">
+                        <div class="font-black text-lg md:text-xl" style="${lineThrough}">${l.price || 0} zł</div>
+                        <div class="text-[10px] md:text-xs font-bold uppercase tracking-widest opacity-60">${statusIcon}</div>
+                    </div>
+                </div>
+                ${linksHtml}
+            </div>
+        `;
+    });
+}
+
+function updateCurrentTimeLine() {
+    const line = document.getElementById('current-time-line');
+    if(!line) return;
+    const now = new Date(); const monday = getMonday(currentDate);
+    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+    
+    if (now >= monday && now <= new Date(sunday.setHours(23,59,59))) {
+        line.classList.remove('hidden');
+        let hours = now.getHours(); let minutes = now.getMinutes();
+        if(hours >= settings.startHour && hours <= settings.endHour) {
+            let top = ((hours - settings.startHour) * 96) + (minutes / 60 * 96);
+            line.style.top = `${top}px`;
+        } else { line.classList.add('hidden'); }
+    } else { line.classList.add('hidden'); }
+}
+setInterval(updateCurrentTimeLine, 60000);
+
+// ==========================================
+// --- SZUKANIE TERMINU ---
+// ==========================================
+
+function openFindSlotModal() {
+    slotDate = new Date(); 
+    document.getElementById('modal-find-slot').classList.remove('hidden');
+    renderSlotCalendar();
+}
+
+function changeSlotWeek(offset) {
+    slotDate = new Date(slotDate.getTime() + offset * 7 * 24 * 60 * 60 * 1000);
+    renderSlotCalendar();
+}
+
+function renderSlotCalendar() {
+    let monday = getMonday(slotDate);
+    let sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+    const monthNames = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+    
+    let formatDay = (date) => date.getDate().toString().padStart(2, '0');
+    document.getElementById('slot-week-btn-text').innerText = `${formatDay(monday)} - ${formatDay(sunday)} ${monthNames[sunday.getMonth()].substring(0,3).toUpperCase()}`;
+
+    const daysNames = ['PON', 'WT', 'ŚR', 'CZW', 'PT', 'SOB', 'ND'];
+    let headerHtml = '<div class="border-r-2 p-1 md:p-2 w-12 shrink-0 bg-karta ramka-ciemna"></div>';
+    
+    for(let i=0; i<7; i++) {
+        let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
+        let isToday = getLocalISODate(dayDate) === getLocalISODate(new Date());
+        let circleStyle = isToday ? `background-color: var(--akcent); color: #fff; border: 2px solid var(--ciemny);` : `color: var(--tekst-glowny)`;
+        let textStyle = isToday ? `color: var(--akcent)` : `color: var(--tekst-szary)`;
+        
+        headerHtml += `
+            <div class="text-center py-1 md:py-2 border-r-2 day-col flex-1 bg-karta ramka-ciemna">
+                <div class="text-[10px] md:text-xs font-extrabold mb-1 tracking-wider" style="${textStyle}">${daysNames[i]}</div>
+                <div class="mx-auto w-6 h-6 md:w-8 md:h-8 flex items-center justify-center rounded-full font-extrabold text-xs md:text-sm" style="${circleStyle}">
+                    ${dayDate.getDate()}
+                </div>
+            </div>`;
+    }
+    document.getElementById('slot-calendar-header').innerHTML = headerHtml;
+
+    let gridHtml = `<div class="border-r-2 relative w-12 shrink-0 z-10 bg-karta ramka-ciemna">`;
+    for(let h = settings.startHour; h <= settings.endHour; h++) {
+        gridHtml += `<div class="h-24 time-row text-[10px] md:text-xs text-right pr-1 pt-1 font-bold tekst-szary" id="slot-hour-row-${h}">${h}:00</div>`;
+    }
+    gridHtml += `</div>`;
+
+    let earliestAvailableHour = settings.endHour;
+
+    for(let i=0; i<7; i++) {
+        let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
+        let dateString = getLocalISODate(dayDate);
+        let dayOfWeek = dayDate.getDay();
+
+        let colBg = `background-color: rgba(244, 63, 94, 0.05);`;
+
+        gridHtml += `<div class="relative day-col flex-1 border-r-2 last:border-r-0 cursor-pointer overflow-hidden transition hover:bg-slate-100/50 ramka-szara" style="${colBg}" onclick="handleSlotClick(event, '${dateString}')">`;
+        
+        for(let h = settings.startHour; h <= settings.endHour; h++) {
+            gridHtml += `<div class="h-24 time-row border-rose-200 opacity-50" style="border-bottom-style: dashed; border-bottom-width: 1px;"></div>`;
+        }
+        
+        let avail = settings.availability[dayOfWeek];
+        if (avail && avail.active) {
+            let [sH, sM] = avail.start.split(':').map(Number);
+            let [eH, eM] = avail.end.split(':').map(Number);
+            
+            if(sH < earliestAvailableHour) earliestAvailableHour = sH;
+
+            let startPos = ((sH - settings.startHour) * 96) + (sM / 60 * 96);
+            let height = (((eH - sH) * 96) + ((eM - sM) / 60 * 96));
+            let maxPos = (settings.endHour - settings.startHour) * 96 + 96;
+            
+            if(startPos < 0) { height += startPos; startPos = 0; }
+            if(startPos + height > maxPos) { height = maxPos - startPos; }
+
+            if (height > 0 && startPos < maxPos) {
+                gridHtml += `
+                    <div class="absolute w-[94%] left-[3%] rounded-lg border-2 shadow-[2px_2px_0_var(--ciemny)] z-0 flex flex-col items-center justify-start pt-1 md:pt-2 overflow-hidden transition-transform hover:-translate-y-0.5 ramka-ciemna" 
+                         style="top: ${startPos}px; height: ${height}px; background-color: #bbf7d0;">
+                         <div class="px-1 text-[8px] md:text-[10px] font-extrabold uppercase tracking-widest text-center" style="color: var(--ciemny)">Dostępne</div>
+                    </div>`;
+            }
+        }
+
+        let dailyLessons = lessons.filter(l => l.date === dateString && !l.cancelled);
+        dailyLessons.forEach(lesson => {
+            let start = lesson.startTime.split(':');
+            let end = lesson.endTime.split(':');
+            
+            if(parseInt(start[0]) < settings.startHour && parseInt(end[0]) <= settings.startHour) return;
+
+            let topPosition = ((parseInt(start[0]) - settings.startHour) * 96) + (parseInt(start[1]) / 60 * 96);
+            let height = (((parseInt(end[0]) - parseInt(start[0])) * 96) + ((parseInt(end[1]) - parseInt(start[1])) / 60 * 96));
+            
+            if(topPosition < 0) { height += topPosition; topPosition = 0; }
+
+            let student = students.find(s => s.id == lesson.studentId) || {name: 'Nieznany'};
+            let subject = subjects.find(s => s.id == lesson.subjectId) || {name: ''};
+
+            gridHtml += `
+                <div class="absolute w-[94%] left-[3%] rounded-lg border-2 shadow-[2px_2px_0_var(--ciemny)] z-10 flex flex-col items-start justify-start p-1 overflow-hidden opacity-[0.98] cursor-not-allowed ramka-ciemna" 
+                     style="top: ${topPosition}px; height: ${height}px; background-color: #fecaca;"
+                     onclick="event.stopPropagation()">
+                    <div class="text-[8px] md:text-[9px] font-bold leading-none mb-0.5" style="color: var(--ciemny)">${lesson.startTime}-${lesson.endTime}</div>
+                    <div class="text-[9px] md:text-[10px] font-extrabold leading-tight truncate w-full" style="color: var(--ciemny)">${esc(student.name)}</div>
+                    <div class="text-[7px] md:text-[8px] font-bold uppercase tracking-wider truncate w-full mt-auto opacity-75" style="color: var(--ciemny)">${esc(subject.name)}</div>
+                </div>`;
+        });
+
+        gridHtml += `</div>`;
+    }
+    document.getElementById('slot-calendar-grid').innerHTML = gridHtml;
+
+    setTimeout(() => {
+        let scrollTargetHour = earliestAvailableHour - 1;
+        if(scrollTargetHour < settings.startHour) scrollTargetHour = settings.startHour;
+        
+        let targetPos = earliestAvailableHour < settings.endHour ? ((scrollTargetHour - settings.startHour) * 96) : 0;
+        
+        let slotScroll = document.querySelector('#slot-calendar-grid').parentElement;
+        let modalScroll = document.querySelector('#modal-find-slot .modal-okno');
+
+        if (slotScroll && slotScroll.scrollHeight > slotScroll.clientHeight) {
+            slotScroll.scrollTo({ top: targetPos, behavior: 'smooth' });
+        } else if (modalScroll) {
+            modalScroll.scrollTo({ top: targetPos, behavior: 'smooth' });
+        } else if (slotScroll) {
+            slotScroll.scrollTop = targetPos;
+        }
+    }, 400); 
+}
+
+function handleSlotClick(e, dateStr) {
+    let col = e.currentTarget;
+    let rect = col.getBoundingClientRect();
+    let y = e.clientY - rect.top; 
+    
+    let rawHours = settings.startHour + (y / 96);
+    let h = Math.floor(rawHours);
+    let m = Math.floor((rawHours - h) * 60);
+    
+    m = Math.round(m / 15) * 15;
+    if(m === 60) { h++; m = 0; }
+    
+    if(h < settings.startHour) h = settings.startHour;
+    if(h >= settings.endHour) { h = settings.endHour - 1; m = 45; }
+    
+    let startStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    
+    document.getElementById('modal-find-slot').classList.add('hidden');
+    openLessonModal();
+    if(datePicker) datePicker.setDate(dateStr);
+    document.getElementById('lesson-time-start').value = startStr;
+    if(timeStartPicker) timeStartPicker.setDate(startStr);
+    autoUzupelnijCzas(); 
+}
+
+// ==========================================
+// --- WIDOK ZAROBKÓW ---
+// ==========================================
+
+function processEarningsData(lessonsArray) {
+    let total = 0; let byStudent = {}; let bySubject = {};
+
+    lessonsArray.forEach(l => {
+        if(l.paid && !l.cancelled) {
+            let effectivePrice = Number(l.price || 0);
+            if (l.bundleId && l.bundleValue !== null && l.bundleValue !== undefined) {
+                effectivePrice = Number(l.bundleValue);
+            }
+            
+            total += effectivePrice;
+            
+            let student = students.find(s => s.id == l.studentId);
+            let studentName = student ? student.name : 'Nieznany uczeń';
+            byStudent[studentName] = (byStudent[studentName] || 0) + effectivePrice;
+            
+            let subject = subjects.find(s => s.id == l.subjectId);
+            let subjectName = subject ? subject.name : 'Inne';
+            let subjectColor = subject ? subject.color : settings.accent;
+
+            if(!bySubject[subjectName]) bySubject[subjectName] = {val: 0, color: subjectColor};
+            bySubject[subjectName].val += effectivePrice;
+        }
+    });
+
+    let studentArr = Object.keys(byStudent).map(k => ({name: k, val: Math.round(byStudent[k])})).sort((a,b) => b.val - a.val);
+    let subjectArr = Object.keys(bySubject).map(k => ({name: k, val: Math.round(bySubject[k].val), color: bySubject[k].color})).sort((a,b) => b.val - a.val);
+    return { total: Math.round(total), studentArr, subjectArr };
+}
+
+function renderChart(canvasId, type, dataArr) {
+    if(chartInstances[canvasId]) chartInstances[canvasId].destroy();
+    let canvas = document.getElementById(canvasId);
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if(dataArr.length === 0) { ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); return; }
+
+    const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--ciemny').trim();
+    chartInstances[canvasId] = new Chart(ctx, {
+        type: type,
+        data: {
+            labels: dataArr.map(d => esc(d.name)),
+            datasets: [{
+                data: dataArr.map(d => d.val),
+                backgroundColor: dataArr.map(d => d.color || settings.accent),
+                borderColor: borderColor, borderWidth: 2, borderRadius: type === 'bar' ? 6 : 0
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: type === 'doughnut', position: 'bottom' } },
+            scales: type === 'bar' ? { y: { beginAtZero: true, grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--szary-ramka').trim() } }, x: { grid: { display: false } } } : undefined
+        }
+    });
+}
+
+function renderStudentList(containerId, studentArr, total) {
+    const container = document.getElementById(containerId); 
+    if(!container) return;
+    container.innerHTML = '';
+    if(studentArr.length === 0) { container.innerHTML = '<p class="text-sm tekst-szary">Brak opłaconych lekcji.</p>'; return; }
+    studentArr.forEach(item => {
+        let width = total > 0 ? Math.max(5, (item.val / total) * 100) : 0;
+        container.innerHTML += `
+            <div class="mb-3">
+                <div class="flex justify-between text-xs md:text-sm font-bold mb-1"><span>${esc(item.name)}</span><span class="tekst-akcent">${item.val} zł</span></div>
+                <div class="w-full rounded-full h-2 md:h-3 border-2 bg-jasny ramka-szara"><div class="h-full rounded-full bg-akcent" style="width: ${width}%; background-color: var(--akcent)"></div></div>
+            </div>`;
+    });
+}
+
+function renderZarobki() {
+    let monthPickerEl = document.getElementById('earnings-month-picker');
+    let weekPickerEl = document.getElementById('earnings-week-picker');
+    
+    const monthPicker = monthPickerEl ? monthPickerEl.value : null; 
+    const weekPicker = weekPickerEl ? weekPickerEl.value : null;
+
+    const allData = processEarningsData(lessons);
+    animateValue('total-all-earnings', 0, allData.total, 800, ' zł');
+    renderChart('chart-all-subject', 'doughnut', allData.subjectArr);
+    renderStudentList('list-all-student', allData.studentArr, allData.total);
+
+    if(monthPicker) {
+        const monthLessons = lessons.filter(l => l.date.substring(0,7) === monthPicker);
+        const monthData = processEarningsData(monthLessons);
+        animateValue('total-month-earnings', 0, monthData.total, 800, ' zł');
+        renderChart('chart-month-subject', 'bar', monthData.subjectArr);
+    }
+    if(weekPicker) {
+        const weekLessons = lessons.filter(l => getWeekString(l.date) === weekPicker);
+        const weekData = processEarningsData(weekLessons);
+        animateValue('total-week-earnings', 0, weekData.total, 800, ' zł');
+        renderChart('chart-week-subject', 'bar', weekData.subjectArr);
+    }
 }
