@@ -336,7 +336,6 @@ function updateLessonBundleDropdown() {
     const bundleSelect = document.getElementById('lesson-bundle');
     
     if(!bundleSelect) return; 
-    
     bundleSelect.innerHTML = '<option value="">Standardowa cena (wpisz ręcznie)</option>';
     
     if(student && student.bundles && student.bundles.length > 0) {
@@ -351,44 +350,32 @@ function updateLessonBundleDropdown() {
 function handleBundleChange() {
     const bundleSelect = document.getElementById('lesson-bundle');
     if(!bundleSelect) return;
-    
     const bundleId = bundleSelect.value;
     const priceInput = document.getElementById('lesson-price');
     const priceLabel = document.getElementById('lesson-price-label');
     const paymentDateDiv = document.getElementById('lesson-payment-date-div');
     
     if (bundleId) {
-        // Uczeń korzysta z pakietu
         if(priceLabel) priceLabel.innerText = 'Cena poza pakietem (zł)';
-        if(paymentDateDiv) paymentDateDiv.classList.remove('hidden');
+        if(paymentDateDiv) {
+            paymentDateDiv.classList.remove('hidden');
+            paymentDateDiv.style.pointerEvents = 'auto'; // Resetujemy blokadę
+            paymentDateDiv.style.opacity = '1';
+        }
         if(priceInput) priceInput.readOnly = false; 
         
         const stId = document.getElementById('lesson-student').value;
         const student = students.find(s => s.id == stId);
         const bundle = student ? (student.bundles || []).find(b => b.id == bundleId) : null;
+        
+        if (bundle && bundle.payDay !== undefined && bundle.payDay !== "") {
+            // W starym kodzie braliśmy to z wartości tekstowej pola data
+            let lDateStr = document.getElementById('lesson-date').value;
+            let lDate = lDateStr ? new Date(lDateStr + "T12:00:00") : new Date();
+            lDate.setHours(12,0,0,0);
 
-        // KROK 1: Resetujemy blokadę całego kontenera płatności przed wykonaniem logiki
-        if (paymentDateDiv) {
-            paymentDateDiv.style.pointerEvents = 'auto';
-            paymentDateDiv.style.opacity = '1';
-        }
+            let finalDateStr = '';
 
-        let forcedDateStr = '';
-
-        // KROK 2: Sprawdzamy, czy w profilu ucznia jest ustawiony "sztywny" dzień płatności
-        if (bundle && bundle.payDay !== undefined && bundle.payDay !== null && bundle.payDay !== "") {
-            
-            // Pobieramy "żywą" datę z głównego kalendarza lekcji
-            let lDate;
-            if (datePicker && datePicker.selectedDates.length > 0) {
-                lDate = new Date(datePicker.selectedDates[0]);
-            } else {
-                let lDateStr = document.getElementById('lesson-date').value;
-                lDate = lDateStr ? new Date(lDateStr + "T12:00:00") : new Date();
-            }
-            lDate.setHours(12,0,0,0); 
-            
-            // Obliczamy dokładną datę
             if (bundle.type === 'monthly') {
                 let targetDay = parseInt(bundle.payDay);
                 if(!isNaN(targetDay)) {
@@ -396,7 +383,7 @@ function handleBundleChange() {
                     let finalDay = Math.min(targetDay, lastDayOfMonth);
                     let pDate = new Date(lDate.getFullYear(), lDate.getMonth(), finalDay);
                     pDate.setHours(12,0,0,0);
-                    forcedDateStr = getLocalISODate(pDate);
+                    finalDateStr = getLocalISODate(pDate);
                 }
             } else {
                 let weekMonday = getMonday(lDate);
@@ -404,36 +391,27 @@ function handleBundleChange() {
                 if(!isNaN(offset)) {
                     if (offset === 0) { weekMonday.setDate(weekMonday.getDate() + 6); } 
                     else { weekMonday.setDate(weekMonday.getDate() + (offset - 1)); }
-                    forcedDateStr = getLocalISODate(weekMonday);
+                    finalDateStr = getLocalISODate(weekMonday);
                 }
             }
 
-            // Ustawiamy wymuszoną datę w kalendarzyku płatności
-            if (forcedDateStr && paymentDatePicker) {
-                paymentDatePicker.setDate(forcedDateStr, true);
-                
-                // Zabezpieczenie na wypadek gdyby Flatpickr nawalił
-                document.getElementById('lesson-payment-date').value = forcedDateStr;
-                
-                // KROK 3: NAKŁADAMY TWARDĄ BLOKADĘ CSS NA CAŁY DIV, ODCINAJĄC KLIKNIĘCIA
+            if (finalDateStr && paymentDatePicker) {
+                paymentDatePicker.setDate(finalDateStr);
+                // Nakładamy szarą blokadę na cały div (użytkownik nie może kliknąć w pole)
                 if (paymentDateDiv) {
                     paymentDateDiv.style.pointerEvents = 'none';
                     paymentDateDiv.style.opacity = '0.6';
                 }
             }
-        } 
-        
+        }
     } else {
-        // Brak pakietu - standardowa, pojedyncza lekcja
         if(priceLabel) priceLabel.innerText = 'Cena za tę lekcję (zł)';
-        if(paymentDateDiv) paymentDateDiv.classList.add('hidden');
-        if(priceInput) priceInput.readOnly = false;
-        
-        // Zawsze odblokowujemy kontener
-        if (paymentDateDiv) {
+        if(paymentDateDiv) {
+            paymentDateDiv.classList.add('hidden');
             paymentDateDiv.style.pointerEvents = 'auto';
             paymentDateDiv.style.opacity = '1';
         }
+        if(priceInput) priceInput.readOnly = false;
     }
 }
 
@@ -459,7 +437,6 @@ function openLessonModal() {
     let topicEl = document.getElementById('lesson-topic');
     if(topicEl) topicEl.value = ''; 
     
-    // Twarde wymuszenie wyczyszczenia i ustawienia "Dzisiaj"
     let defaultDate = getLocalISODate(new Date());
     document.getElementById('lesson-date').value = defaultDate;
     if(datePicker) {
@@ -467,9 +444,7 @@ function openLessonModal() {
         datePicker.setDate(defaultDate, true);
     }
     
-    if(paymentDatePicker) {
-        paymentDatePicker.clear();
-    }
+    if(paymentDatePicker) paymentDatePicker.clear();
     
     document.getElementById('lesson-time-start').value = '15:00';
     if(timeStartPicker) timeStartPicker.setDate('15:00', true);
@@ -512,7 +487,6 @@ function editLesson(id) {
         let topicEl = document.getElementById('lesson-topic');
         if(topicEl) topicEl.value = lesson.topic || ''; 
         
-        // KROK 1: Najpierw twarde ustawienie dat w kalendarzach
         document.getElementById('lesson-date').value = lesson.date;
         if(datePicker) datePicker.setDate(lesson.date, true); 
         
@@ -525,7 +499,6 @@ function editLesson(id) {
         if(timeStartPicker) timeStartPicker.setDate(lesson.startTime, true);
         if(timeEndPicker) timeEndPicker.setDate(lesson.endTime, true);
 
-        // KROK 2: Ustawienie Ucznia
         const selectStudent = document.getElementById('lesson-student');
         selectStudent.innerHTML = '';
         students.forEach(s => { 
@@ -534,7 +507,6 @@ function editLesson(id) {
             }
         });
 
-        // KROK 3: Ładowanie przedmiotów i pakietów
         updateLessonSubjectDropdown();
         if(lesson.subjectId) document.getElementById('lesson-subject').value = lesson.subjectId;
         
@@ -542,7 +514,6 @@ function editLesson(id) {
         let bundleSel = document.getElementById('lesson-bundle');
         if(bundleSel && lesson.bundleId) bundleSel.value = lesson.bundleId;
 
-        // KROK 4: Ustawienie reszty okienka
         document.getElementById('lesson-price').value = lesson.price || '';
         
         let paidCb = document.getElementById('lesson-paid');
@@ -558,7 +529,6 @@ function editLesson(id) {
 
         document.getElementById('modal-lesson').classList.remove('hidden');
         
-        // KROK 5: Na sam koniec sprawdzamy pakiety i nakładamy szarą blokadę, jeśli trzeba
         handleBundleChange();
         
     } catch(err) {
@@ -757,6 +727,7 @@ async function saveLesson() {
                         finalPayDateStr = getLocalISODate(correctPayDate);
                     }
                 } else {
+                    // UWZGLĘDNIONO RÓWNIEŻ PAKIETY TYGODNIOWE W NOWYCH LEKCJACH
                     let wMon = getMonday(lessonDate);
                     let offset = parseInt(bundle.payDay);
                     if(!isNaN(offset)) {
