@@ -356,6 +356,7 @@ function handleBundleChange() {
     const priceInput = document.getElementById('lesson-price');
     const priceLabel = document.getElementById('lesson-price-label');
     const paymentDateDiv = document.getElementById('lesson-payment-date-div');
+    const realInput = document.getElementById('lesson-payment-date');
     
     if (bundleId) {
         // Uczeń korzysta z pakietu
@@ -367,15 +368,17 @@ function handleBundleChange() {
         const student = students.find(s => s.id == stId);
         const bundle = student ? (student.bundles || []).find(b => b.id == bundleId) : null;
 
-        // KROK 1: Zdejmujemy wszelkie blokady z kalendarzyka, żeby Flatpickr nie wariował
+        // KROK 1: Całkowite odblokowanie kalendarzyka przed wprowadzaniem zmian
+        if(realInput) realInput.disabled = false;
         if(paymentDatePicker && paymentDatePicker.altInput) {
-            paymentDatePicker.altInput.removeAttribute('disabled');
+            paymentDatePicker.altInput.disabled = false;
+            paymentDatePicker.altInput.style.pointerEvents = 'auto';
             paymentDatePicker.altInput.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
             paymentDatePicker.altInput.classList.add('bg-white', 'cursor-pointer');
         }
         
         // KROK 2: Sprawdzamy, czy w profilu ucznia jest ustawiony "sztywny" dzień płatności (np. Sobota)
-        if (bundle && bundle.payDay !== undefined && bundle.payDay !== "") {
+        if (bundle && bundle.payDay !== undefined && bundle.payDay !== null && bundle.payDay !== "") {
             
             // Pobieramy "żywą" datę z głównego kalendarza lekcji
             let lDate;
@@ -411,16 +414,18 @@ function handleBundleChange() {
 
             // Ustawiamy wymuszoną datę w kalendarzyku płatności
             if (finalDateStr && paymentDatePicker) {
-                paymentDatePicker.setDate(finalDateStr, true); // "true" wymusza odświeżenie UI
+                paymentDatePicker.setDate(finalDateStr, true); // Zaktualizuje ui
                 
-                // KROK 3: Nakładamy sztywną blokadę na pole (szare tło, brak klikania)
+                // KROK 3: Nakładamy twardą blokadę na pole z odrobiną opóźnienia, aby Flatpickr zdążył przetworzyć
                 setTimeout(() => {
+                    if(realInput) realInput.disabled = true;
                     if(paymentDatePicker.altInput) {
-                        paymentDatePicker.altInput.setAttribute('disabled', 'true');
+                        paymentDatePicker.altInput.disabled = true;
+                        paymentDatePicker.altInput.style.pointerEvents = 'none'; // Ignoruj kliknięcia całkowicie
                         paymentDatePicker.altInput.classList.remove('bg-white', 'cursor-pointer');
                         paymentDatePicker.altInput.classList.add('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
                     }
-                }, 10);
+                }, 30);
             }
             
         } 
@@ -432,8 +437,10 @@ function handleBundleChange() {
         if(priceInput) priceInput.readOnly = false;
         
         // Zawsze odblokowujemy kalendarzyk
+        if(realInput) realInput.disabled = false;
         if(paymentDatePicker && paymentDatePicker.altInput) {
-            paymentDatePicker.altInput.removeAttribute('disabled');
+            paymentDatePicker.altInput.disabled = false;
+            paymentDatePicker.altInput.style.pointerEvents = 'auto';
             paymentDatePicker.altInput.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
             paymentDatePicker.altInput.classList.add('bg-white', 'cursor-pointer');
         }
@@ -668,7 +675,7 @@ async function saveLesson() {
                         if(bundleId) {
                             const st = students.find(s => s.id == studentId);
                             const bun = st ? st.bundles.find(b => b.id == bundleId) : null;
-                            if(bun && bun.payDay !== undefined && bun.payDay !== "") {
+                            if(bun && bun.payDay !== undefined && bun.payDay !== null && bun.payDay !== "") {
                                 let flDateObj = new Date(fl.date + "T12:00:00");
                                 if(bun.type === 'monthly') {
                                     let targetDay = parseInt(bun.payDay);
@@ -682,9 +689,11 @@ async function saveLesson() {
                                 } else {
                                     let wMon = getMonday(fl.date + "T12:00:00");
                                     let offset = parseInt(bun.payDay);
-                                    if (offset === 0) { wMon.setDate(wMon.getDate() + 6); } 
-                                    else { wMon.setDate(wMon.getDate() + (offset - 1)); }
-                                    fl.paymentDate = getLocalISODate(wMon);
+                                    if(!isNaN(offset)) {
+                                        if (offset === 0) { wMon.setDate(wMon.getDate() + 6); } 
+                                        else { wMon.setDate(wMon.getDate() + (offset - 1)); }
+                                        fl.paymentDate = getLocalISODate(wMon);
+                                    }
                                 }
                             } else {
                                 let pd = new Date((fl.paymentDate || fl.date) + "T12:00:00");
@@ -696,7 +705,7 @@ async function saveLesson() {
                         if(bundleId) {
                             const st = students.find(s => s.id == studentId);
                             const bun = st ? st.bundles.find(b => b.id == bundleId) : null;
-                            if(bun && bun.payDay !== undefined && bun.payDay !== "") {
+                            if(bun && bun.payDay !== undefined && bun.payDay !== null && bun.payDay !== "") {
                                 let flDateObj = new Date(fl.date + "T12:00:00");
                                 if(bun.type === 'monthly') {
                                     let targetDay = parseInt(bun.payDay);
@@ -710,9 +719,11 @@ async function saveLesson() {
                                 } else {
                                     let wMon = getMonday(fl.date + "T12:00:00");
                                     let offset = parseInt(bun.payDay);
-                                    if (offset === 0) { wMon.setDate(wMon.getDate() + 6); } 
-                                    else { wMon.setDate(wMon.getDate() + (offset - 1)); }
-                                    fl.paymentDate = getLocalISODate(wMon);
+                                    if(!isNaN(offset)) {
+                                        if (offset === 0) { wMon.setDate(wMon.getDate() + 6); } 
+                                        else { wMon.setDate(wMon.getDate() + (offset - 1)); }
+                                        fl.paymentDate = getLocalISODate(wMon);
+                                    }
                                 }
                             }
                         }
@@ -745,14 +756,25 @@ async function saveLesson() {
             
             let finalPayDateStr = bundleId ? getLocalISODate(pDate) : getLocalISODate(lessonDate);
             
-            if (bundle && bundle.type === 'monthly' && bundle.payDay !== undefined && bundle.payDay !== "") {
-                let targetDay = parseInt(bundle.payDay);
-                if(!isNaN(targetDay)) {
-                    let lastDayOfMonth = new Date(lessonDate.getFullYear(), lessonDate.getMonth() + 1, 0).getDate();
-                    let finalDay = Math.min(targetDay, lastDayOfMonth);
-                    let correctPayDate = new Date(lessonDate.getFullYear(), lessonDate.getMonth(), finalDay);
-                    correctPayDate.setHours(12,0,0,0);
-                    finalPayDateStr = getLocalISODate(correctPayDate);
+            if (bundle && bundle.payDay !== undefined && bundle.payDay !== null && bundle.payDay !== "") {
+                if (bundle.type === 'monthly') {
+                    let targetDay = parseInt(bundle.payDay);
+                    if(!isNaN(targetDay)) {
+                        let lastDayOfMonth = new Date(lessonDate.getFullYear(), lessonDate.getMonth() + 1, 0).getDate();
+                        let finalDay = Math.min(targetDay, lastDayOfMonth);
+                        let correctPayDate = new Date(lessonDate.getFullYear(), lessonDate.getMonth(), finalDay);
+                        correctPayDate.setHours(12,0,0,0);
+                        finalPayDateStr = getLocalISODate(correctPayDate);
+                    }
+                } else {
+                    // DODANO BRAKUJĄCE PRZELICZANIE DLA PAKIETÓW TYGODNIOWYCH
+                    let wMon = getMonday(lessonDate);
+                    let offset = parseInt(bundle.payDay);
+                    if(!isNaN(offset)) {
+                        if (offset === 0) { wMon.setDate(wMon.getDate() + 6); } 
+                        else { wMon.setDate(wMon.getDate() + (offset - 1)); }
+                        finalPayDateStr = getLocalISODate(wMon);
+                    }
                 }
             }
 
