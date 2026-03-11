@@ -335,7 +335,7 @@ function renderCalendar() {
     document.getElementById('calendar-grid').innerHTML = gridHtml;
     updateCurrentTimeLine();
 
-    // Auto przewijanie w dół (zawsze 1 godzina przed pierwszą lekcją w tygodniu)
+    // --- AUTO PRZEWIJANIE (POPRAWIONE) ---
     let weekStringStart = getLocalISODate(monday);
     let weekStringEnd = getLocalISODate(sunday);
     let weekLessons = lessons.filter(l => l.date >= weekStringStart && l.date <= weekStringEnd && !l.cancelled);
@@ -343,7 +343,6 @@ function renderCalendar() {
     let earliestHour = settings.endHour;
     let hasLessons = false;
     
-    // Szukamy najwcześniejszej lekcji w tym tygodniu
     weekLessons.forEach(l => {
         let h = parseInt(l.startTime.split(':')[0]);
         if(h < earliestHour) {
@@ -352,7 +351,7 @@ function renderCalendar() {
         }
     });
 
-    // Przewijamy z opóźnieniem
+    // Zwiększony timeout do 400ms – czekamy aż skończy się animacja "duration-300" z HTML
     setTimeout(() => {
         let scrollTargetHour = earliestHour - 1;
         if(scrollTargetHour < settings.startHour) scrollTargetHour = settings.startHour;
@@ -360,10 +359,16 @@ function renderCalendar() {
         let targetPos = hasLessons ? ((scrollTargetHour - settings.startHour) * 96) : 0;
 
         let calScroll = document.getElementById('calendar-body-scroll');
-        if (calScroll) {
+        let mainContent = document.getElementById('main-content'); // Bezpiecznik dla telefonów
+
+        if (calScroll && calScroll.scrollHeight > calScroll.clientHeight) {
             calScroll.scrollTo({ top: targetPos, behavior: 'smooth' });
+        } else if (mainContent && mainContent.scrollHeight > mainContent.clientHeight) {
+            mainContent.scrollTo({ top: targetPos, behavior: 'smooth' });
+        } else if (calScroll) {
+            calScroll.scrollTop = targetPos; // Twardy fallback, gdyby smooth zawiodło
         }
-    }, 150); 
+    }, 400); 
 }
 
 function renderAgendaView(monday, sunday) {
@@ -588,6 +593,8 @@ function renderSlotCalendar() {
             slotScroll.scrollTo({ top: targetPos, behavior: 'smooth' });
         } else if (modalScroll) {
             modalScroll.scrollTo({ top: targetPos, behavior: 'smooth' });
+        } else if (slotScroll) {
+            slotScroll.scrollTop = targetPos;
         }
     }, 400); 
 }
