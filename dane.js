@@ -356,7 +356,6 @@ function handleBundleChange() {
     const priceInput = document.getElementById('lesson-price');
     const priceLabel = document.getElementById('lesson-price-label');
     const paymentDateDiv = document.getElementById('lesson-payment-date-div');
-    const realInput = document.getElementById('lesson-payment-date');
     
     if (bundleId) {
         // Uczeń korzysta z pakietu
@@ -368,16 +367,15 @@ function handleBundleChange() {
         const student = students.find(s => s.id == stId);
         const bundle = student ? (student.bundles || []).find(b => b.id == bundleId) : null;
 
-        // KROK 1: Całkowite odblokowanie kalendarzyka przed wprowadzaniem zmian
-        if(realInput) realInput.disabled = false;
-        if(paymentDatePicker && paymentDatePicker.altInput) {
-            paymentDatePicker.altInput.disabled = false;
-            paymentDatePicker.altInput.style.pointerEvents = 'auto';
-            paymentDatePicker.altInput.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
-            paymentDatePicker.altInput.classList.add('bg-white', 'cursor-pointer');
+        // KROK 1: Resetujemy blokadę całego kontenera płatności przed wykonaniem logiki
+        if (paymentDateDiv) {
+            paymentDateDiv.style.pointerEvents = 'auto';
+            paymentDateDiv.style.opacity = '1';
         }
-        
-        // KROK 2: Sprawdzamy, czy w profilu ucznia jest ustawiony "sztywny" dzień płatności (np. Sobota)
+
+        let forcedDateStr = '';
+
+        // KROK 2: Sprawdzamy, czy w profilu ucznia jest ustawiony "sztywny" dzień płatności
         if (bundle && bundle.payDay !== undefined && bundle.payDay !== null && bundle.payDay !== "") {
             
             // Pobieramy "żywą" datę z głównego kalendarza lekcji
@@ -390,8 +388,6 @@ function handleBundleChange() {
             }
             lDate.setHours(12,0,0,0); 
             
-            let finalDateStr = '';
-
             // Obliczamy dokładną datę
             if (bundle.type === 'monthly') {
                 let targetDay = parseInt(bundle.payDay);
@@ -400,7 +396,7 @@ function handleBundleChange() {
                     let finalDay = Math.min(targetDay, lastDayOfMonth);
                     let pDate = new Date(lDate.getFullYear(), lDate.getMonth(), finalDay);
                     pDate.setHours(12,0,0,0);
-                    finalDateStr = getLocalISODate(pDate);
+                    forcedDateStr = getLocalISODate(pDate);
                 }
             } else {
                 let weekMonday = getMonday(lDate);
@@ -408,26 +404,23 @@ function handleBundleChange() {
                 if(!isNaN(offset)) {
                     if (offset === 0) { weekMonday.setDate(weekMonday.getDate() + 6); } 
                     else { weekMonday.setDate(weekMonday.getDate() + (offset - 1)); }
-                    finalDateStr = getLocalISODate(weekMonday);
+                    forcedDateStr = getLocalISODate(weekMonday);
                 }
             }
 
             // Ustawiamy wymuszoną datę w kalendarzyku płatności
-            if (finalDateStr && paymentDatePicker) {
-                paymentDatePicker.setDate(finalDateStr, true); // Zaktualizuje ui
+            if (forcedDateStr && paymentDatePicker) {
+                paymentDatePicker.setDate(forcedDateStr, true);
                 
-                // KROK 3: Nakładamy twardą blokadę na pole z odrobiną opóźnienia, aby Flatpickr zdążył przetworzyć
-                setTimeout(() => {
-                    if(realInput) realInput.disabled = true;
-                    if(paymentDatePicker.altInput) {
-                        paymentDatePicker.altInput.disabled = true;
-                        paymentDatePicker.altInput.style.pointerEvents = 'none'; // Ignoruj kliknięcia całkowicie
-                        paymentDatePicker.altInput.classList.remove('bg-white', 'cursor-pointer');
-                        paymentDatePicker.altInput.classList.add('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
-                    }
-                }, 30);
+                // Zabezpieczenie na wypadek gdyby Flatpickr nawalił
+                document.getElementById('lesson-payment-date').value = forcedDateStr;
+                
+                // KROK 3: NAKŁADAMY TWARDĄ BLOKADĘ CSS NA CAŁY DIV, ODCINAJĄC KLIKNIĘCIA
+                if (paymentDateDiv) {
+                    paymentDateDiv.style.pointerEvents = 'none';
+                    paymentDateDiv.style.opacity = '0.6';
+                }
             }
-            
         } 
         
     } else {
@@ -436,13 +429,10 @@ function handleBundleChange() {
         if(paymentDateDiv) paymentDateDiv.classList.add('hidden');
         if(priceInput) priceInput.readOnly = false;
         
-        // Zawsze odblokowujemy kalendarzyk
-        if(realInput) realInput.disabled = false;
-        if(paymentDatePicker && paymentDatePicker.altInput) {
-            paymentDatePicker.altInput.disabled = false;
-            paymentDatePicker.altInput.style.pointerEvents = 'auto';
-            paymentDatePicker.altInput.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
-            paymentDatePicker.altInput.classList.add('bg-white', 'cursor-pointer');
+        // Zawsze odblokowujemy kontener
+        if (paymentDateDiv) {
+            paymentDateDiv.style.pointerEvents = 'auto';
+            paymentDateDiv.style.opacity = '1';
         }
     }
 }
@@ -767,7 +757,6 @@ async function saveLesson() {
                         finalPayDateStr = getLocalISODate(correctPayDate);
                     }
                 } else {
-                    // DODANO BRAKUJĄCE PRZELICZANIE DLA PAKIETÓW TYGODNIOWYCH
                     let wMon = getMonday(lessonDate);
                     let offset = parseInt(bundle.payDay);
                     if(!isNaN(offset)) {
