@@ -335,7 +335,7 @@ function renderCalendar() {
     document.getElementById('calendar-grid').innerHTML = gridHtml;
     updateCurrentTimeLine();
 
-    // Auto przewijanie w dół
+    // Auto przewijanie w dół (zawsze 1 godzina przed pierwszą lekcją w tygodniu)
     let weekStringStart = getLocalISODate(monday);
     let weekStringEnd = getLocalISODate(sunday);
     let weekLessons = lessons.filter(l => l.date >= weekStringStart && l.date <= weekStringEnd && !l.cancelled);
@@ -343,6 +343,7 @@ function renderCalendar() {
     let earliestHour = settings.endHour;
     let hasLessons = false;
     
+    // Szukamy najwcześniejszej lekcji w tym tygodniu
     weekLessons.forEach(l => {
         let h = parseInt(l.startTime.split(':')[0]);
         if(h < earliestHour) {
@@ -351,6 +352,7 @@ function renderCalendar() {
         }
     });
 
+    // Przewijamy z opóźnieniem
     setTimeout(() => {
         let scrollTargetHour = earliestHour - 1;
         if(scrollTargetHour < settings.startHour) scrollTargetHour = settings.startHour;
@@ -358,14 +360,10 @@ function renderCalendar() {
         let targetPos = hasLessons ? ((scrollTargetHour - settings.startHour) * 96) : 0;
 
         let calScroll = document.getElementById('calendar-body-scroll');
-        let mainScroll = document.getElementById('main-content');
-        
-        if (calScroll && calScroll.scrollHeight > calScroll.clientHeight) {
+        if (calScroll) {
             calScroll.scrollTo({ top: targetPos, behavior: 'smooth' });
-        } else if (mainScroll) {
-            mainScroll.scrollTo({ top: targetPos, behavior: 'smooth' });
         }
-    }, 500); 
+    }, 150); 
 }
 
 function renderAgendaView(monday, sunday) {
@@ -694,7 +692,6 @@ function renderStudentList(containerId, studentArr, total) {
 }
 
 function renderZarobki() {
-    // Uwaga: Te pola usunęliśmy w kroku optymalizacji HTML, ale jeśli kiedyś do nich wrócisz, kod jest gotowy.
     let monthPickerEl = document.getElementById('earnings-month-picker');
     let weekPickerEl = document.getElementById('earnings-week-picker');
     
