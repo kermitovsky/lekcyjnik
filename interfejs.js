@@ -240,7 +240,6 @@ function switchTab(tabName) {
     let tabEl = document.getElementById(`tab-${tabName}`);
     if(tabEl) tabEl.classList.add('aktywna');
 
-    // Uruchamianie odpowiednich widoków (te funkcje będą w widoki.js i dane.js)
     if(tabName === 'pulpit') renderDashboard();
     if(tabName === 'kalendarz') renderCalendar();
     if(tabName === 'uczniowie') renderStudents();
@@ -346,4 +345,17 @@ function zapiszOpcje() {
     settings.duration = parseInt(document.getElementById('ust-czas').value) || 60;
     saveSettingsToCloud(); renderCalendar();
     showToast('Zapisano ustawienia!');
+}
+
+// Funkcja obsługująca zakładki na stronie Onboardingu
+function switchLandingTab(tabId) {
+    document.querySelectorAll('.landing-tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.landing-tab-btn').forEach(el => {
+        el.classList.remove('bg-[#4f46e5]', 'text-white');
+        el.classList.add('bg-white', 'text-black');
+    });
+    
+    document.getElementById('landing-tab-' + tabId).classList.remove('hidden');
+    document.getElementById('btn-landing-' + tabId).classList.remove('bg-white', 'text-black');
+    document.getElementById('btn-landing-' + tabId).classList.add('bg-[#4f46e5]', 'text-white');
 }
