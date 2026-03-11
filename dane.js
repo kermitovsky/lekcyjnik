@@ -335,7 +335,6 @@ function updateLessonBundleDropdown() {
     const student = students.find(s => s.id == stId);
     const bundleSelect = document.getElementById('lesson-bundle');
     
-    // Upewniamy się, że element istnieje (czasami wywołujemy to zanim DOM jest pełny)
     if(!bundleSelect) return; 
     
     bundleSelect.innerHTML = '<option value="">Standardowa cena (wpisz ręcznie)</option>';
@@ -365,9 +364,11 @@ function handleBundleChange() {
         
         const stId = document.getElementById('lesson-student').value;
         const student = students.find(s => s.id == stId);
-        const bundle = student.bundles.find(b => b.id == bundleId);
+        const bundle = student ? (student.bundles || []).find(b => b.id == bundleId) : null;
         
+        // Zabezpieczenie przed błędem, gdy pakiet został usunięty w profilu ucznia, ale lekcja wciąż ma go zapisanego
         if (bundle && bundle.payDay !== undefined && bundle.payDay !== "") {
+            // Pakiet ma sztywny dzień - ustawiamy go z automatu
             let lDateStr = document.getElementById('lesson-date').value;
             let lDate = lDateStr ? new Date(lDateStr + "T12:00:00") : new Date();
             lDate.setHours(12,0,0,0); 
@@ -379,20 +380,39 @@ function handleBundleChange() {
                     let finalDay = Math.min(targetDay, lastDayOfMonth);
                     let pDate = new Date(lDate.getFullYear(), lDate.getMonth(), finalDay);
                     pDate.setHours(12,0,0,0);
-                    if(paymentDatePicker) paymentDatePicker.setDate(getLocalISODate(pDate));
+                    if(paymentDatePicker) paymentDatePicker.setDate(getLocalISODate(pDate), false);
                 }
             } else {
                 let weekMonday = getMonday(lDate);
                 let offset = parseInt(bundle.payDay);
                 if (offset === 0) { weekMonday.setDate(weekMonday.getDate() + 6); } 
                 else { weekMonday.setDate(weekMonday.getDate() + (offset - 1)); }
-                if(paymentDatePicker) paymentDatePicker.setDate(getLocalISODate(weekMonday));
+                if(paymentDatePicker) paymentDatePicker.setDate(getLocalISODate(weekMonday), false);
+            }
+            
+            // Blokujemy możliwość ręcznej zmiany daty (Szary kalendarzyk)
+            if(paymentDatePicker && paymentDatePicker.altInput) {
+                paymentDatePicker.altInput.disabled = true;
+                paymentDatePicker.altInput.classList.add('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
+            }
+            
+        } else {
+            // Pakiet nie ma sztywnego dnia - odblokowujemy
+            if(paymentDatePicker && paymentDatePicker.altInput) {
+                paymentDatePicker.altInput.disabled = false;
+                paymentDatePicker.altInput.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
             }
         }
     } else {
+        // Brak pakietu - zwykła lekcja
         if(priceLabel) priceLabel.innerText = 'Cena za tę lekcję (zł)';
         if(paymentDateDiv) paymentDateDiv.classList.add('hidden');
         if(priceInput) priceInput.readOnly = false;
+        
+        if(paymentDatePicker && paymentDatePicker.altInput) {
+            paymentDatePicker.altInput.disabled = false;
+            paymentDatePicker.altInput.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
+        }
     }
 }
 
@@ -407,7 +427,7 @@ function autoUzupelnijCzas() {
     let endStr = `${endH}:${endM}`;
     
     document.getElementById('lesson-time-end').value = endStr;
-    if(timeEndPicker) timeEndPicker.setDate(endStr);
+    if(timeEndPicker) timeEndPicker.setDate(endStr, false);
     handleBundleChange(); 
 }
 
@@ -419,11 +439,12 @@ function openLessonModal() {
     if(topicEl) topicEl.value = ''; 
     
     let defaultDate = getLocalISODate(new Date());
-    if(datePicker) datePicker.setDate(defaultDate);
-    if(paymentDatePicker) paymentDatePicker.setDate('');
+    document.getElementById('lesson-date').value = defaultDate;
+    if(datePicker) datePicker.setDate(defaultDate, false);
+    if(paymentDatePicker) paymentDatePicker.setDate('', false);
     
     document.getElementById('lesson-time-start').value = '15:00';
-    if(timeStartPicker) timeStartPicker.setDate('15:00');
+    if(timeStartPicker) timeStartPicker.setDate('15:00', false);
     autoUzupelnijCzas();
 
     document.getElementById('lesson-price').value = '';
@@ -455,20 +476,41 @@ function openLessonModal() {
 function editLesson(id) {
     const lesson = lessons.find(l => l.id == id);
     if(!lesson) return;
+    
     document.getElementById('lesson-modal-title').innerText = 'Szczegóły lekcji';
     document.getElementById('lesson-id').value = lesson.id;
     
     let topicEl = document.getElementById('lesson-topic');
     if(topicEl) topicEl.value = lesson.topic || ''; 
     
-    if(datePicker) datePicker.setDate(lesson.date);
-    if(paymentDatePicker) paymentDatePicker.setDate(lesson.paymentDate || lesson.date);
+    // 1. ZAWSZE NAJPIERW USTAW DATY (żeby obliczenia pakietu miały z czego korzystać)
+    document.getElementById('lesson-date').value = lesson.date;
+    if(datePicker) datePicker.setDate(lesson.date, false); // false zatrzymuje błędy przy ładowaniu
+    if(paymentDatePicker) paymentDatePicker.setDate(lesson.paymentDate || lesson.date, false);
     
     document.getElementById('lesson-time-start').value = lesson.startTime;
     document.getElementById('lesson-time-end').value = lesson.endTime;
-    if(timeStartPicker) timeStartPicker.setDate(lesson.startTime);
-    if(timeEndPicker) timeEndPicker.setDate(lesson.endTime);
+    if(timeStartPicker) timeStartPicker.setDate(lesson.startTime, false);
+    if(timeEndPicker) timeEndPicker.setDate(lesson.endTime, false);
 
+    // 2. USTAW UCZNIA
+    const selectStudent = document.getElementById('lesson-student');
+    selectStudent.innerHTML = '';
+    students.forEach(s => { 
+        if(!s.archived || s.id == lesson.studentId) {
+            selectStudent.innerHTML += `<option value="${s.id}" ${s.id == lesson.studentId ? 'selected' : ''}>${esc(s.name)}</option>`; 
+        }
+    });
+
+    // 3. ZAKTUALIZUJ LISTY ZALEŻNE OD UCZNIA
+    updateLessonSubjectDropdown();
+    if(lesson.subjectId) document.getElementById('lesson-subject').value = lesson.subjectId;
+    
+    updateLessonBundleDropdown();
+    let bundleSel = document.getElementById('lesson-bundle');
+    if(bundleSel && lesson.bundleId) bundleSel.value = lesson.bundleId;
+
+    // 4. USTAW RESZTĘ PÓL
     document.getElementById('lesson-price').value = lesson.price || '';
     
     let paidCb = document.getElementById('lesson-paid');
@@ -482,18 +524,9 @@ function editLesson(id) {
     if(cancBox) cancBox.classList.remove('hidden'); 
     document.getElementById('btn-delete-lesson').classList.remove('hidden');
 
-    const selectStudent = document.getElementById('lesson-student');
-    selectStudent.innerHTML = '';
-    students.forEach(s => { if(!s.archived || s.id == lesson.studentId) selectStudent.innerHTML += `<option value="${s.id}" ${s.id == lesson.studentId ? 'selected' : ''}>${esc(s.name)}</option>`; });
-
-    updateLessonSubjectDropdown();
-    if(lesson.subjectId) document.getElementById('lesson-subject').value = lesson.subjectId;
-    
-    updateLessonBundleDropdown();
-    let bundleSel = document.getElementById('lesson-bundle');
-    if(bundleSel && lesson.bundleId) bundleSel.value = lesson.bundleId;
-
     document.getElementById('modal-lesson').classList.remove('hidden');
+    
+    // 5. NA KONIEC URUCHOM BLOKADY (w tym szarzenie daty płatności)
     handleBundleChange();
 }
 
