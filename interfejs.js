@@ -35,9 +35,14 @@ function getMonday(d) {
     return monday;
 }
 
-function getWeekString(dateString) {
-    let monday = getLocalISODate(getMonday(dateString + "T12:00:00"));
-    return monday; 
+// NOWA FUNKCJA DO OBSŁUGI TYGODNI
+function getISOWeek(dateObj) {
+    let d = new Date(dateObj);
+    d.setHours(0,0,0,0);
+    d.setDate(d.getDate() + 4 - (d.getDay()||7));
+    let yearStart = new Date(d.getFullYear(),0,1);
+    let weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+    return d.getFullYear() + '-W' + String(weekNo).padStart(2, '0');
 }
 
 function animateValue(id, start, end, duration, suffix = '') {
@@ -243,7 +248,7 @@ async function wipeDatabase() {
 
 // GENERATOR SMS
 window.copySms = function(type, studentName, dateStr, timeStr, amount) {
-    if(!settings.smsEnabled) return; // Zabezpieczenie
+    if(!settings.smsEnabled) return; 
     let template = type === 'reminder' ? settings.smsReminder : settings.smsPayment;
     let finalMsg = template
         .replace(/\[IMIE\]/g, studentName || '')
@@ -293,6 +298,16 @@ function renderAvailabilitySettings() {
             </div>
         `;
     }
+}
+
+function toggleDay(dayId, isChecked) {
+    settings.availability[dayId].active = isChecked;
+    saveSettingsToCloud(); renderAvailabilitySettings();
+    showToast('Zaktualizowano grafik');
+}
+
+function updateDayTime(dayId, type, value) {
+    if(value) { settings.availability[dayId][type] = value; saveSettingsToCloud(); }
 }
 
 function switchLandingTab(tabId) {
