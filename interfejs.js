@@ -143,7 +143,6 @@ function applyVisualSettings() {
     const metaThemeColor = document.getElementById('meta-theme-color');
     if (metaThemeColor) metaThemeColor.setAttribute('content', settings.accent || '#4f46e5');
 
-    // Aktualizacja wzoru tła
     document.body.classList.remove('bg-pattern-grid', 'bg-pattern-dots', 'bg-pattern-clean');
     document.body.classList.add(`bg-pattern-${settings.bgPattern || 'grid'}`);
 
@@ -152,22 +151,21 @@ function applyVisualSettings() {
     if(activeCircle) activeCircle.classList.add('aktywny');
 }
 
-// --- NOWY PANEL USTAWIEŃ (Zakładki) ---
+// --- ROZSZERZONY PANEL USTAWIEŃ (Zakładki) ---
 function switchSettingsTab(tabId) {
-    // Ukryj wszystkie panele ustawień
     document.querySelectorAll('.set-content').forEach(el => el.classList.add('hidden'));
     
-    // Zresetuj wygląd przycisków w menu ustawień
     document.querySelectorAll('.set-tab').forEach(el => {
         el.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-black', 'dark:text-white');
         el.classList.add('text-slate-500', 'hover:bg-slate-200', 'dark:hover:bg-slate-600');
     });
 
-    // Pokaż wybrany
     document.getElementById('set-content-' + tabId).classList.remove('hidden');
     let btn = document.getElementById('set-tab-' + tabId);
-    btn.classList.remove('text-slate-500', 'hover:bg-slate-200', 'dark:hover:bg-slate-600');
-    btn.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-black', 'dark:text-white');
+    if(btn) {
+        btn.classList.remove('text-slate-500', 'hover:bg-slate-200', 'dark:hover:bg-slate-600');
+        btn.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-black', 'dark:text-white');
+    }
     
     if (tabId === 'kalendarz') renderAvailabilitySettings();
 }
@@ -183,10 +181,28 @@ function loadSettingsUI() {
     document.getElementById('ust-buffer').value = settings.timeBuffer || 0;
     document.getElementById('ust-hide-weekends').checked = settings.hideWeekends || false;
     document.getElementById('ust-default-price').value = settings.defaultPrice || '';
+    
+    let smsToggle = document.getElementById('ust-sms-toggle');
+    if(smsToggle) smsToggle.checked = settings.smsEnabled || false;
     document.getElementById('ust-sms-reminder').value = settings.smsReminder || 'Cześć! Przypominam o naszej lekcji: [DATA] o [CZAS].';
     document.getElementById('ust-sms-payment').value = settings.smsPayment || 'Cześć, przypominam o zbliżającym się terminie zapłaty. Kwota do przelewu: [KWOTA] zł. Dzięki!';
+    toggleSmsSectionVisuals();
     
-    switchSettingsTab('wyglad'); // Domyślna zakładka po otwarciu ustawień
+    switchSettingsTab('wyglad'); 
+}
+
+function toggleSmsSectionVisuals() {
+    const smsSettingsDiv = document.getElementById('sms-settings-boxes');
+    if(document.getElementById('ust-sms-toggle').checked) {
+        smsSettingsDiv.classList.remove('opacity-50', 'pointer-events-none', 'grayscale');
+    } else {
+        smsSettingsDiv.classList.add('opacity-50', 'pointer-events-none', 'grayscale');
+    }
+}
+
+function toggleSmsAction() {
+    toggleSmsSectionVisuals();
+    zapiszOpcje();
 }
 
 function ustawMotyw(theme) { settings.theme = theme; applyVisualSettings(); saveSettingsToCloud(); }
@@ -202,6 +218,8 @@ function zapiszOpcje() {
     settings.timeBuffer = parseInt(document.getElementById('ust-buffer').value) || 0;
     settings.hideWeekends = document.getElementById('ust-hide-weekends').checked;
     settings.defaultPrice = document.getElementById('ust-default-price').value;
+    
+    settings.smsEnabled = document.getElementById('ust-sms-toggle').checked;
     settings.smsReminder = document.getElementById('ust-sms-reminder').value;
     settings.smsPayment = document.getElementById('ust-sms-payment').value;
 
@@ -225,6 +243,7 @@ async function wipeDatabase() {
 
 // GENERATOR SMS
 window.copySms = function(type, studentName, dateStr, timeStr, amount) {
+    if(!settings.smsEnabled) return; // Zabezpieczenie
     let template = type === 'reminder' ? settings.smsReminder : settings.smsPayment;
     let finalMsg = template
         .replace(/\[IMIE\]/g, studentName || '')
@@ -276,17 +295,6 @@ function renderAvailabilitySettings() {
     }
 }
 
-function toggleDay(dayId, isChecked) {
-    settings.availability[dayId].active = isChecked;
-    saveSettingsToCloud(); renderAvailabilitySettings();
-    showToast('Zaktualizowano grafik');
-}
-
-function updateDayTime(dayId, type, value) {
-    if(value) { settings.availability[dayId][type] = value; saveSettingsToCloud(); }
-}
-
-// Funkcja obsługująca zakładki na stronie Onboardingu
 function switchLandingTab(tabId) {
     document.querySelectorAll('.landing-tab-content').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.landing-tab-btn').forEach(el => {
