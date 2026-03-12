@@ -108,7 +108,6 @@ function renderDashboard() {
                 let dateDisplay = l.date === todayString ? 'Dzisiaj' : `${dayNames[lDate.getDay()]}, ${lDate.getDate()} ${monthsGenitive[lDate.getMonth()]}`;
                 let badge = subject ? `<span class="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded border" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${esc(subject.color)}; border-color: ${esc(subject.color)}">${esc(subject.name).toUpperCase()}</span>` : '';
 
-                // Ikona SMS tylko jak jest włączone w opcjach
                 let smsBtn = settings.smsEnabled ? `<button onclick="event.stopPropagation(); window.copySms('reminder', '${esc(student.name)}', '${l.date}', '${l.startTime}', '${l.price||0}')" title="Kopiuj SMS z przypomnieniem" class="ml-2 hover:scale-110 transition text-lg">💬</button>` : '';
 
                 upcomingHtml += `
@@ -786,6 +785,16 @@ function renderZarobki() {
     let monthPickerEl = document.getElementById('earnings-month-picker');
     let weekPickerEl = document.getElementById('earnings-week-picker');
     
+    // Autouzupełnianie, jeśli okienka są puste
+    if (monthPickerEl && !monthPickerEl.value) {
+        let now = new Date();
+        monthPickerEl.value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    }
+    
+    if (weekPickerEl && !weekPickerEl.value) {
+        weekPickerEl.value = getISOWeek(new Date());
+    }
+
     const monthPicker = monthPickerEl ? monthPickerEl.value : null; 
     const weekPicker = weekPickerEl ? weekPickerEl.value : null;
 
@@ -801,7 +810,7 @@ function renderZarobki() {
         renderChart('chart-month-subject', 'bar', monthData.subjectArr);
     }
     if(weekPicker) {
-        const weekLessons = lessons.filter(l => getWeekString(l.date) === weekPicker);
+        const weekLessons = lessons.filter(l => getISOWeek(l.date + "T12:00:00") === weekPicker);
         const weekData = processEarningsData(weekLessons);
         animateValue('total-week-earnings', 0, weekData.total, 800, ' zł');
         renderChart('chart-week-subject', 'bar', weekData.subjectArr);
