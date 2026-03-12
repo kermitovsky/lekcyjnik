@@ -97,10 +97,9 @@ function renderDashboard() {
     
     const upcomingContainer = document.getElementById('pulpit-upcoming-lessons'); 
     if(upcomingContainer) {
-        upcomingContainer.innerHTML = '';
-        
+        let upcomingHtml = '';
         if(upcomingLessons.length === 0) {
-            upcomingContainer.innerHTML = '<p class="text-sm md:text-base tekst-szary">Brak zaplanowanych lekcji.</p>';
+            upcomingHtml = '<p class="text-sm md:text-base tekst-szary">Brak zaplanowanych lekcji.</p>';
         } else {
             upcomingLessons.slice(0, 5).forEach(l => {
                 let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
@@ -109,7 +108,7 @@ function renderDashboard() {
                 let dateDisplay = l.date === todayString ? 'Dzisiaj' : `${dayNames[lDate.getDay()]}, ${lDate.getDate()} ${monthsGenitive[lDate.getMonth()]}`;
                 let badge = subject ? `<span class="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded border" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${esc(subject.color)}; border-color: ${esc(subject.color)}">${esc(subject.name).toUpperCase()}</span>` : '';
 
-                upcomingContainer.innerHTML += `
+                upcomingHtml += `
                     <div onclick="editLesson('${l.id}')" class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-sm hover:shadow-md gap-2 sm:gap-0 lesson-block bg-karta ramka-szara" data-id="${l.id}">
                         <div class="flex items-center gap-3 md:gap-4">
                             <div class="w-8 h-8 md:w-10 h-10 rounded-full flex items-center justify-center font-bold border text-sm md:text-base bg-jasny ramka-szara tekst-szary">🕒</div>
@@ -122,6 +121,7 @@ function renderDashboard() {
                     </div>`;
             });
         }
+        upcomingContainer.innerHTML = upcomingHtml;
     }
 
     // ========================================================
@@ -212,37 +212,29 @@ function renderDashboard() {
     
     let sumEl = document.getElementById('dashboard-unpaid-sum');
     if (sumEl) {
-        // Wrzucamy do diva osobny span na animowaną zaległość i statyczny pomarańczowy span na oczekujące
-        // Zmieniono nawias, usunięto znak plusa
         sumEl.innerHTML = `<span id="dashboard-animated-overdue">0</span> zł` + 
                           (pendingTotal > 0 ? ` <span class="text-orange-500 text-[0.55em] font-extrabold ml-1 align-middle">(${Math.round(pendingTotal)} zł w trakcie)</span>` : '');
         
-        // Animujemy tylko twarde zaległości
         animateValue('dashboard-animated-overdue', 0, Math.round(overdueTotal), 800, '');
     }
 
     let dashUnpaidCount = document.getElementById('dashboard-unpaid-count');
     if(dashUnpaidCount) {
-        // Usunięto nawias (tylko oczekujące)
         dashUnpaidCount.innerText = `${overdueCount} zaległości`;
     }
 
     const unpaidContainer = document.getElementById('pulpit-unpaid-lessons'); 
     if(unpaidContainer) {
-        unpaidContainer.innerHTML = '';
-
-        // Sprawdzamy, czy cokolwiek ma się pokazać w listingu poniżej
         let totalCards = overdueCount + bundlesToShow.filter(b => todayString <= b.paymentDate).length;
+        let unpaidHtml = '';
 
         if(totalCards === 0) {
-            unpaidContainer.innerHTML = `<div class="border-2 p-4 md:p-6 rounded-xl text-center" style="background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3)"><div class="text-2xl md:text-3xl mb-1 md:mb-2">🎉</div><p class="text-emerald-500 font-bold text-sm md:text-base">Uczniowie nie mają zaległości.</p></div>`;
+            unpaidHtml = `<div class="border-2 p-4 md:p-6 rounded-xl text-center" style="background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3)"><div class="text-2xl md:text-3xl mb-1 md:mb-2">🎉</div><p class="text-emerald-500 font-bold text-sm md:text-base">Uczniowie nie mają zaległości.</p></div>`;
         } else {
-            // Renderowanie PAKIETÓW (zarówno po terminie jak i w trakcie)
+            // Renderowanie PAKIETÓW
             bundlesToShow.forEach(group => {
                 let student = students.find(s => s.id == group.studentId) || {name: 'Nieznany uczeń'};
-                
                 let isOverdue = todayString > group.paymentDate; 
-                
                 let bgClass = isOverdue ? 'bg-rose-50 border-rose-300' : 'bg-orange-50 border-orange-300';
                 let textClass = isOverdue ? 'text-rose-600' : 'text-orange-600';
                 let textSubClass = isOverdue ? 'text-rose-500' : 'text-orange-500';
@@ -252,7 +244,7 @@ function renderDashboard() {
                 let icon = isOverdue ? '⚠️ PO TERMINIE' : '⏳ W TRAKCIE (Oczekuje)';
                 if (group.completedLessons === group.totalLessons && !isOverdue) icon = '⏳ OCZEKUJE NA WPŁATĘ';
                 
-                unpaidContainer.innerHTML += `
+                unpaidHtml += `
                     <div class="flex justify-between items-center p-3 md:p-4 rounded-xl border-2 transition mb-2 shadow-sm hover:shadow-md ${bgClass}">
                         <div>
                             <div class="font-bold text-sm md:text-base">${esc(student.name)}</div>
@@ -269,10 +261,10 @@ function renderDashboard() {
                     </div>`;
             });
 
-            // Renderowanie POJEDYNCZYCH lekcji (tylko spóźnione)
+            // Renderowanie POJEDYNCZYCH lekcji
             individualPayments.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime)).slice(0, 5).forEach(l => {
                 let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
-                unpaidContainer.innerHTML += `
+                unpaidHtml += `
                     <div onclick="editLesson('${l.id}')" class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2 lesson-block bg-rose-50 border-rose-200 hover:border-rose-300 shadow-sm" data-id="${l.id}">
                         <div>
                             <div class="font-bold text-sm md:text-base">${esc(student.name)}</div>
@@ -285,11 +277,12 @@ function renderDashboard() {
                     </div>`;
             });
         }
+        unpaidContainer.innerHTML = unpaidHtml;
     }
 
     const weekContainer = document.getElementById('pulpit-week-view'); 
     if(weekContainer) {
-        weekContainer.innerHTML = '';
+        let weekHtml = '';
         const mondayString = getLocalISODate(getMonday(now));
         let sundayDate = new Date(getMonday(now)); sundayDate.setDate(sundayDate.getDate() + 6);
         const sundayString = getLocalISODate(sundayDate);
@@ -297,14 +290,15 @@ function renderDashboard() {
         let thisWeekLessons = lessons.filter(l => l.date >= mondayString && l.date <= sundayString);
         thisWeekLessons.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
 
-        if(thisWeekLessons.length === 0) weekContainer.innerHTML = '<p class="text-sm md:text-base tekst-szary">Pusty grafik na ten tydzień.</p>';
-        else {
+        if(thisWeekLessons.length === 0) {
+            weekHtml = '<p class="text-sm md:text-base tekst-szary">Pusty grafik na ten tydzień.</p>';
+        } else {
             const daysNamesPL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota']; let lastDay = '';
             thisWeekLessons.forEach(l => {
                 let lDate = new Date(l.date + "T12:00:00");
                 let dayDisplay = l.date === todayString ? `<span class="tekst-akcent">Dzisiaj</span>` : daysNamesPL[lDate.getDay()];
                 if(l.date !== lastDay) {
-                    weekContainer.innerHTML += `<div class="text-xs md:text-sm font-extrabold uppercase tracking-wider mt-4 md:mt-6 mb-2 border-b-2 pb-1 ramka-szara">${dayDisplay} <span class="font-medium text-[10px] md:text-xs normal-case tekst-szary">(${l.date})</span></div>`;
+                    weekHtml += `<div class="text-xs md:text-sm font-extrabold uppercase tracking-wider mt-4 md:mt-6 mb-2 border-b-2 pb-1 ramka-szara">${dayDisplay} <span class="font-medium text-[10px] md:text-xs normal-case tekst-szary">(${l.date})</span></div>`;
                     lastDay = l.date;
                 }
 
@@ -316,7 +310,7 @@ function renderDashboard() {
                 let topicHtml = l.topic ? `<p class="text-[10px] md:text-xs font-medium truncate mt-0.5 tekst-szary">📝 ${esc(l.topic)}</p>` : '';
                 let bundleBadge = l.bundleId ? `<span class="text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded ml-1 border bg-blue-50 text-blue-600 border-blue-200">📦 PAKIET</span>` : '';
 
-                weekContainer.innerHTML += `
+                weekHtml += `
                     <div onclick="editLesson('${l.id}')" class="flex items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition cien-ciemny hover:-translate-y-0.5 gap-2 md:gap-4 lesson-block bg-karta ramka-ciemna" style="${cardOpacity}" data-id="${l.id}">
                         <div class="flex items-center gap-3 md:gap-4 w-full truncate">
                             <div class="w-1.5 h-10 md:h-12 rounded-full shrink-0" style="background-color: ${esc(subject.color)}"></div>
@@ -333,6 +327,7 @@ function renderDashboard() {
                     </div>`;
             });
         }
+        weekContainer.innerHTML = weekHtml;
     }
 }
 
@@ -486,7 +481,7 @@ function renderCalendar() {
 
 function renderAgendaView(monday, sunday) {
     const container = document.getElementById('calendar-agenda-container');
-    container.innerHTML = '';
+    let agendaHtml = '';
     
     let weekStringStart = getLocalISODate(monday);
     let weekStringEnd = getLocalISODate(sunday);
@@ -510,7 +505,7 @@ function renderAgendaView(monday, sunday) {
             let isToday = l.date === todayStr;
             let dayHeaderColor = isToday ? 'color: var(--akcent)' : 'color: var(--tekst-glowny)';
             
-            container.innerHTML += `
+            agendaHtml += `
                 <div class="text-lg md:text-xl font-black uppercase tracking-wider mb-3 mt-6 border-b-4 pb-1 flex items-baseline gap-2 ramka-ciemna" style="${dayHeaderColor}">
                     ${isToday ? 'Dzisiaj' : dayName} <span class="font-bold text-xs md:text-sm normal-case opacity-60">(${l.date})</span>
                 </div>`;
@@ -537,7 +532,7 @@ function renderAgendaView(monday, sunday) {
             }
         }
 
-        container.innerHTML += `
+        agendaHtml += `
             <div onclick="editLesson('${l.id}')" class="karta cursor-pointer transition hover:-translate-y-1 hover:shadow-[6px_6px_0_var(--ciemny)] border-4 p-4 md:p-5 mb-4 flex flex-col bg-white lesson-block ramka-ciemna" 
                  style="border-left-width: 8px; border-left-color: ${esc(subject.color)}; ${opacityAndStrike}" 
                  data-id="${l.id}">
@@ -559,6 +554,7 @@ function renderAgendaView(monday, sunday) {
             </div>
         `;
     });
+    container.innerHTML = agendaHtml;
 }
 
 function updateCurrentTimeLine() {
@@ -799,16 +795,21 @@ function renderChart(canvasId, type, dataArr) {
 function renderStudentList(containerId, studentArr, total) {
     const container = document.getElementById(containerId); 
     if(!container) return;
-    container.innerHTML = '';
-    if(studentArr.length === 0) { container.innerHTML = '<p class="text-sm tekst-szary">Brak opłaconych lekcji.</p>'; return; }
-    studentArr.forEach(item => {
-        let width = total > 0 ? Math.max(5, (item.val / total) * 100) : 0;
-        container.innerHTML += `
-            <div class="mb-3">
-                <div class="flex justify-between text-xs md:text-sm font-bold mb-1"><span>${esc(item.name)}</span><span class="tekst-akcent">${item.val} zł</span></div>
-                <div class="w-full rounded-full h-2 md:h-3 border-2 bg-jasny ramka-szara"><div class="h-full rounded-full bg-akcent" style="width: ${width}%; background-color: var(--akcent)"></div></div>
-            </div>`;
-    });
+    
+    let listHtml = '';
+    if(studentArr.length === 0) { 
+        listHtml = '<p class="text-sm tekst-szary">Brak opłaconych lekcji.</p>'; 
+    } else {
+        studentArr.forEach(item => {
+            let width = total > 0 ? Math.max(5, (item.val / total) * 100) : 0;
+            listHtml += `
+                <div class="mb-3">
+                    <div class="flex justify-between text-xs md:text-sm font-bold mb-1"><span>${esc(item.name)}</span><span class="tekst-akcent">${item.val} zł</span></div>
+                    <div class="w-full rounded-full h-2 md:h-3 border-2 bg-jasny ramka-szara"><div class="h-full rounded-full bg-akcent" style="width: ${width}%; background-color: var(--akcent)"></div></div>
+                </div>`;
+        });
+    }
+    container.innerHTML = listHtml;
 }
 
 function renderZarobki() {
