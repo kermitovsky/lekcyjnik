@@ -384,7 +384,7 @@ function handleBundleChange() {
         if(priceLabel) priceLabel.innerText = 'Cena poza pakietem (zł)';
         if(paymentDateDiv) {
             paymentDateDiv.classList.remove('hidden');
-            paymentDateDiv.style.pointerEvents = 'auto'; // Reset
+            paymentDateDiv.style.pointerEvents = 'auto'; 
             paymentDateDiv.style.opacity = '1';
         }
         if(priceInput) priceInput.readOnly = false; 
@@ -429,8 +429,8 @@ function handleBundleChange() {
                     fpInstance.setDate(finalDateStr, true);
                     if(fpInstance.altInput) {
                         fpInstance.altInput.disabled = true;
-                        fpInstance.altInput.style.backgroundColor = '#e2e8f0'; 
-                        fpInstance.altInput.style.color = '#64748b'; 
+                        fpInstance.altInput.style.backgroundColor = 'var(--jasny)'; 
+                        fpInstance.altInput.style.color = 'var(--tekst-szary)'; 
                         fpInstance.altInput.style.cursor = 'not-allowed'; 
                     }
                 } else if (realInput) {
@@ -498,7 +498,8 @@ function openLessonModal() {
     if(timeStartPicker) timeStartPicker.setDate('15:00', true);
     autoUzupelnijCzas();
 
-    document.getElementById('lesson-price').value = '';
+    // Wstawianie domyślnej ceny z ustawień
+    document.getElementById('lesson-price').value = settings.defaultPrice || '';
     
     let paidCb = document.getElementById('lesson-paid');
     if(paidCb) paidCb.checked = false;
