@@ -108,6 +108,9 @@ function renderDashboard() {
                 let dateDisplay = l.date === todayString ? 'Dzisiaj' : `${dayNames[lDate.getDay()]}, ${lDate.getDate()} ${monthsGenitive[lDate.getMonth()]}`;
                 let badge = subject ? `<span class="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded border" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${esc(subject.color)}; border-color: ${esc(subject.color)}">${esc(subject.name).toUpperCase()}</span>` : '';
 
+                // Ikona SMS tylko jak jest włączone w opcjach
+                let smsBtn = settings.smsEnabled ? `<button onclick="event.stopPropagation(); window.copySms('reminder', '${esc(student.name)}', '${l.date}', '${l.startTime}', '${l.price||0}')" title="Kopiuj SMS z przypomnieniem" class="ml-2 hover:scale-110 transition text-lg">💬</button>` : '';
+
                 upcomingHtml += `
                     <div onclick="editLesson('${l.id}')" class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-sm hover:shadow-md gap-2 sm:gap-0 lesson-block" style="background-color: var(--karta-bg); border-color: var(--szary-ramka);" data-id="${l.id}">
                         <div class="flex items-center gap-3 md:gap-4">
@@ -119,7 +122,7 @@ function renderDashboard() {
                         </div>
                         <div class="flex items-center gap-2">
                             ${badge}
-                            <button onclick="event.stopPropagation(); window.copySms('reminder', '${esc(student.name)}', '${l.date}', '${l.startTime}', '${l.price||0}')" title="Kopiuj SMS z przypomnieniem" class="ml-2 hover:scale-110 transition text-lg">💬</button>
+                            ${smsBtn}
                         </div>
                     </div>`;
             });
@@ -206,6 +209,8 @@ function renderDashboard() {
                 let icon = isOverdue ? '⚠️ PO TERMINIE' : '⏳ W TRAKCIE (Oczekuje)';
                 if (group.completedLessons === group.totalLessons && !isOverdue) icon = '⏳ OCZEKUJE NA WPŁATĘ';
                 
+                let smsBtn = settings.smsEnabled ? `<button onclick="window.copySms('payment', '${esc(student.name)}', '', '', '${Math.round(group.displayPrice)}')" title="Kopiuj SMS z przypomnieniem" class="text-xl hover:scale-110 transition">💬</button>` : '';
+
                 unpaidHtml += `
                     <div class="flex justify-between items-center p-3 md:p-4 rounded-xl border-2 transition mb-2 shadow-sm hover:shadow-md ${bgClass}">
                         <div>
@@ -219,7 +224,7 @@ function renderDashboard() {
                         <div class="flex flex-col items-end gap-2 shrink-0">
                             <div class="font-extrabold ${priceClass} text-base md:text-lg">${Math.round(group.displayPrice)} zł</div>
                             <div class="flex items-center gap-2">
-                                <button onclick="window.copySms('payment', '${esc(student.name)}', '', '', '${Math.round(group.displayPrice)}')" title="Kopiuj SMS z przypomnieniem" class="text-xl hover:scale-110 transition">💬</button>
+                                ${smsBtn}
                                 <button onclick="window.markCycleAsPaid('${group.lessonIds.join(',')}', event)" class="px-3 py-1.5 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-white ${textClass} border-[currentColor] hover:bg-slate-50 transition whitespace-nowrap hover:-translate-y-0.5">Opłać pakiet</button>
                             </div>
                         </div>
@@ -228,6 +233,8 @@ function renderDashboard() {
 
             individualPayments.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime)).slice(0, 5).forEach(l => {
                 let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
+                let smsBtn = settings.smsEnabled ? `<button onclick="event.stopPropagation(); window.copySms('payment', '${esc(student.name)}', '', '', '${l.price||0}')" title="Kopiuj SMS z przypomnieniem" class="text-xl hover:scale-110 transition">💬</button>` : '';
+
                 unpaidHtml += `
                     <div onclick="editLesson('${l.id}')" class="flex justify-between items-center p-3 rounded-xl cursor-pointer border-2 transition mb-2 lesson-block bg-rose-50 border-rose-200 hover:border-rose-300 shadow-sm" data-id="${l.id}">
                         <div>
@@ -236,7 +243,7 @@ function renderDashboard() {
                         </div>
                         <div class="flex items-center gap-2 md:gap-3">
                             <div class="font-extrabold text-rose-600 text-sm md:text-base">${l.price || 0} zł</div>
-                            <button onclick="event.stopPropagation(); window.copySms('payment', '${esc(student.name)}', '', '', '${l.price||0}')" title="Kopiuj SMS z przypomnieniem" class="text-xl hover:scale-110 transition">💬</button>
+                            ${smsBtn}
                             <button onclick="markAsPaid('${l.id}', event)" class="px-2 py-1.5 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-white text-rose-600 border-rose-300 hover:bg-rose-100 transition whitespace-nowrap hover:-translate-y-0.5">Zapłacone</button>
                         </div>
                     </div>`;
@@ -300,7 +307,6 @@ function renderDashboard() {
     }
 }
 
-
 // ==========================================
 // --- WIDOK KALENDARZA ---
 // ==========================================
@@ -350,7 +356,6 @@ function renderCalendar() {
     let daysCount = settings.hideWeekends ? 5 : 7;
     let gridColsClass = settings.hideWeekends ? 'grid-cols-6' : 'grid-cols-8';
     
-    // Zmiana klas siatki w zależności od weekendów
     calHeader.className = `grid ${gridColsClass} border-b-2 sticky top-0 z-20`;
     document.getElementById('calendar-grid').className = `grid ${gridColsClass} relative min-h-[900px]`;
 
@@ -698,33 +703,8 @@ function renderSlotCalendar() {
     }, 400); 
 }
 
-function handleSlotClick(e, dateStr) {
-    let col = e.currentTarget;
-    let rect = col.getBoundingClientRect();
-    let y = e.clientY - rect.top; 
-    
-    let rawHours = settings.startHour + (y / 96);
-    let h = Math.floor(rawHours);
-    let m = Math.floor((rawHours - h) * 60);
-    
-    m = Math.round(m / 15) * 15;
-    if(m === 60) { h++; m = 0; }
-    
-    if(h < settings.startHour) h = settings.startHour;
-    if(h >= settings.endHour) { h = settings.endHour - 1; m = 45; }
-    
-    let startStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-    
-    document.getElementById('modal-find-slot').classList.add('hidden');
-    openLessonModal();
-    if(datePicker) datePicker.setDate(dateStr);
-    document.getElementById('lesson-time-start').value = startStr;
-    if(timeStartPicker) timeStartPicker.setDate(startStr);
-    autoUzupelnijCzas(); 
-}
-
 // ==========================================
-// --- WIDOK ZAROBKÓW ---
+// --- WIDOK ZAROBKÓW I RAPORTY ---
 // ==========================================
 
 function processEarningsData(lessonsArray) {
@@ -827,3 +807,120 @@ function renderZarobki() {
         renderChart('chart-week-subject', 'bar', weekData.subjectArr);
     }
 }
+
+// GENERATOR RAPORTU PDF
+window.generateMonthlyReport = function() {
+    let monthPickerEl = document.getElementById('earnings-month-picker');
+    let monthStr = monthPickerEl ? monthPickerEl.value : null;
+    if(!monthStr) {
+        showToast('Najpierw wybierz miesiąc w okienku obok!', 'error');
+        return;
+    }
+
+    const monthLessons = lessons.filter(l => l.date.substring(0,7) === monthStr);
+    const data = processEarningsData(monthLessons);
+
+    let unpaidLessons = monthLessons.filter(l => !l.paid && !l.cancelled);
+    let unpaidSum = 0;
+    unpaidLessons.forEach(l => {
+        if (l.bundleId && l.bundleValue !== null) unpaidSum += Number(l.bundleValue);
+        else unpaidSum += Number(l.price || 0);
+    });
+
+    let studentsHtml = '';
+    data.studentArr.forEach(s => {
+        studentsHtml += `<div class="row"><span>${esc(s.name)}</span><strong>${s.val} zł</strong></div>`;
+    });
+    if(data.studentArr.length === 0) studentsHtml = '<div class="row">Brak opłaconych lekcji w tym miesiącu.</div>';
+
+    let subjectsHtml = '';
+    data.subjectArr.forEach(s => {
+        subjectsHtml += `<div class="row"><span>${esc(s.name)}</span><strong>${s.val} zł</strong></div>`;
+    });
+
+    let unpaidHtml = '';
+    unpaidLessons.forEach(l => {
+        let st = students.find(s => s.id == l.studentId) || {name: 'Nieznany'};
+        let p = (l.bundleId && l.bundleValue !== null) ? Number(l.bundleValue) : Number(l.price || 0);
+        unpaidHtml += `<div class="row" style="color: #ef4444;"><span>${l.date} - ${esc(st.name)}</span><strong>${Math.round(p)} zł</strong></div>`;
+    });
+    if(unpaidLessons.length === 0) unpaidHtml = '<div class="row" style="color: #10b981; font-weight: bold; border: none;">Brak zaległości! Wszystko opłacone.</div>';
+
+    const printWin = window.open('', '', 'width=900,height=800');
+    
+    let html = `
+    <!DOCTYPE html>
+    <html lang="pl">
+    <head>
+        <meta charset="UTF-8">
+        <title>Raport Finansowy - ${monthStr}</title>
+        <style>
+            @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; } }
+            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1e293b; background: white; }
+            .header { border-bottom: 4px solid #1e293b; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+            .title { font-weight: 900; font-size: 32px; color: ${settings.accent}; margin: 0; line-height: 1; text-transform: uppercase; }
+            .subtitle { font-weight: 700; font-size: 16px; color: #64748b; margin-top: 5px;}
+            .period { font-size: 24px; font-weight: 800; background: #f8fafc; padding: 5px 15px; border-radius: 8px; border: 2px solid #e2e8f0;}
+            
+            .total-box { background: ${settings.accent}; color: white; border-radius: 16px; padding: 30px; text-align: center; margin-bottom: 40px; border: 2px solid #1e293b; }
+            .total-title { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; opacity: 0.9; }
+            .total-amount { font-size: 48px; font-weight: 900; margin-top: 10px; }
+
+            .grid { display: flex; gap: 30px; margin-bottom: 30px; }
+            .col { flex: 1; }
+            .section-title { font-size: 18px; font-weight: 800; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px; }
+            
+            .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #e2e8f0; font-size: 15px; }
+            .row:last-child { border-bottom: none; }
+            
+            .unpaid-box { background: #fef2f2; border: 2px solid #fecaca; border-radius: 12px; padding: 20px; margin-top: 20px; }
+            .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div>
+                <h1 class="title">TutoGrid.</h1>
+                <div class="subtitle">Raport Finansowy</div>
+            </div>
+            <div class="period">Miesiąc: ${monthStr}</div>
+        </div>
+
+        <div class="total-box">
+            <div class="total-title">Całkowity Przychód Opłacony</div>
+            <div class="total-amount">${data.total} zł</div>
+        </div>
+
+        <div class="grid">
+            <div class="col">
+                <div class="section-title">Zarobki wg Uczniów</div>
+                ${studentsHtml}
+            </div>
+            <div class="col">
+                <div class="section-title">Zarobki wg Przedmiotów</div>
+                ${subjectsHtml}
+            </div>
+        </div>
+
+        <div class="unpaid-box">
+            <div class="section-title" style="color: #ef4444; border-bottom-color: #fecaca;">Brakujące Wpłaty (Zaległości z tego miesiąca)</div>
+            ${unpaidHtml}
+            <div style="text-align: right; margin-top: 15px; font-size: 18px; font-weight: 900; color: #ef4444;">
+                Łącznie zalegają: ${Math.round(unpaidSum)} zł
+            </div>
+        </div>
+
+        <div class="footer">
+            Wygenerowano automatycznie z systemu TutoGrid &copy; ${new Date().getFullYear()}
+        </div>
+        
+        <script>
+            setTimeout(() => { window.print(); window.close(); }, 500);
+        </script>
+    </body>
+    </html>
+    `;
+
+    printWin.document.write(html);
+    printWin.document.close();
+};
