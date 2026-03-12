@@ -109,9 +109,9 @@ function renderDashboard() {
                 let badge = subject ? `<span class="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded border" style="background-color: ${hexToRgba(subject.color, 0.2)}; color: ${esc(subject.color)}; border-color: ${esc(subject.color)}">${esc(subject.name).toUpperCase()}</span>` : '';
 
                 upcomingHtml += `
-                    <div onclick="editLesson('${l.id}')" class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-sm hover:shadow-md gap-2 sm:gap-0 lesson-block bg-karta ramka-szara" data-id="${l.id}">
+                    <div onclick="editLesson('${l.id}')" class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition shadow-sm hover:shadow-md gap-2 sm:gap-0 lesson-block" style="background-color: var(--karta-bg); border-color: var(--szary-ramka);" data-id="${l.id}">
                         <div class="flex items-center gap-3 md:gap-4">
-                            <div class="w-8 h-8 md:w-10 h-10 rounded-full flex items-center justify-center font-bold border text-sm md:text-base bg-jasny ramka-szara tekst-szary">🕒</div>
+                            <div class="w-8 h-8 md:w-10 h-10 rounded-full flex items-center justify-center font-bold border text-sm md:text-base" style="background-color: var(--jasny); border-color: var(--szary-ramka); color: var(--tekst-szary);">🕒</div>
                             <div>
                                 <div class="font-extrabold text-sm md:text-base">${esc(student.name)}</div>
                                 <div class="text-xs md:text-sm font-medium tekst-szary">${dateDisplay}, ${l.startTime}</div>
@@ -143,14 +143,12 @@ function renderDashboard() {
         let bundle = student && student.bundles ? student.bundles.find(b => b.id == l.bundleId) : null;
         
         if (!l.bundleId || !bundle) {
-            // Zwykła, pojedyncza lekcja
             if (!l.paid && isPast) {
                 individualPayments.push(l);
                 overdueTotal += Number(l.price || 0);
                 overdueCount++;
             }
         } else {
-            // Lekcja z Pakietu - grupujemy po cyklu
             let cycleKey = '';
             
             if (bundle.type === 'monthly') {
@@ -197,19 +195,16 @@ function renderDashboard() {
 
     let bundlesToShow = Object.values(activeBundles).filter(b => !b.isFullyPaid && b.hasPastLessons);
     
-    // Sortujemy i dzielimy kwoty
     bundlesToShow.forEach(b => {
         let isOverdue = todayString > b.paymentDate; 
         if (isOverdue) {
             overdueTotal += b.displayPrice;
-            overdueCount++; // Wliczamy tylko spóźnione pakiety
+            overdueCount++; 
         } else {
-            pendingTotal += b.displayPrice; // "Oczekujące"
+            pendingTotal += b.displayPrice; 
         }
     });
 
-    // --- AKTUALIZACJA LICZNIKÓW NA PULPICIE ---
-    
     let sumEl = document.getElementById('dashboard-unpaid-sum');
     if (sumEl) {
         sumEl.innerHTML = `<span id="dashboard-animated-overdue">0</span> zł` + 
@@ -231,7 +226,6 @@ function renderDashboard() {
         if(totalCards === 0) {
             unpaidHtml = `<div class="border-2 p-4 md:p-6 rounded-xl text-center" style="background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3)"><div class="text-2xl md:text-3xl mb-1 md:mb-2">🎉</div><p class="text-emerald-500 font-bold text-sm md:text-base">Uczniowie nie mają zaległości.</p></div>`;
         } else {
-            // Renderowanie PAKIETÓW
             bundlesToShow.forEach(group => {
                 let student = students.find(s => s.id == group.studentId) || {name: 'Nieznany uczeń'};
                 let isOverdue = todayString > group.paymentDate; 
@@ -261,7 +255,6 @@ function renderDashboard() {
                     </div>`;
             });
 
-            // Renderowanie POJEDYNCZYCH lekcji
             individualPayments.sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime)).slice(0, 5).forEach(l => {
                 let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
                 unpaidHtml += `
@@ -298,20 +291,24 @@ function renderDashboard() {
                 let lDate = new Date(l.date + "T12:00:00");
                 let dayDisplay = l.date === todayString ? `<span class="tekst-akcent">Dzisiaj</span>` : daysNamesPL[lDate.getDay()];
                 if(l.date !== lastDay) {
-                    weekHtml += `<div class="text-xs md:text-sm font-extrabold uppercase tracking-wider mt-4 md:mt-6 mb-2 border-b-2 pb-1 ramka-szara">${dayDisplay} <span class="font-medium text-[10px] md:text-xs normal-case tekst-szary">(${l.date})</span></div>`;
+                    weekHtml += `<div class="text-xs md:text-sm font-extrabold uppercase tracking-wider mt-4 md:mt-6 mb-2 border-b-2 pb-1" style="border-color: var(--szary-ramka);">${dayDisplay} <span class="font-medium text-[10px] md:text-xs normal-case opacity-70">(${l.date})</span></div>`;
                     lastDay = l.date;
                 }
 
                 let student = students.find(s => s.id == l.studentId) || {name: 'Nieznany uczeń'};
                 let subject = subjects.find(s => s.id == l.subjectId) || {name: 'Brak', color: '#cbd5e1'};
-                let statusIcon = l.cancelled ? '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm bg-jasny tekst-szary ramka-szara">Odwołana ❌</span>' : (l.paid ? '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm text-emerald-600 bg-emerald-50 border-emerald-200">Opłacone</span>' : '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm text-rose-500 bg-rose-50 border-rose-200">Brak</span>');
-                let cardOpacity = l.cancelled ? 'opacity: 0.5; filter: grayscale(100%)' : '';
-                let lineThrough = l.cancelled ? 'text-decoration: line-through' : '';
+                
+                let statusIcon = l.cancelled 
+                    ? `<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm" style="background-color: var(--jasny); border-color: var(--szary-ramka); color: var(--tekst-szary);">Odwołana ❌</span>` 
+                    : (l.paid ? '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm text-emerald-600 bg-emerald-50 border-emerald-200">Opłacone</span>' : '<span class="px-1.5 py-1 rounded border text-[9px] font-bold shadow-sm text-rose-500 bg-rose-50 border-rose-200">Brak</span>');
+                
+                let cardOpacity = l.cancelled ? 'opacity: 0.5; filter: grayscale(100%);' : '';
+                let lineThrough = l.cancelled ? 'text-decoration: line-through;' : '';
                 let topicHtml = l.topic ? `<p class="text-[10px] md:text-xs font-medium truncate mt-0.5 tekst-szary">📝 ${esc(l.topic)}</p>` : '';
                 let bundleBadge = l.bundleId ? `<span class="text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded ml-1 border bg-blue-50 text-blue-600 border-blue-200">📦 PAKIET</span>` : '';
 
                 weekHtml += `
-                    <div onclick="editLesson('${l.id}')" class="flex items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition cien-ciemny hover:-translate-y-0.5 gap-2 md:gap-4 lesson-block bg-karta ramka-ciemna" style="${cardOpacity}" data-id="${l.id}">
+                    <div onclick="editLesson('${l.id}')" class="flex items-center justify-between p-3 md:p-4 rounded-xl border-2 cursor-pointer transition hover:-translate-y-0.5 gap-2 md:gap-4 lesson-block shadow-sm" style="background-color: var(--karta-bg); border-color: var(--szary-ramka); ${cardOpacity}" data-id="${l.id}">
                         <div class="flex items-center gap-3 md:gap-4 w-full truncate">
                             <div class="w-1.5 h-10 md:h-12 rounded-full shrink-0" style="background-color: ${esc(subject.color)}"></div>
                             <div class="truncate flex-1">
@@ -378,7 +375,7 @@ function renderCalendar() {
     }
 
     const daysNames = ['PON', 'WT', 'ŚR', 'CZW', 'PT', 'SOB', 'ND'];
-    let headerHtml = '<div class="border-r-2 p-1 md:p-2 w-12 md:w-16 shrink-0 bg-karta ramka-ciemna"></div>';
+    let headerHtml = '<div class="border-r-2 p-1 md:p-2 w-12 md:w-16 shrink-0" style="background-color: var(--karta-bg); border-color: var(--ciemny);"></div>';
     
     for(let i=0; i<7; i++) {
         let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
@@ -387,7 +384,7 @@ function renderCalendar() {
         let textStyle = isToday ? `color: var(--akcent)` : `color: var(--tekst-szary)`;
         
         headerHtml += `
-            <div class="text-center py-2 md:py-3 border-r-2 day-col flex-1 bg-karta ramka-ciemna">
+            <div class="text-center py-2 md:py-3 border-r-2 day-col flex-1" style="background-color: var(--karta-bg); border-color: var(--ciemny);">
                 <div class="text-[10px] md:text-xs font-extrabold mb-1 md:mb-2 tracking-wider" style="${textStyle}">${daysNames[i]}</div>
                 <div class="mx-auto w-8 h-8 md:w-12 md:h-12 flex items-center justify-center rounded-full font-extrabold text-sm md:text-xl" style="${circleStyle}">
                     ${dayDate.getDate()}
@@ -396,7 +393,7 @@ function renderCalendar() {
     }
     calHeader.innerHTML = headerHtml;
 
-    let gridHtml = `<div class="border-r-2 relative w-12 md:w-16 shrink-0 z-10 bg-karta ramka-ciemna">`;
+    let gridHtml = `<div class="border-r-2 relative w-12 md:w-16 shrink-0 z-10" style="background-color: var(--karta-bg); border-color: var(--ciemny);">`;
     for(let h = settings.startHour; h <= settings.endHour; h++) {
         gridHtml += `<div class="h-24 time-row text-[10px] md:text-xs text-right pr-1 md:pr-2 pt-1 font-bold tekst-szary" id="hour-row-${h}">${h}:00</div>`;
     }
@@ -407,7 +404,7 @@ function renderCalendar() {
         let dateString = getLocalISODate(dayDate);
         let isWeekend = (i === 5 || i === 6) ? `background-color: rgba(120, 120, 120, 0.03);` : '';
 
-        gridHtml += `<div class="relative day-col flex-1 border-r-2 last:border-r-0 ramka-szara" style="${isWeekend}" data-date="${dateString}">`;
+        gridHtml += `<div class="relative day-col flex-1 border-r-2 last:border-r-0" style="border-color: var(--szary-ramka); ${isWeekend}" data-date="${dateString}">`;
         for(let h = settings.startHour; h <= settings.endHour; h++) { gridHtml += `<div class="h-24 time-row"></div>`; }
         
         let dailyLessons = lessons.filter(l => l.date === dateString);
@@ -506,7 +503,7 @@ function renderAgendaView(monday, sunday) {
             let dayHeaderColor = isToday ? 'color: var(--akcent)' : 'color: var(--tekst-glowny)';
             
             agendaHtml += `
-                <div class="text-lg md:text-xl font-black uppercase tracking-wider mb-3 mt-6 border-b-4 pb-1 flex items-baseline gap-2 ramka-ciemna" style="${dayHeaderColor}">
+                <div class="text-lg md:text-xl font-black uppercase tracking-wider mb-3 mt-6 border-b-4 pb-1 flex items-baseline gap-2" style="border-color: var(--ciemny); ${dayHeaderColor}">
                     ${isToday ? 'Dzisiaj' : dayName} <span class="font-bold text-xs md:text-sm normal-case opacity-60">(${l.date})</span>
                 </div>`;
             lastDate = l.date;
@@ -533,8 +530,8 @@ function renderAgendaView(monday, sunday) {
         }
 
         agendaHtml += `
-            <div onclick="editLesson('${l.id}')" class="karta cursor-pointer transition hover:-translate-y-1 hover:shadow-[6px_6px_0_var(--ciemny)] border-4 p-4 md:p-5 mb-4 flex flex-col bg-white lesson-block ramka-ciemna" 
-                 style="border-left-width: 8px; border-left-color: ${esc(subject.color)}; ${opacityAndStrike}" 
+            <div onclick="editLesson('${l.id}')" class="karta cursor-pointer transition hover:-translate-y-1 hover:shadow-[6px_6px_0_var(--ciemny)] border-4 p-4 md:p-5 mb-4 flex flex-col lesson-block" 
+                 style="background-color: var(--karta-bg); border-color: var(--ciemny); border-left-width: 8px; border-left-color: ${esc(subject.color)}; ${opacityAndStrike}" 
                  data-id="${l.id}">
                  
                 <div class="flex justify-between items-start gap-4">
@@ -598,7 +595,7 @@ function renderSlotCalendar() {
     document.getElementById('slot-week-btn-text').innerText = `${formatDay(monday)} - ${formatDay(sunday)} ${monthNames[sunday.getMonth()].substring(0,3).toUpperCase()}`;
 
     const daysNames = ['PON', 'WT', 'ŚR', 'CZW', 'PT', 'SOB', 'ND'];
-    let headerHtml = '<div class="border-r-2 p-1 md:p-2 w-12 shrink-0 bg-karta ramka-ciemna"></div>';
+    let headerHtml = '<div class="border-r-2 p-1 md:p-2 w-12 shrink-0" style="background-color: var(--karta-bg); border-color: var(--ciemny);"></div>';
     
     for(let i=0; i<7; i++) {
         let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
@@ -607,7 +604,7 @@ function renderSlotCalendar() {
         let textStyle = isToday ? `color: var(--akcent)` : `color: var(--tekst-szary)`;
         
         headerHtml += `
-            <div class="text-center py-1 md:py-2 border-r-2 day-col flex-1 bg-karta ramka-ciemna">
+            <div class="text-center py-1 md:py-2 border-r-2 day-col flex-1" style="background-color: var(--karta-bg); border-color: var(--ciemny);">
                 <div class="text-[10px] md:text-xs font-extrabold mb-1 tracking-wider" style="${textStyle}">${daysNames[i]}</div>
                 <div class="mx-auto w-6 h-6 md:w-8 md:h-8 flex items-center justify-center rounded-full font-extrabold text-xs md:text-sm" style="${circleStyle}">
                     ${dayDate.getDate()}
@@ -616,7 +613,7 @@ function renderSlotCalendar() {
     }
     document.getElementById('slot-calendar-header').innerHTML = headerHtml;
 
-    let gridHtml = `<div class="border-r-2 relative w-12 shrink-0 z-10 bg-karta ramka-ciemna">`;
+    let gridHtml = `<div class="border-r-2 relative w-12 shrink-0 z-10" style="background-color: var(--karta-bg); border-color: var(--ciemny);">`;
     for(let h = settings.startHour; h <= settings.endHour; h++) {
         gridHtml += `<div class="h-24 time-row text-[10px] md:text-xs text-right pr-1 pt-1 font-bold tekst-szary" id="slot-hour-row-${h}">${h}:00</div>`;
     }
@@ -631,7 +628,7 @@ function renderSlotCalendar() {
 
         let colBg = `background-color: rgba(244, 63, 94, 0.05);`;
 
-        gridHtml += `<div class="relative day-col flex-1 border-r-2 last:border-r-0 cursor-pointer overflow-hidden transition hover:bg-slate-100/50 ramka-szara" style="${colBg}" onclick="handleSlotClick(event, '${dateString}')">`;
+        gridHtml += `<div class="relative day-col flex-1 border-r-2 last:border-r-0 cursor-pointer overflow-hidden transition hover:opacity-80" style="${colBg} border-color: var(--szary-ramka);" onclick="handleSlotClick(event, '${dateString}')">`;
         
         for(let h = settings.startHour; h <= settings.endHour; h++) {
             gridHtml += `<div class="h-24 time-row border-rose-200 opacity-50" style="border-bottom-style: dashed; border-bottom-width: 1px;"></div>`;
@@ -653,8 +650,8 @@ function renderSlotCalendar() {
 
             if (height > 0 && startPos < maxPos) {
                 gridHtml += `
-                    <div class="absolute w-[94%] left-[3%] rounded-lg border-2 shadow-[2px_2px_0_var(--ciemny)] z-0 flex flex-col items-center justify-start pt-1 md:pt-2 overflow-hidden transition-transform hover:-translate-y-0.5 ramka-ciemna" 
-                         style="top: ${startPos}px; height: ${height}px; background-color: #bbf7d0;">
+                    <div class="absolute w-[94%] left-[3%] rounded-lg border-2 shadow-[2px_2px_0_var(--ciemny)] z-0 flex flex-col items-center justify-start pt-1 md:pt-2 overflow-hidden transition-transform hover:-translate-y-0.5" 
+                         style="top: ${startPos}px; height: ${height}px; background-color: #bbf7d0; border-color: var(--ciemny);">
                          <div class="px-1 text-[8px] md:text-[10px] font-extrabold uppercase tracking-widest text-center" style="color: var(--ciemny)">Dostępne</div>
                     </div>`;
             }
@@ -676,8 +673,8 @@ function renderSlotCalendar() {
             let subject = subjects.find(s => s.id == lesson.subjectId) || {name: ''};
 
             gridHtml += `
-                <div class="absolute w-[94%] left-[3%] rounded-lg border-2 shadow-[2px_2px_0_var(--ciemny)] z-10 flex flex-col items-start justify-start p-1 overflow-hidden opacity-[0.98] cursor-not-allowed ramka-ciemna" 
-                     style="top: ${topPosition}px; height: ${height}px; background-color: #fecaca;"
+                <div class="absolute w-[94%] left-[3%] rounded-lg border-2 shadow-[2px_2px_0_var(--ciemny)] z-10 flex flex-col items-start justify-start p-1 overflow-hidden opacity-[0.98] cursor-not-allowed" 
+                     style="top: ${topPosition}px; height: ${height}px; background-color: #fecaca; border-color: var(--ciemny);"
                      onclick="event.stopPropagation()">
                     <div class="text-[8px] md:text-[9px] font-bold leading-none mb-0.5" style="color: var(--ciemny)">${lesson.startTime}-${lesson.endTime}</div>
                     <div class="text-[9px] md:text-[10px] font-extrabold leading-tight truncate w-full" style="color: var(--ciemny)">${esc(student.name)}</div>
@@ -805,7 +802,7 @@ function renderStudentList(containerId, studentArr, total) {
             listHtml += `
                 <div class="mb-3">
                     <div class="flex justify-between text-xs md:text-sm font-bold mb-1"><span>${esc(item.name)}</span><span class="tekst-akcent">${item.val} zł</span></div>
-                    <div class="w-full rounded-full h-2 md:h-3 border-2 bg-jasny ramka-szara"><div class="h-full rounded-full bg-akcent" style="width: ${width}%; background-color: var(--akcent)"></div></div>
+                    <div class="w-full rounded-full h-2 md:h-3 border-2" style="background-color: var(--jasny); border-color: var(--szary-ramka);"><div class="h-full rounded-full bg-akcent" style="width: ${width}%; background-color: var(--akcent)"></div></div>
                 </div>`;
         });
     }
