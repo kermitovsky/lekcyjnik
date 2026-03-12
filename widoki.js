@@ -117,27 +117,24 @@ function renderDashboard() {
                                 <div class="text-xs md:text-sm font-medium tekst-szary">${dateDisplay}, ${l.startTime}</div>
                             </div>
                         </div>
-                        <div>${badge}</div>
+                        <div class="flex items-center gap-2">
+                            ${badge}
+                            <button onclick="event.stopPropagation(); window.copySms('reminder', '${esc(student.name)}', '${l.date}', '${l.startTime}', '${l.price||0}')" title="Kopiuj SMS z przypomnieniem" class="ml-2 hover:scale-110 transition text-lg">💬</button>
+                        </div>
                     </div>`;
             });
         }
         upcomingContainer.innerHTML = upcomingHtml;
     }
 
-    // ========================================================
-    // NOWA LOGIKA ZALEGŁOŚCI (ODDZIELENIE OCZEKUJĄCYCH)
-    // ========================================================
-    
     let individualPayments = []; 
     let activeBundles = {};
-    
     let overdueTotal = 0; 
     let pendingTotal = 0;
     let overdueCount = 0;
 
     lessons.forEach(l => {
         if (l.cancelled) return; 
-        
         let isPast = (l.date < todayString || (l.date === todayString && l.endTime < nowTime));
         let student = students.find(s => s.id == l.studentId);
         let bundle = student && student.bundles ? student.bundles.find(b => b.id == l.bundleId) : null;
@@ -150,73 +147,44 @@ function renderDashboard() {
             }
         } else {
             let cycleKey = '';
-            
-            if (bundle.type === 'monthly') {
-                cycleKey = l.date.substring(0, 7); 
-            } else {
-                cycleKey = getLocalISODate(getMonday(l.date + "T12:00:00")); 
-            }
+            if (bundle.type === 'monthly') { cycleKey = l.date.substring(0, 7); } 
+            else { cycleKey = getLocalISODate(getMonday(l.date + "T12:00:00")); }
             
             let key = `${l.studentId}_${l.bundleId}_${cycleKey}`;
             
             if (!activeBundles[key]) {
                 activeBundles[key] = {
-                    studentId: l.studentId,
-                    bundleId: l.bundleId,
-                    bundleName: bundle.name,
-                    lessonIds: [],
-                    paymentDate: l.paymentDate || l.date,
-                    totalLessons: 0,
-                    completedLessons: 0,
-                    isFullyPaid: true,
-                    hasPastLessons: false,
-                    displayPrice: Number(bundle.total)
+                    studentId: l.studentId, bundleId: l.bundleId, bundleName: bundle.name, lessonIds: [],
+                    paymentDate: l.paymentDate || l.date, totalLessons: 0, completedLessons: 0,
+                    isFullyPaid: true, hasPastLessons: false, displayPrice: Number(bundle.total)
                 };
             }
             
             activeBundles[key].lessonIds.push(l.id);
             activeBundles[key].totalLessons++; 
-            
-            if (isPast) {
-                activeBundles[key].completedLessons++;
-                activeBundles[key].hasPastLessons = true;
-            }
-            
-            if (!l.paid) {
-                activeBundles[key].isFullyPaid = false;
-            }
-            
+            if (isPast) { activeBundles[key].completedLessons++; activeBundles[key].hasPastLessons = true; }
+            if (!l.paid) { activeBundles[key].isFullyPaid = false; }
             let lPay = l.paymentDate || l.date;
-            if (lPay > activeBundles[key].paymentDate) {
-                activeBundles[key].paymentDate = lPay;
-            }
+            if (lPay > activeBundles[key].paymentDate) { activeBundles[key].paymentDate = lPay; }
         }
     });
 
     let bundlesToShow = Object.values(activeBundles).filter(b => !b.isFullyPaid && b.hasPastLessons);
-    
     bundlesToShow.forEach(b => {
         let isOverdue = todayString > b.paymentDate; 
-        if (isOverdue) {
-            overdueTotal += b.displayPrice;
-            overdueCount++; 
-        } else {
-            pendingTotal += b.displayPrice; 
-        }
+        if (isOverdue) { overdueTotal += b.displayPrice; overdueCount++; } 
+        else { pendingTotal += b.displayPrice; }
     });
 
     let sumEl = document.getElementById('dashboard-unpaid-sum');
     if (sumEl) {
         sumEl.innerHTML = `<span id="dashboard-animated-overdue">0</span> zł` + 
                           (pendingTotal > 0 ? ` <span class="text-orange-500 text-[0.55em] font-extrabold ml-1 align-middle">(${Math.round(pendingTotal)} zł w trakcie)</span>` : '');
-        
         animateValue('dashboard-animated-overdue', 0, Math.round(overdueTotal), 800, '');
     }
 
     let dashUnpaidCount = document.getElementById('dashboard-unpaid-count');
-    if(dashUnpaidCount) {
-        dashUnpaidCount.innerText = `${overdueCount} zaległości`;
-    }
+    if(dashUnpaidCount) { dashUnpaidCount.innerText = `${overdueCount} zaległości`; }
 
     const unpaidContainer = document.getElementById('pulpit-unpaid-lessons'); 
     if(unpaidContainer) {
@@ -250,7 +218,10 @@ function renderDashboard() {
                         </div>
                         <div class="flex flex-col items-end gap-2 shrink-0">
                             <div class="font-extrabold ${priceClass} text-base md:text-lg">${Math.round(group.displayPrice)} zł</div>
-                            <button onclick="window.markCycleAsPaid('${group.lessonIds.join(',')}', event)" class="px-3 py-1.5 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-white ${textClass} border-[currentColor] hover:bg-slate-50 transition whitespace-nowrap hover:-translate-y-0.5">Opłać pakiet</button>
+                            <div class="flex items-center gap-2">
+                                <button onclick="window.copySms('payment', '${esc(student.name)}', '', '', '${Math.round(group.displayPrice)}')" title="Kopiuj SMS z przypomnieniem" class="text-xl hover:scale-110 transition">💬</button>
+                                <button onclick="window.markCycleAsPaid('${group.lessonIds.join(',')}', event)" class="px-3 py-1.5 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-white ${textClass} border-[currentColor] hover:bg-slate-50 transition whitespace-nowrap hover:-translate-y-0.5">Opłać pakiet</button>
+                            </div>
                         </div>
                     </div>`;
             });
@@ -263,8 +234,9 @@ function renderDashboard() {
                             <div class="font-bold text-sm md:text-base">${esc(student.name)}</div>
                             <div class="text-[10px] md:text-xs font-medium text-rose-500">${l.date} | ${l.startTime}</div>
                         </div>
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2 md:gap-3">
                             <div class="font-extrabold text-rose-600 text-sm md:text-base">${l.price || 0} zł</div>
+                            <button onclick="event.stopPropagation(); window.copySms('payment', '${esc(student.name)}', '', '', '${l.price||0}')" title="Kopiuj SMS z przypomnieniem" class="text-xl hover:scale-110 transition">💬</button>
                             <button onclick="markAsPaid('${l.id}', event)" class="px-2 py-1.5 rounded-lg border-2 text-[10px] md:text-xs font-bold shadow-sm bg-white text-rose-600 border-rose-300 hover:bg-rose-100 transition whitespace-nowrap hover:-translate-y-0.5">Zapłacone</button>
                         </div>
                     </div>`;
@@ -375,9 +347,16 @@ function renderCalendar() {
     }
 
     const daysNames = ['PON', 'WT', 'ŚR', 'CZW', 'PT', 'SOB', 'ND'];
+    let daysCount = settings.hideWeekends ? 5 : 7;
+    let gridColsClass = settings.hideWeekends ? 'grid-cols-6' : 'grid-cols-8';
+    
+    // Zmiana klas siatki w zależności od weekendów
+    calHeader.className = `grid ${gridColsClass} border-b-2 sticky top-0 z-20`;
+    document.getElementById('calendar-grid').className = `grid ${gridColsClass} relative min-h-[900px]`;
+
     let headerHtml = '<div class="border-r-2 p-1 md:p-2 w-12 md:w-16 shrink-0" style="background-color: var(--karta-bg); border-color: var(--ciemny);"></div>';
     
-    for(let i=0; i<7; i++) {
+    for(let i=0; i < daysCount; i++) {
         let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
         let isToday = getLocalISODate(dayDate) === getLocalISODate(new Date());
         let circleStyle = isToday ? `background-color: var(--akcent); color: #fff; border: 2px solid var(--ciemny); box-shadow: 2px 2px 0 var(--ciemny)` : `color: var(--tekst-glowny)`;
@@ -399,7 +378,7 @@ function renderCalendar() {
     }
     gridHtml += `</div>`;
 
-    for(let i=0; i<7; i++) {
+    for(let i=0; i < daysCount; i++) {
         let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
         let dateString = getLocalISODate(dayDate);
         let isWeekend = (i === 5 || i === 6) ? `background-color: rgba(120, 120, 120, 0.03);` : '';
@@ -484,6 +463,13 @@ function renderAgendaView(monday, sunday) {
     let weekStringEnd = getLocalISODate(sunday);
 
     let weekLessons = lessons.filter(l => l.date >= weekStringStart && l.date <= weekStringEnd);
+    if(settings.hideWeekends) {
+        weekLessons = weekLessons.filter(l => {
+            let day = new Date(l.date + "T12:00:00").getDay();
+            return day !== 0 && day !== 6;
+        });
+    }
+    
     weekLessons.sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
 
     if (weekLessons.length === 0) {
@@ -595,9 +581,16 @@ function renderSlotCalendar() {
     document.getElementById('slot-week-btn-text').innerText = `${formatDay(monday)} - ${formatDay(sunday)} ${monthNames[sunday.getMonth()].substring(0,3).toUpperCase()}`;
 
     const daysNames = ['PON', 'WT', 'ŚR', 'CZW', 'PT', 'SOB', 'ND'];
+    let daysCount = settings.hideWeekends ? 5 : 7;
+    let gridColsClass = settings.hideWeekends ? 'grid-cols-6' : 'grid-cols-8';
+
+    let calHeader = document.getElementById('slot-calendar-header');
+    calHeader.className = `grid ${gridColsClass} border-b-2 sticky top-0 z-20`;
+    document.getElementById('slot-calendar-grid').className = `grid ${gridColsClass} relative min-h-[600px]`;
+
     let headerHtml = '<div class="border-r-2 p-1 md:p-2 w-12 shrink-0" style="background-color: var(--karta-bg); border-color: var(--ciemny);"></div>';
     
-    for(let i=0; i<7; i++) {
+    for(let i=0; i < daysCount; i++) {
         let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
         let isToday = getLocalISODate(dayDate) === getLocalISODate(new Date());
         let circleStyle = isToday ? `background-color: var(--akcent); color: #fff; border: 2px solid var(--ciemny);` : `color: var(--tekst-glowny)`;
@@ -611,7 +604,7 @@ function renderSlotCalendar() {
                 </div>
             </div>`;
     }
-    document.getElementById('slot-calendar-header').innerHTML = headerHtml;
+    calHeader.innerHTML = headerHtml;
 
     let gridHtml = `<div class="border-r-2 relative w-12 shrink-0 z-10" style="background-color: var(--karta-bg); border-color: var(--ciemny);">`;
     for(let h = settings.startHour; h <= settings.endHour; h++) {
@@ -621,7 +614,7 @@ function renderSlotCalendar() {
 
     let earliestAvailableHour = settings.endHour;
 
-    for(let i=0; i<7; i++) {
+    for(let i=0; i < daysCount; i++) {
         let dayDate = new Date(monday); dayDate.setDate(monday.getDate() + i);
         let dateString = getLocalISODate(dayDate);
         let dayOfWeek = dayDate.getDay();
