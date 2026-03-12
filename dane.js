@@ -4,12 +4,15 @@
 
 function renderSubjects() {
     const list = document.getElementById('subjects-list');
-    list.innerHTML = '';
-    if(subjects.length === 0) return list.innerHTML = '<p class="tekst-szary">Brak przedmiotów. Dodaj pierwszy!</p>';
+    if(subjects.length === 0) {
+        list.innerHTML = '<p class="tekst-szary">Brak przedmiotów. Dodaj pierwszy!</p>';
+        return;
+    }
     
+    let html = '';
     subjects.forEach(sub => {
         let hasLinks = sub.links && sub.links.trim() !== '' ? '<span class="text-sm px-2 rounded bg-slate-100 text-slate-500 shadow-sm border border-slate-200" title="Materiały podpięte">🔗 Linki</span>' : '';
-        list.innerHTML += `
+        html += `
             <div class="karta flex justify-between items-center cursor-pointer hover:-translate-y-1 transition" onclick="editSubject('${sub.id}')">
                 <div class="flex items-center gap-3">
                     <div class="w-6 h-6 rounded-md border-2 ramka-ciemna" style="background-color: ${esc(sub.color)};"></div>
@@ -20,6 +23,7 @@ function renderSubjects() {
                 </div>
             </div>`;
     });
+    list.innerHTML = html;
 }
 
 function openSubjectModal() {
@@ -86,10 +90,11 @@ function toggleBundleType(radioElem) {
 
 function renderStudentBundles() {
     const container = document.getElementById('student-bundles-container');
-    container.innerHTML = '';
+    let html = '';
+    
     currentStudentBundles.forEach((b, index) => {
         let isMonthly = b.type === 'monthly';
-        container.innerHTML += `
+        html += `
             <div class="flex flex-col gap-3 items-start p-3 md:p-4 rounded-xl border-2 bg-white border-slate-200 bundle-row shadow-sm w-full box-border" data-id="${b.id}">
                 <div class="flex flex-col w-full gap-2">
                     <input type="text" placeholder="Nazwa pakietu (np. Matma + Fizyka)" value="${esc(b.name || '')}" class="bundle-name w-full text-sm p-2 border-2 rounded-lg font-bold outline-none transition" style="focus:border-color: var(--akcent)">
@@ -139,6 +144,7 @@ function renderStudentBundles() {
                 <button type="button" onclick="this.closest('.bundle-row').remove()" class="text-rose-500 font-extrabold w-full text-center py-2 bg-rose-50 rounded-lg border border-rose-100 hover:bg-rose-100 transition text-[10px] md:text-xs uppercase tracking-wider mt-1">Usuń ten pakiet</button>
             </div>`;
     });
+    container.innerHTML = html;
 }
 
 function addBundleToStudent() {
@@ -151,15 +157,15 @@ function renderStudents() {
     const archivedList = document.getElementById('archived-students-list');
     const archivedSection = document.getElementById('archived-students-section');
     
-    list.innerHTML = ''; archivedList.innerHTML = '';
     const searchInput = document.getElementById('student-search');
     const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
     
     let activeStudents = students.filter(s => !s.archived && s.name.toLowerCase().includes(searchTerm));
     let archivedStudents = students.filter(s => s.archived && s.name.toLowerCase().includes(searchTerm));
 
+    let activeHtml = '';
     if(activeStudents.length === 0) {
-        list.innerHTML = '<p class="tekst-szary">Brak aktywnych uczniów.</p>';
+        activeHtml = '<p class="tekst-szary">Brak aktywnych uczniów.</p>';
     } else {
         activeStudents.forEach(student => {
             let studentSubjectsHtml = '';
@@ -175,7 +181,7 @@ function renderStudents() {
                 bundlesHtml = `<div class="mt-2 text-[10px] md:text-xs font-bold text-slate-500">PAKIETY: ${student.bundles.map(b => esc(b.name)).join(', ')}</div>`;
             }
 
-            list.innerHTML += `
+            activeHtml += `
                 <div class="karta flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0">
                     <div class="space-y-2">
                         <h4 class="font-extrabold text-lg md:text-xl">${esc(student.name)}</h4>
@@ -190,11 +196,13 @@ function renderStudents() {
                 </div>`;
         });
     }
+    list.innerHTML = activeHtml;
 
+    let archivedHtml = '';
     if(archivedStudents.length > 0) {
         archivedSection.classList.remove('hidden');
         archivedStudents.forEach(student => {
-            archivedList.innerHTML += `
+            archivedHtml += `
                 <div class="karta flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0 bg-jasny">
                     <div class="space-y-1">
                         <h4 class="font-extrabold text-lg md:text-xl tekst-szary">${esc(student.name)}</h4>
@@ -206,7 +214,11 @@ function renderStudents() {
                     </div>
                 </div>`;
         });
-    } else { archivedSection.classList.add('hidden'); }
+        archivedList.innerHTML = archivedHtml;
+    } else { 
+        archivedSection.classList.add('hidden'); 
+        archivedList.innerHTML = '';
+    }
 }
 
 async function toggleArchiveStudent(id) {
@@ -224,15 +236,20 @@ async function toggleArchiveStudent(id) {
 function openStudentModal() {
     document.getElementById('student-name').value = '';
     const container = document.getElementById('student-subjects-container');
-    container.innerHTML = '';
-    if(subjects.length === 0) container.innerHTML = '<p class="text-sm text-rose-500 font-bold">Najpierw dodaj przedmioty w zakładce "Przedmioty"!</p>';
-    else subjects.forEach(sub => {
-        container.innerHTML += `
-            <label class="flex items-center gap-3 p-2 hover:bg-slate-500/10 rounded-lg cursor-pointer transition">
-                <input type="checkbox" value="${sub.id}" class="student-subject-cb w-5 h-5 rounded" style="accent-color: var(--akcent)">
-                <span class="font-bold flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background-color:${esc(sub.color)}"></div> ${esc(sub.name)}</span>
-            </label>`;
-    });
+    
+    let html = '';
+    if(subjects.length === 0) {
+        html = '<p class="text-sm text-rose-500 font-bold">Najpierw dodaj przedmioty w zakładce "Przedmioty"!</p>';
+    } else {
+        subjects.forEach(sub => {
+            html += `
+                <label class="flex items-center gap-3 p-2 hover:bg-slate-500/10 rounded-lg cursor-pointer transition">
+                    <input type="checkbox" value="${sub.id}" class="student-subject-cb w-5 h-5 rounded" style="accent-color: var(--akcent)">
+                    <span class="font-bold flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background-color:${esc(sub.color)}"></div> ${esc(sub.name)}</span>
+                </label>`;
+        });
+    }
+    container.innerHTML = html;
     
     currentStudentBundles = [];
     renderStudentBundles();
@@ -246,15 +263,17 @@ function editStudent(id) {
     if(!student) return;
     document.getElementById('student-name').value = student.name;
     const container = document.getElementById('student-subjects-container');
-    container.innerHTML = '';
+    
+    let html = '';
     subjects.forEach(sub => {
         let isChecked = (student.subjectIds || []).includes(sub.id) ? 'checked' : '';
-        container.innerHTML += `
+        html += `
             <label class="flex items-center gap-3 p-2 hover:bg-slate-500/10 rounded-lg cursor-pointer transition">
                 <input type="checkbox" value="${sub.id}" class="student-subject-cb w-5 h-5 rounded" style="accent-color: var(--akcent)" ${isChecked}>
                 <span class="font-bold flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background-color:${esc(sub.color)}"></div> ${esc(sub.name)}</span>
             </label>`;
     });
+    container.innerHTML = html;
     
     currentStudentBundles = student.bundles ? JSON.parse(JSON.stringify(student.bundles)) : [];
     renderStudentBundles();
@@ -319,15 +338,17 @@ function updateLessonSubjectDropdown() {
     const stId = document.getElementById('lesson-student').value;
     const student = students.find(s => s.id == stId);
     const subjectSelect = document.getElementById('lesson-subject');
-    subjectSelect.innerHTML = '';
+    
+    let html = '';
     if(!student || !student.subjectIds || student.subjectIds.length === 0) {
-        subjects.forEach(sub => subjectSelect.innerHTML += `<option value="${sub.id}">${esc(sub.name)}</option>`);
+        subjects.forEach(sub => html += `<option value="${sub.id}">${esc(sub.name)}</option>`);
     } else {
         student.subjectIds.forEach(subId => {
             let sub = subjects.find(s => s.id == subId);
-            if(sub) subjectSelect.innerHTML += `<option value="${sub.id}">${esc(sub.name)}</option>`;
+            if(sub) html += `<option value="${sub.id}">${esc(sub.name)}</option>`;
         });
     }
+    subjectSelect.innerHTML = html;
 }
 
 function updateLessonBundleDropdown() {
@@ -336,14 +357,15 @@ function updateLessonBundleDropdown() {
     const bundleSelect = document.getElementById('lesson-bundle');
     
     if(!bundleSelect) return; 
-    bundleSelect.innerHTML = '<option value="">Standardowa cena (wpisz ręcznie)</option>';
+    let html = '<option value="">Standardowa cena (wpisz ręcznie)</option>';
     
     if(student && student.bundles && student.bundles.length > 0) {
         student.bundles.forEach(b => {
             let bTypeText = b.type === 'monthly' ? 'Miesięczny' : 'Tygodniowy';
-            bundleSelect.innerHTML += `<option value="${b.id}">Pakiet [${bTypeText}]: ${esc(b.name)} (${b.total} zł / ${b.hours}h)</option>`;
+            html += `<option value="${b.id}">Pakiet [${bTypeText}]: ${esc(b.name)} (${b.total} zł / ${b.hours}h)</option>`;
         });
     }
+    bundleSelect.innerHTML = html;
     handleBundleChange();
 }
 
@@ -356,7 +378,6 @@ function handleBundleChange() {
     const paymentDateDiv = document.getElementById('lesson-payment-date-div');
     const realInput = document.getElementById('lesson-payment-date');
     
-    // 🔥 PANCERNY TRIK: Pobieramy silnik Flatpickr bezpośrednio z elementu HTML!
     const fpInstance = realInput ? realInput._flatpickr : null;
 
     if (bundleId) {
@@ -368,7 +389,6 @@ function handleBundleChange() {
         }
         if(priceInput) priceInput.readOnly = false; 
         
-        // Odblokuj pole na start
         if(fpInstance && fpInstance.altInput) {
             fpInstance.altInput.disabled = false;
             fpInstance.altInput.style.backgroundColor = '';
@@ -405,23 +425,19 @@ function handleBundleChange() {
             }
 
             if (finalDateStr) {
-                // Wymuszamy datę na znalezionym kalendarzyku
                 if (fpInstance) {
                     fpInstance.setDate(finalDateStr, true);
-                    
-                    // Bezpośrednie modyfikowanie wyglądu pola wewnątrz Flatpickra
                     if(fpInstance.altInput) {
                         fpInstance.altInput.disabled = true;
-                        fpInstance.altInput.style.backgroundColor = '#e2e8f0'; // Szare tło
-                        fpInstance.altInput.style.color = '#64748b'; // Szary tekst
-                        fpInstance.altInput.style.cursor = 'not-allowed'; // Przekreślony kursor
+                        fpInstance.altInput.style.backgroundColor = '#e2e8f0'; 
+                        fpInstance.altInput.style.color = '#64748b'; 
+                        fpInstance.altInput.style.cursor = 'not-allowed'; 
                     }
                 } else if (realInput) {
                     realInput.value = finalDateStr;
                     realInput.disabled = true;
                 }
                 
-                // Dodatkowe zablokowanie całego obszaru
                 if (paymentDateDiv) {
                     paymentDateDiv.style.pointerEvents = 'none';
                     paymentDateDiv.style.opacity = '0.7';
@@ -437,7 +453,6 @@ function handleBundleChange() {
         }
         if(priceInput) priceInput.readOnly = false;
         
-        // Całkowite odblokowanie pola, gdy nie ma pakietu
         if(fpInstance && fpInstance.altInput) {
             fpInstance.altInput.disabled = false;
             fpInstance.altInput.style.backgroundColor = ''; 
@@ -497,8 +512,9 @@ function openLessonModal() {
     document.getElementById('btn-delete-lesson').classList.add('hidden');
 
     const selectStudent = document.getElementById('lesson-student');
-    selectStudent.innerHTML = '<option value="">Wybierz ucznia...</option>';
-    students.filter(s => !s.archived).forEach(s => { selectStudent.innerHTML += `<option value="${s.id}">${esc(s.name)}</option>`; });
+    let htmlSt = '<option value="">Wybierz ucznia...</option>';
+    students.filter(s => !s.archived).forEach(s => { htmlSt += `<option value="${s.id}">${esc(s.name)}</option>`; });
+    selectStudent.innerHTML = htmlSt;
 
     document.getElementById('lesson-subject').innerHTML = '<option value="">Wybierz ucznia najpierw...</option>';
     
@@ -534,12 +550,13 @@ function editLesson(id) {
         if(timeEndPicker) timeEndPicker.setDate(lesson.endTime, true);
 
         const selectStudent = document.getElementById('lesson-student');
-        selectStudent.innerHTML = '';
+        let htmlSt = '';
         students.forEach(s => { 
             if(!s.archived || s.id == lesson.studentId) {
-                selectStudent.innerHTML += `<option value="${s.id}" ${s.id == lesson.studentId ? 'selected' : ''}>${esc(s.name)}</option>`; 
+                htmlSt += `<option value="${s.id}" ${s.id == lesson.studentId ? 'selected' : ''}>${esc(s.name)}</option>`; 
             }
         });
+        selectStudent.innerHTML = htmlSt;
 
         updateLessonSubjectDropdown();
         if(lesson.subjectId) document.getElementById('lesson-subject').value = lesson.subjectId;
@@ -839,21 +856,4 @@ function markAsPaid(id, event) {
         }
         showToast('Oznaczono jako opłacone!');
     }
-}
-
-function markBundleAsPaid(studentId, bundleId, paymentDate, event) {
-    event.stopPropagation();
-    lessons.forEach(l => {
-        let lPayDate = l.paymentDate || l.date;
-        if (l.studentId == studentId && l.bundleId == bundleId && lPayDate === paymentDate) {
-            l.paid = true;
-        }
-    });
-    saveLessonsToCloud(); 
-    if(typeof renderDashboard === 'function') renderDashboard();
-    let kalendarzView = document.getElementById('view-kalendarz');
-    if(kalendarzView && !kalendarzView.classList.contains('hidden')) {
-        if(typeof renderCalendar === 'function') renderCalendar();
-    }
-    showToast('Pakiet opłacony!');
 }
