@@ -63,7 +63,8 @@ function wyloguj() {
     firebase.auth().signOut();
 }
 
-firebase.auth().onAuthStateIdChanged(user => {
+// POPRAWIONA LITERÓWKA PONIŻEJ
+firebase.auth().onAuthStateChanged(user => {
     if (user) {
         currentUser = user;
         document.getElementById('view-login').classList.add('hidden');
