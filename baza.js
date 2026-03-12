@@ -19,103 +19,120 @@ db.enablePersistence().catch(function(err) {
     }
 });
 
-// --- ZMIENNE GLOBALNE (współdzielone między wszystkimi plikami) ---
+// --- ZMIENNE GLOBALNE ---
 let currentUser = null; 
 let subjects = [];
 let students = [];
 let lessons = [];
 
+// Zaktualizowane ustawienia o nowe funkcje personalizacji
 let settings = {
     theme: 'light',
     accent: '#4f46e5',
+    bgPattern: 'grid', // 'grid', 'dots', 'clean'
+    defaultView: 'grid', // 'grid' lub 'agenda'
     startHour: 7,
     endHour: 22,
     duration: 60,
+    timeBuffer: 0, // Bufor czasowy np. 10 min
+    hideWeekends: false, // Ukrywanie weekendów
+    defaultPrice: '', // Domyślna cena lekcji
+    smsReminder: 'Cześć! Przypominam o naszej lekcji: [DATA] o [CZAS].',
+    smsPayment: 'Cześć, przypominam o zbliżającym się terminie zapłaty. Kwota do przelewu: [KWOTA] zł. Dzięki!',
     availability: null 
 };
 
 let currentDate = new Date();
-let slotDate = new Date(); 
-let datePicker, timeStartPicker, timeEndPicker, jumpPicker, paymentDatePicker; 
-let chartInstances = {}; 
-let currentStudentBundles = []; 
-let currentCalendarView = 'grid'; 
-let notifiedLessons = new Set();
+let slotDate = new Date();
+let currentCalendarView = 'grid'; // Domyślnie siatka, ale nadpiszemy z ustawień
+let currentStudentBundles = [];
+let datePicker, timeStartPicker, timeEndPicker, paymentDatePicker;
+let chartInstances = {};
+let dbUnsubscribe = null;
 
-// Ustawienia wykresów
-Chart.defaults.font.family = "'Inter', 'sans-serif'";
-Chart.defaults.color = '#64748b';
+// --- LOGOWANIE ---
+const provider = new firebase.auth.GoogleAuthProvider();
 
-// --- LOGOWANIE I CHMURA ---
-firebase.auth().onAuthStateChanged((user) => {
+function zalogujPrzezGoogle() {
+    firebase.auth().signInWithPopup(provider).catch(error => {
+        alert("Błąd logowania: " + error.message);
+    });
+}
+
+function wyloguj() {
+    firebase.auth().signOut();
+}
+
+firebase.auth().onAuthStateIdChanged(user => {
     if (user) {
         currentUser = user;
         document.getElementById('view-login').classList.add('hidden');
         document.getElementById('app-nav').classList.remove('hidden');
         document.getElementById('main-content').classList.remove('hidden');
-        
-        switchTab('skeleton'); 
-        pobierzDaneZChmury(); 
+        document.getElementById('view-skeleton').classList.remove('hidden');
+        loadDataFromCloud();
     } else {
         currentUser = null;
         document.getElementById('view-login').classList.remove('hidden');
         document.getElementById('app-nav').classList.add('hidden');
         document.getElementById('main-content').classList.add('hidden');
+        document.querySelectorAll('main > div').forEach(el => el.classList.add('hidden'));
+        if(dbUnsubscribe) { dbUnsubscribe(); dbUnsubscribe = null; }
     }
 });
 
-async function zalogujPrzezGoogle() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    try { await firebase.auth().signInWithPopup(provider); } 
-    catch (e) { await customAlert("Błąd logowania", e.message); }
-}
-
-function wyloguj() { firebase.auth().signOut(); }
-
-function pobierzDaneZChmury() {
-    db.collection("planer_korepetytora").doc(currentUser.uid).get().then((doc) => {
+// --- OPERACJE NA BAZIE (Zapis / Odczyt) ---
+function loadDataFromCloud() {
+    if (!currentUser) return;
+    const docRef = db.collection('users').doc(currentUser.uid);
+    
+    if(dbUnsubscribe) dbUnsubscribe();
+    
+    dbUnsubscribe = docRef.onSnapshot((doc) => {
         if (doc.exists) {
-            let data = doc.data();
-            subjects = data.subjects || []; students = data.students || []; lessons = data.lessons || [];
-            if(data.settings) settings = data.settings;
+            const data = doc.data();
+            subjects = data.subjects || [];
+            students = data.students || [];
+            lessons = data.lessons || [];
+            if(data.settings) settings = { ...settings, ...data.settings }; 
+            
+            currentCalendarView = settings.defaultView || 'grid';
+            
+            applyVisualSettings();
+            renderSubjects(); renderStudents(); 
+            let kalendarzView = document.getElementById('view-kalendarz');
+            if(kalendarzView && !kalendarzView.classList.contains('hidden')) renderCalendar();
+            let pulpitView = document.getElementById('view-pulpit');
+            if(pulpitView && !pulpitView.classList.contains('hidden')) renderDashboard();
+            let zarobkiView = document.getElementById('view-zarobki');
+            if(zarobkiView && !zarobkiView.classList.contains('hidden')) renderZarobki();
+            
+            document.getElementById('view-skeleton').classList.add('hidden');
+            let anyVisible = false;
+            document.getElementById('nav-tabs').querySelectorAll('.nav-tab').forEach(t => {
+                if(t.classList.contains('aktywny')) anyVisible = true;
+            });
+            if(!anyVisible) switchTab('pulpit');
+            
         } else {
-            subjects = []; students = []; lessons = [];
+            docRef.set({ subjects: [], students: [], lessons: [], settings: settings });
+            applyVisualSettings();
+            document.getElementById('view-skeleton').classList.add('hidden');
+            switchTab('pulpit');
         }
-        applyVisualSettings();
-        
-        initNotifications();
-        checkNotifications();
-
-        switchTab('pulpit');
-    }).catch((error) => {
-        console.error("Błąd połączenia z bazą:", error);
-        switchTab('pulpit'); 
+    }, (error) => {
+        console.error("Błąd pobierania danych: ", error);
+        showToast('Brak połączenia z chmurą', 'error');
     });
 }
 
-function saveSubjectsToCloud() {
-    if(!currentUser) return; 
-    db.collection("planer_korepetytora").doc(currentUser.uid).set({ subjects: subjects }, { merge: true });
-}
+function saveSubjectsToCloud() { if(currentUser) db.collection('users').doc(currentUser.uid).update({ subjects: subjects }); }
+function saveStudentsToCloud() { if(currentUser) db.collection('users').doc(currentUser.uid).update({ students: students }); }
+function saveLessonsToCloud() { if(currentUser) db.collection('users').doc(currentUser.uid).update({ lessons: lessons }); }
+function saveSettingsToCloud() { if(currentUser) db.collection('users').doc(currentUser.uid).update({ settings: settings }); }
 
-function saveStudentsToCloud() {
-    if(!currentUser) return; 
-    db.collection("planer_korepetytora").doc(currentUser.uid).set({ students: students }, { merge: true });
-}
-
-function saveLessonsToCloud() {
-    if(!currentUser) return; 
-    db.collection("planer_korepetytora").doc(currentUser.uid).set({ lessons: lessons }, { merge: true });
-}
-
-function saveSettingsToCloud() {
-    if(!currentUser) return; 
-    db.collection("planer_korepetytora").doc(currentUser.uid).set({ settings: settings }, { merge: true });
-}
-
-// --- EKSPORT I IMPORT DANYCH ---
 function eksportujDane() {
-    const backupData = { subjects, students, lessons, settings };
+    const backupData = { subjects, students, lessons, settings, exportDate: new Date().toISOString() };
     const dataStr = JSON.stringify(backupData, null, 2);
     const blob = new Blob([dataStr], {type: "application/json"});
     const url = URL.createObjectURL(blob);
@@ -137,14 +154,14 @@ async function importujDane(event) {
             const data = JSON.parse(e.target.result);
             if(data.subjects && data.students && data.lessons) {
                 subjects = data.subjects; students = data.students; lessons = data.lessons;
-                if(data.settings) settings = data.settings;
+                if(data.settings) settings = { ...settings, ...data.settings };
                 
                 saveSubjectsToCloud(); saveStudentsToCloud(); saveLessonsToCloud(); saveSettingsToCloud();
                 
                 applyVisualSettings(); switchTab('pulpit');
                 showToast('Wgrano kopię zapasową!');
             } else { await customAlert('Błąd pliku', 'Ten plik jest uszkodzony.'); }
-        } catch (error) { await customAlert('Błąd', 'Nie udało się poprawnie odczytać pliku.'); }
+        } catch (error) { await customAlert('Błąd', 'Nie udało się wgrać pliku.'); }
         event.target.value = '';
     };
     reader.readAsText(file);
