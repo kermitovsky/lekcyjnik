@@ -25,18 +25,18 @@ let subjects = [];
 let students = [];
 let lessons = [];
 
-// Zaktualizowane ustawienia o nowe funkcje personalizacji
 let settings = {
     theme: 'light',
     accent: '#4f46e5',
-    bgPattern: 'grid', // 'grid', 'dots', 'clean'
-    defaultView: 'grid', // 'grid' lub 'agenda'
+    bgPattern: 'grid', 
+    defaultView: 'grid', 
     startHour: 7,
     endHour: 22,
     duration: 60,
-    timeBuffer: 0, // Bufor czasowy np. 10 min
-    hideWeekends: false, // Ukrywanie weekendów
-    defaultPrice: '', // Domyślna cena lekcji
+    timeBuffer: 0, 
+    hideWeekends: false, 
+    defaultPrice: '', 
+    smsEnabled: false, // Domyślnie WYŁĄCZONE
     smsReminder: 'Cześć! Przypominam o naszej lekcji: [DATA] o [CZAS].',
     smsPayment: 'Cześć, przypominam o zbliżającym się terminie zapłaty. Kwota do przelewu: [KWOTA] zł. Dzięki!',
     availability: null 
@@ -44,7 +44,7 @@ let settings = {
 
 let currentDate = new Date();
 let slotDate = new Date();
-let currentCalendarView = 'grid'; // Domyślnie siatka, ale nadpiszemy z ustawień
+let currentCalendarView = 'grid';
 let currentStudentBundles = [];
 let datePicker, timeStartPicker, timeEndPicker, paymentDatePicker;
 let chartInstances = {};
