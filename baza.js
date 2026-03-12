@@ -63,7 +63,6 @@ function wyloguj() {
     firebase.auth().signOut();
 }
 
-// POPRAWIONA LITERÓWKA PONIŻEJ
 firebase.auth().onAuthStateChanged(user => {
     if (user) {
         currentUser = user;
@@ -85,7 +84,8 @@ firebase.auth().onAuthStateChanged(user => {
 // --- OPERACJE NA BAZIE (Zapis / Odczyt) ---
 function loadDataFromCloud() {
     if (!currentUser) return;
-    const docRef = db.collection('users').doc(currentUser.uid);
+    
+    const docRef = db.collection('planer_korepetytora').doc(currentUser.uid);
     
     if(dbUnsubscribe) dbUnsubscribe();
     
@@ -127,10 +127,10 @@ function loadDataFromCloud() {
     });
 }
 
-function saveSubjectsToCloud() { if(currentUser) db.collection('users').doc(currentUser.uid).update({ subjects: subjects }); }
-function saveStudentsToCloud() { if(currentUser) db.collection('users').doc(currentUser.uid).update({ students: students }); }
-function saveLessonsToCloud() { if(currentUser) db.collection('users').doc(currentUser.uid).update({ lessons: lessons }); }
-function saveSettingsToCloud() { if(currentUser) db.collection('users').doc(currentUser.uid).update({ settings: settings }); }
+function saveSubjectsToCloud() { if(currentUser) db.collection('planer_korepetytora').doc(currentUser.uid).update({ subjects: subjects }); }
+function saveStudentsToCloud() { if(currentUser) db.collection('planer_korepetytora').doc(currentUser.uid).update({ students: students }); }
+function saveLessonsToCloud() { if(currentUser) db.collection('planer_korepetytora').doc(currentUser.uid).update({ lessons: lessons }); }
+function saveSettingsToCloud() { if(currentUser) db.collection('planer_korepetytora').doc(currentUser.uid).update({ settings: settings }); }
 
 function eksportujDane() {
     const backupData = { subjects, students, lessons, settings, exportDate: new Date().toISOString() };
