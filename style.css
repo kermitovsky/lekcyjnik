@@ -7,7 +7,7 @@
     --karta-bg: #ffffff;
     --tekst-glowny: #1e293b;
     --tekst-szary: #64748b;
-    --kratka-kolor: rgba(148, 163, 184, 0.15); /* Delikatna szara kratka */
+    --kratka-kolor: rgba(148, 163, 184, 0.15);
 }
 
 html.dark {
@@ -17,72 +17,94 @@ html.dark {
     --karta-bg: #1e293b;
     --tekst-glowny: #f8fafc;
     --tekst-szary: #94a3b8;
-    --kratka-kolor: rgba(255, 255, 255, 0.04); /* Delikatna jasna kratka */
+    --kratka-kolor: rgba(255, 255, 255, 0.04);
 }
 
 body {
     background-color: var(--jasny);
     color: var(--tekst-glowny);
-    /* Zmiana na tło w kratkę zeszytową */
-    background-image: 
-        linear-gradient(var(--kratka-kolor) 1px, transparent 1px),
-        linear-gradient(90deg, var(--kratka-kolor) 1px, transparent 1px);
-    background-size: 24px 24px;
-    background-position: top left;
     transition: background-color 0.3s, color 0.3s;
 }
 
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #64748b; border-radius: 10px; }
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+/* --- Nowe wzory tła --- */
+body.bg-pattern-grid {
+    background-image: 
+        linear-gradient(var(--kratka-kolor) 1px, transparent 1px),
+        linear-gradient(90deg, var(--kratka-kolor) 1px, transparent 1px) !important;
+    background-size: 20px 20px !important;
+}
 
-.time-row { border-bottom: 1px dashed var(--szary-ramka); }
-.day-col { border-right: 1px dashed var(--szary-ramka); }
-.day-col:last-child { border-right: none; }
+body.bg-pattern-dots {
+    background-image: radial-gradient(var(--kratka-kolor) 2px, transparent 2px) !important;
+    background-size: 20px 20px !important;
+}
+
+body.bg-pattern-clean {
+    background-image: none !important;
+}
 
 .karta {
     background-color: var(--karta-bg);
-    border: 2px solid var(--ciemny);
-    border-radius: 0.75rem;
+    border: 2px solid var(--szary-ramka);
+    border-radius: 1rem;
     padding: 1.5rem;
-    box-shadow: 4px 4px 0px var(--ciemny);
-    transition: transform 0.2s, background-color 0.3s, border-color 0.3s;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease-in-out;
 }
-.karta:hover { transform: translateY(-4px); }
+
+.cien-ciemny { box-shadow: 4px 4px 0px var(--ciemny); }
+.ramka-ciemna { border-color: var(--ciemny); }
+.ramka-szara { border-color: var(--szary-ramka); }
+.bg-karta { background-color: var(--karta-bg); }
+.bg-jasny { background-color: var(--jasny); }
+.tekst-szary { color: var(--tekst-szary); }
+.tekst-glowny { color: var(--tekst-glowny); }
+.tekst-akcent { color: var(--akcent); }
 
 .przycisk-glowny {
     background-color: var(--akcent);
     color: #ffffff;
-    font-weight: bold;
+    font-weight: 800;
     padding: 0.5rem 1.5rem;
-    border-radius: 9999px;
-    box-shadow: 2px 2px 0px var(--ciemny);
+    border-radius: 0.75rem;
     border: 2px solid var(--ciemny);
-    transition: filter 0.2s;
-    cursor: pointer;
-    white-space: nowrap;
+    box-shadow: 2px 2px 0px var(--ciemny);
+    transition: all 0.2s;
 }
-.przycisk-glowny:hover { filter: brightness(1.1); }
+.przycisk-glowny:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px var(--ciemny);
+}
+.przycisk-glowny:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px var(--ciemny);
+}
 
 .przycisk-anuluj {
-    padding: 0.5rem 1rem;
+    background-color: transparent;
     color: var(--tekst-szary);
-    font-weight: bold;
+    font-weight: 800;
+    padding: 0.5rem 1.5rem;
     border-radius: 0.75rem;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
 }
-.przycisk-anuluj:hover { background-color: var(--szary-ramka); }
+.przycisk-anuluj:hover { color: var(--tekst-glowny); transform: translateY(-1px); }
+
+.kolor-kolo {
+    width: 2rem; height: 2rem; border-radius: 9999px; cursor: pointer; transition: transform 0.2s, border 0.2s;
+    border: 2px solid transparent;
+}
+.kolor-kolo:hover { transform: scale(1.1); }
+.kolor-kolo.aktywny { border-color: var(--ciemny); box-shadow: 0 0 0 2px var(--karta-bg), 0 0 0 4px var(--ciemny); }
 
 .pole-tekstowe {
     width: 100%;
-    border: 2px solid var(--szary-ramka);
     padding: 0.75rem;
     border-radius: 0.75rem;
-    outline: none;
-    font-weight: 500;
+    border: 2px solid var(--szary-ramka);
+    background-color: transparent;
     color: var(--tekst-glowny);
+    outline: none;
     background-color: var(--karta-bg);
     transition: border-color 0.2s;
     margin-bottom: 0.75rem;
@@ -122,25 +144,15 @@ body {
     border-radius: 9999px;
     transition: all 0.2s;
     white-space: nowrap;
-    cursor: pointer;
-    border: 2px solid transparent;
 }
-.nav-tab:hover { color: var(--tekst-glowny); }
-.nav-tab.aktywna {
-    background-color: var(--akcent);
-    color: #ffffff;
-    box-shadow: 2px 2px 0px var(--ciemny);
-    border: 2px solid var(--ciemny);
-    font-weight: bold;
-}
+.nav-tab:hover { background-color: rgba(148, 163, 184, 0.1); color: var(--tekst-glowny); }
+.nav-tab.aktywny { background-color: var(--akcent); color: white; font-weight: 800; }
 
-.kolor-kolo {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 9999px;
-    cursor: pointer;
-    border: 3px solid transparent;
-    transition: transform 0.2s;
-}
-.kolor-kolo:hover { transform: scale(1.1); }
-.kolor-kolo.aktywny { border-color: var(--ciemny); box-shadow: 0 0 0 2px var(--karta-bg) inset; }
+.day-col { min-width: 0; }
+.time-row { border-bottom: 1px solid var(--szary-ramka); }
+
+/* Chowanie paska przewijania w ładny sposób */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.lesson-block:hover { z-index: 20; }
