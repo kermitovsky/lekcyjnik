@@ -227,7 +227,6 @@
 
     <nav id="app-nav" class="backdrop-blur border-b px-3 py-1.5 md:px-6 md:py-2 flex flex-col md:flex-row md:items-center justify-between gap-2 z-30 relative shadow-sm hidden" style="background-color: rgba(var(--karta-bg), 0.9); border-color: var(--szary-ramka)">
         <div class="flex items-center justify-between w-full md:w-auto gap-4">
-            
             <div class="flex items-center gap-2 md:gap-3">
                 <img src="logo.png" alt="Logo TutoGrid" class="h-8 sm:h-10 md:h-12 w-auto object-contain shrink-0" onerror="this.style.display='none'">
                 <div class="flex items-baseline gap-1">
@@ -235,7 +234,6 @@
                     <span class="text-[10px] md:text-sm font-black tracking-tight hidden sm:inline-block truncate normal-case mt-0.5 sm:mt-0" style="color: var(--tekst-glowny)">Twój Planer Korepetytora</span>
                 </div>
             </div>
-
             <div class="flex items-center gap-1 md:gap-2 md:hidden shrink-0">
                 <button onclick="switchTab('ustawienia')" class="nav-tab px-2 text-xl" title="Ustawienia">⚙️</button>
                 <button onclick="wyloguj()" class="text-rose-500 font-bold px-2 py-1.5 rounded-lg border-2 border-transparent text-sm">Wyloguj</button>
@@ -427,10 +425,14 @@
                     </div>
                 </div>
             </section>
+            
             <section class="space-y-4 md:space-y-6">
-                <div class="flex flex-col sm:flex-row justify-between sm:items-end border-b-2 pb-2 gap-2" style="border-color: var(--szary-ramka)">
+                <div class="flex flex-col sm:flex-row justify-between sm:items-end border-b-2 pb-2 gap-3" style="border-color: var(--szary-ramka)">
                     <h3 class="text-xl md:text-2xl font-extrabold">2. Zarobki w miesiącu</h3>
-                    <input type="month" id="earnings-month-picker" onchange="renderZarobki()" class="border-2 p-2 rounded-xl font-bold outline-none cursor-pointer w-full sm:w-auto" style="background-color: var(--karta-bg); border-color: var(--ciemny); color: var(--tekst-glowny)">
+                    <div class="flex gap-2">
+                        <input type="month" id="earnings-month-picker" onchange="renderZarobki()" class="border-2 p-2 rounded-xl font-bold outline-none cursor-pointer w-full sm:w-auto" style="background-color: var(--karta-bg); border-color: var(--ciemny); color: var(--tekst-glowny)">
+                        <button onclick="generateMonthlyReport()" class="przycisk-glowny whitespace-nowrap bg-slate-800 border-slate-800 text-white text-sm px-4 py-2 hover:bg-slate-700">📄 Pobierz Raport</button>
+                    </div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                     <div class="karta text-center flex flex-col justify-center items-center lg:col-span-1">
@@ -442,6 +444,7 @@
                     </div>
                 </div>
             </section>
+            
             <section class="space-y-4 md:space-y-6">
                 <div class="flex flex-col sm:flex-row justify-between sm:items-end border-b-2 pb-2 gap-2" style="border-color: var(--szary-ramka)">
                     <h3 class="text-xl md:text-2xl font-extrabold">3. Zarobki w wybranym tygodniu</h3>
@@ -466,8 +469,10 @@
             <div class="flex overflow-x-auto no-scrollbar gap-2 mb-6 border-b-2 pb-2" style="border-color: var(--szary-ramka);">
                 <button onclick="switchSettingsTab('wyglad')" id="set-tab-wyglad" class="set-tab px-4 py-2 font-bold rounded-t-xl transition whitespace-nowrap">🎨 Wygląd</button>
                 <button onclick="switchSettingsTab('kalendarz')" id="set-tab-kalendarz" class="set-tab px-4 py-2 font-bold rounded-t-xl transition whitespace-nowrap">⏱️ Kalendarz</button>
-                <button onclick="switchSettingsTab('finanse')" id="set-tab-finanse" class="set-tab px-4 py-2 font-bold rounded-t-xl transition whitespace-nowrap">💰 Finanse i Komunikacja</button>
-                <button onclick="switchSettingsTab('baza')" id="set-tab-baza" class="set-tab px-4 py-2 font-bold rounded-t-xl transition whitespace-nowrap">🛡️ Baza i Konto</button>
+                <button onclick="switchSettingsTab('finanse')" id="set-tab-finanse" class="set-tab px-4 py-2 font-bold rounded-t-xl transition whitespace-nowrap">💰 Finanse</button>
+                <button onclick="switchSettingsTab('komunikacja')" id="set-tab-komunikacja" class="set-tab px-4 py-2 font-bold rounded-t-xl transition whitespace-nowrap">💬 Komunikacja</button>
+                <button onclick="switchSettingsTab('baza')" id="set-tab-baza" class="set-tab px-4 py-2 font-bold rounded-t-xl transition whitespace-nowrap">🗄️ Baza</button>
+                <button onclick="switchSettingsTab('konto')" id="set-tab-konto" class="set-tab px-4 py-2 font-bold rounded-t-xl transition whitespace-nowrap text-rose-500">🛡️ Konto</button>
             </div>
 
             <div id="set-content-wyglad" class="set-content karta space-y-8">
@@ -556,9 +561,25 @@
                 </div>
                 <hr style="border-color: var(--szary-ramka)">
                 <div>
-                    <h3 class="font-bold text-lg mb-2">Gotowe szablony wiadomości (SMS / Messenger)</h3>
-                    <p class="text-sm mb-4" style="color: var(--tekst-szary)">Przy zaległościach i lekcjach na pulpicie pojawi się ikonka 💬. Kopiuje ona poniższe teksty podmieniając tagi takie jak <code class="bg-slate-200 px-1 rounded text-black">[DATA]</code>, <code class="bg-slate-200 px-1 rounded text-black">[CZAS]</code>, <code class="bg-slate-200 px-1 rounded text-black">[IMIE]</code>, <code class="bg-slate-200 px-1 rounded text-black">[KWOTA]</code> na prawdziwe dane z bazy.</p>
-                    
+                    <h3 class="font-bold text-lg mb-2 text-emerald-600 flex items-center gap-2"><span>📄</span> Raporty do druku</h3>
+                    <p class="text-sm mb-3" style="color: var(--tekst-szary)">Możesz wygenerować oficjalny raport finansowy gotowy do druku lub formatu PDF. Przycisk znajduje się w zakładce <strong>"Zarobki"</strong>, tuż obok wyboru miesiąca.</p>
+                </div>
+            </div>
+
+            <div id="set-content-komunikacja" class="set-content karta space-y-6 hidden">
+                <div class="flex items-start justify-between border-2 p-4 rounded-xl" style="border-color: var(--akcent); background-color: rgba(var(--akcent), 0.05)">
+                    <div>
+                        <h3 class="font-bold text-lg mb-1" style="color: var(--akcent)">Moduł szybkich wiadomości SMS</h3>
+                        <p class="text-sm" style="color: var(--tekst-szary)">Jeżeli włączysz ten moduł, przy lekcjach i zaległościach na pulpicie pojawią się specjalne ikonki 💬, które jednym kliknięciem skopiują do schowka gotowy, spersonalizowany tekst wiadomości do wysłania uczniowi.</p>
+                    </div>
+                    <label class="flex items-center ml-4 mt-2 relative inline-flex cursor-pointer shrink-0">
+                        <input type="checkbox" id="ust-sms-toggle" class="sr-only peer" onchange="toggleSmsAction()">
+                        <div class="w-14 h-7 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#4f46e5]"></div>
+                    </label>
+                </div>
+
+                <div id="sms-settings-boxes" class="space-y-6 transition-all duration-300">
+                    <p class="text-sm font-bold bg-slate-100 p-3 rounded-lg text-slate-600 border border-slate-200">Możesz używać następujących tagów (system sam je podmieni): <br><code class="bg-white px-2 py-0.5 rounded text-black shadow-sm mx-1">[IMIE]</code> <code class="bg-white px-2 py-0.5 rounded text-black shadow-sm mx-1">[DATA]</code> <code class="bg-white px-2 py-0.5 rounded text-black shadow-sm mx-1">[CZAS]</code> <code class="bg-white px-2 py-0.5 rounded text-black shadow-sm mx-1">[KWOTA]</code></p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="text-sm font-bold block mb-2">Treść przypomnienia o zajęciach:</label>
@@ -572,15 +593,23 @@
                 </div>
             </div>
 
-            <div id="set-content-baza" class="set-content karta space-y-8 hidden">
+            <div id="set-content-baza" class="set-content karta space-y-6 hidden">
                 <div>
-                    <h3 class="font-bold text-lg mb-3">Zarządzanie bazą (Backup)</h3>
-                    <p class="text-sm mb-4" style="color: var(--tekst-szary)">Pobierz wszystkie swoje dane jako jeden plik JSON na swój komputer. Jeśli coś zepsujesz lub zmienisz konto, wystarczy zaimportować ten plik z powrotem.</p>
+                    <h3 class="font-bold text-lg mb-3">Kopia zapasowa danych (Backup)</h3>
+                    <p class="text-sm mb-4" style="color: var(--tekst-szary)">Zalecamy okresowe pobieranie pliku z bazą danych na dysk komputera. Gwarantuje to 100% bezpieczeństwa i pozwala łatwo przenieść konto w przyszłości.</p>
                     <div class="flex flex-col sm:flex-row gap-3">
-                        <button onclick="eksportujDane()" class="przycisk-glowny w-full sm:w-auto bg-slate-800 border-slate-800 text-white flex justify-center items-center gap-2">⬆️ Pobierz (Eksport)</button>
+                        <button onclick="eksportujDane()" class="przycisk-glowny w-full sm:w-auto bg-slate-800 border-slate-800 text-white flex justify-center items-center gap-2 hover:bg-slate-700">⬆️ Pobierz (Eksport JSON)</button>
                         <input type="file" id="import-file" class="hidden" accept=".json" onchange="importujDane(event)">
-                        <button onclick="document.getElementById('import-file').click()" class="przycisk-anuluj w-full sm:w-auto border-2 flex justify-center items-center gap-2 hover:bg-slate-100" style="border-color: var(--szary-ramka); color: var(--tekst-glowny)">⬇️ Wgraj plik (Import)</button>
+                        <button onclick="document.getElementById('import-file').click()" class="przycisk-anuluj w-full sm:w-auto border-2 flex justify-center items-center gap-2 hover:bg-slate-100" style="border-color: var(--szary-ramka); color: var(--tekst-glowny)">⬇️ Wgraj plik (Import JSON)</button>
                     </div>
+                </div>
+            </div>
+
+            <div id="set-content-konto" class="set-content karta space-y-6 hidden">
+                <div>
+                    <h3 class="font-bold text-lg mb-3">Twoje konto Google</h3>
+                    <p class="text-sm mb-4" style="color: var(--tekst-szary)">Jesteś obecnie zalogowany. Jeżeli korzystasz z komputera publicznego, pamiętaj o wylogowaniu się po zakończeniu pracy.</p>
+                    <button onclick="wyloguj()" class="font-bold text-sm bg-slate-200 text-slate-800 px-6 py-3 rounded-lg hover:bg-slate-300 transition shadow-sm border-2 border-slate-300">Wyloguj mnie teraz</button>
                 </div>
                 <hr style="border-color: var(--szary-ramka)">
                 <div class="bg-rose-50 border-2 border-rose-200 rounded-xl p-4 md:p-6">
@@ -776,11 +805,6 @@
                 <button id="btn-series-cancel" class="przycisk-anuluj mt-2">Anuluj</button>
             </div>
         </div>
-    </div>
-
-    <div id="pwa-update-toast" class="hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-2xl z-[100] flex flex-col sm:flex-row items-center gap-3 md:gap-4 border-2 border-slate-700 w-[90%] sm:w-auto">
-        <span class="text-sm font-bold text-center">Dostępna nowa wersja TutoGrid!</span>
-        <button onclick="window.location.reload(true)" class="bg-[#4f46e5] text-white px-4 py-2 rounded-lg text-xs md:text-sm font-bold hover:opacity-80 transition shadow-sm w-full sm:w-auto">Odśwież stronę</button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
